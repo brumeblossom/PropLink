@@ -1,0 +1,295 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  landlord
+  tenant
+}
+
+enum PropertyType {
+  residential
+  commercial
+  mixed
+}
+
+enum UnitType {
+  flat
+  shop
+  office
+}
+
+enum RentFrequency {
+  monthly
+  quarterly
+  annually
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+  cheque
+  other
+}
+
+enum PaymentStatus {
+  confirmed
+  pending
+  disputed
+}
+
+enum NoticeType {
+  rent_reminder
+  maintenance
+  general
+  rent_increment
+}
+
+enum DeliveryStatus {
+  pending
+  sent
+  failed
+}
+
+enum NotificationStatus {
+  sent
+  delivered
+  failed
+}
+
+enum NotificationChannel {
+  in_app
+  email
+  whatsapp
+}
+
+enum RelatedType {
+  notice
+  reminder
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  phone         String?  @unique
+  passwordHash  String?  @map("password_hash")
+  role          Role
+  fullName      String   @map("full_name")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  properties               Property[]         @relation("LandlordProperties")
+  leasesAsTenant           Lease[]            @relation("TenantLeases")
+  recordedPayments         Payment[]          @relation("RecordedPayments")
+  confirmedPayments        Payment[]          @relation("ConfirmedPayments")
+  counterVerifiedPayments  Payment[]          @relation("CounterVerifiedPayments")
+  noticesSent              Notice[]           @relation("LandlordNotices")
+  noticeRecipients         NoticeRecipient[]  @relation("TenantNoticeRecipients")
+  conversationsAsLandlord  Conversation[]     @relation("LandlordConversations")
+  conversationsAsTenant    Conversation[]     @relation("TenantConversations")
+  messagesSent             Message[]          @relation("SenderMessages")
+  notificationsReceived    NotificationLog[]  @relation("RecipientNotifications")
+
+  @@map("users")
+}
+
+model Property {
+  id           String       @id @default(uuid()) @db.Uuid
+  landlordId   String       @map("landlord_id") @db.Uuid
+  name         String
+  address      String
+  city         String
+  state        String
+  propertyType PropertyType @map("property_type")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  landlord User     @relation("LandlordProperties", fields: [landlordId], references: [id], onDelete: Cascade)
+  units    Unit[]
+  notices  Notice[]
+
+  @@map("properties")
+}
+
+model Unit {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  unitNumber String   @map("unit_number")
+  unitType   UnitType @map("unit_type")
+  sizeSqm    Decimal? @map("size_sqm") @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  property      Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  leases        Lease[]
+  notices       Notice[]
+  conversations Conversation[]
+
+  @@map("units")
+}
+
+// NOTE: Overlapping active leases for the same unit are prevented by a database-level trigger constraint.
+// See the corresponding SQL migration file for the trigger implementation.
+model Lease {
+  id                String        @id @default(uuid()) @db.Uuid
+  unitId            String        @map("unit_id") @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
+  startDate         DateTime      @map("start_date") @db.Date
+  endDate           DateTime      @map("end_date") @db.Date
+  rentAmount        Decimal       @map("rent_amount") @db.Decimal(12, 2)
+  rentFrequency     RentFrequency @map("rent_frequency")
+  depositAmount     Decimal?      @map("deposit_amount") @db.Decimal(12, 2)
+  renewalWindowDays Int           @default(60) @map("renewal_window_days")
+  documentUrl       String?       @map("document_url")
+  terminatedAt      DateTime?     @map("terminated_at") @db.Timestamptz
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant      User         @relation("TenantLeases", fields: [tenantId], references: [id], onDelete: Cascade)
+  payments    Payment[]
+  inviteCodes InviteCode[]
+
+  @@map("leases")
+}
+
+model Payment {
+  id                    String        @id @default(uuid()) @db.Uuid
+  leaseId               String        @map("lease_id") @db.Uuid
+  amount                Decimal       @db.Decimal(12, 2)
+  paymentDate           DateTime      @map("payment_date") @db.Date
+  periodStart           DateTime      @map("period_start") @db.Date
+  periodEnd             DateTime      @map("period_end") @db.Date
+  method                PaymentMethod
+  recordedBy            String        @map("recorded_by") @db.Uuid
+  recordedByRole        Role          @map("recorded_by_role")
+  status                PaymentStatus
+  confirmedBy           String?       @map("confirmed_by") @db.Uuid
+  confirmedAt           DateTime?     @map("confirmed_at") @db.Timestamptz
+  disputeReason         String?       @map("dispute_reason")
+  proofUrl              String?       @map("proof_url")
+  counterVerifiedBy     String?       @map("counter_verified_by") @db.Uuid
+  counterVerifiedAt     DateTime?     @map("counter_verified_at") @db.Timestamptz
+  disputedByTenant      Boolean       @default(false) @map("disputed_by_tenant")
+  disputedByReason      String?       @map("disputed_by_reason")
+  disputedByResolvedAt  DateTime?     @map("disputed_by_resolved_at") @db.Timestamptz
+  notes                 String?
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  gatewayProvider       String?       @map("gateway_provider")
+  gatewayReference      String?       @map("gateway_reference")
+
+  // Relations
+  lease           Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  recorder        User   @relation("RecordedPayments", fields: [recordedBy], references: [id], onDelete: Cascade)
+  confirmer       User?  @relation("ConfirmedPayments", fields: [confirmedBy], references: [id], onDelete: SetNull)
+  counterVerifier User?  @relation("CounterVerifiedPayments", fields: [counterVerifiedBy], references: [id], onDelete: SetNull)
+
+  @@map("payments")
+}
+
+model Notice {
+  id         String                @id @default(uuid()) @db.Uuid
+  landlordId String                @map("landlord_id") @db.Uuid
+  propertyId String?               @map("property_id") @db.Uuid
+  unitId     String?               @map("unit_id") @db.Uuid
+  title      String
+  body       String
+  type       NoticeType
+  channels   NotificationChannel[]
+  createdAt  DateTime              @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  landlord   User              @relation("LandlordNotices", fields: [landlordId], references: [id], onDelete: Cascade)
+  property   Property?         @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  unit       Unit?             @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  recipients NoticeRecipient[]
+
+  @@map("notices")
+}
+
+model NoticeRecipient {
+  id                String          @id @default(uuid()) @db.Uuid
+  noticeId          String          @map("notice_id") @db.Uuid
+  tenantId          String          @map("tenant_id") @db.Uuid
+  inAppDeliveredAt  DateTime?       @map("in_app_delivered_at") @db.Timestamptz
+  emailStatus       DeliveryStatus? @map("email_status")
+  whatsappStatus    DeliveryStatus? @map("whatsapp_status")
+  readAt            DateTime?       @map("read_at") @db.Timestamptz
+
+  // Relations
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  tenant User   @relation("TenantNoticeRecipients", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("notice_recipients")
+}
+
+model Conversation {
+  id         String   @id @default(uuid()) @db.Uuid
+  unitId     String   @map("unit_id") @db.Uuid
+  landlordId String   @map("landlord_id") @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  unit     Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  landlord User      @relation("LandlordConversations", fields: [landlordId], references: [id], onDelete: Cascade)
+  tenant   User      @relation("TenantConversations", fields: [tenantId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([unitId, tenantId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  senderId       String    @map("sender_id") @db.Uuid
+  body           String
+  attachmentUrl  String?   @map("attachment_url")
+  readAt         DateTime? @map("read_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model InviteCode {
+  id         String    @id @default(uuid()) @db.Uuid
+  leaseId    String    @map("lease_id") @db.Uuid
+  code       String    @unique
+  redeemedAt DateTime? @map("redeemed_at") @db.Timestamptz
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+
+  @@map("invite_codes")
+}
+
+model NotificationLog {
+  id                 String              @id @default(uuid()) @db.Uuid
+  recipientId        String              @map("recipient_id") @db.Uuid
+  channel            NotificationChannel
+  relatedType        RelatedType         @map("related_type")
+  relatedId          String              @map("related_id") @db.Uuid
+  status             NotificationStatus
+  providerMessageId  String?             @map("provider_message_id")
+  sentAt             DateTime            @map("sent_at") @db.Timestamptz
+
+  // Relations
+  recipient User @relation("RecipientNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("notification_log")
+}

@@ -1,0 +1,362 @@
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { router, authedProcedure } from "../trpc";
+import { prisma } from "@/lib/prisma";
+import { RentFrequency } from "@prisma/client";
+import { createClient } from "@/utils/supabase/server";
+
+export const leasesRouter = router({
+  create: authedProcedure
+    .input(
+      z.object({
+        unitId: z.string().uuid(),
+        tenantEmail: z.string().email(),
+        tenantName: z.string().min(2),
+        startDate: z.string(), // ISO String
+        endDate: z.string(), // ISO String
+        rentAmount: z.number().positive(),
+        rentFrequency: z.nativeEnum(RentFrequency),
+        depositAmount: z.number().positive().optional(),
+        renewalWindowDays: z.number().int().positive().default(60),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const unit = await prisma.unit.findUnique({
+        where: { id: input.unitId },
+        include: { property: true },
+      });
+
+      if (!unit || unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit's parent property.",
+        });
+      }
+
+      const start = new Date(input.startDate);
+      const end = new Date(input.endDate);
+
+      if (start >= end) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Start date must be before end date.",
+        });
+      }
+
+      // Check for overlapping active leases for this unit
+      const overlap = await prisma.lease.findFirst({
+        where: {
+          unitId: input.unitId,
+          terminatedAt: null,
+          NOT: {
+            OR: [{ endDate: { lt: start } }, { startDate: { gt: end } }],
+          },
+        },
+        include: {
+          tenant: {
+            select: { fullName: true },
+          },
+        },
+      });
+
+      if (overlap) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `This unit already has an active lease for ${
+            overlap.tenant.fullName
+          } from ${new Date(overlap.startDate).toLocaleDateString()} to ${new Date(
+            overlap.endDate
+          ).toLocaleDateString()}.`,
+        });
+      }
+
+      // Find or create placeholder tenant user profile
+      let tenant = await prisma.user.findUnique({
+        where: { email: input.tenantEmail },
+      });
+      let isNewTenant = false;
+
+      if (!tenant) {
+        tenant = await prisma.user.create({
+          data: {
+            email: input.tenantEmail,
+            fullName: input.tenantName,
+            role: "tenant",
+          },
+        });
+        isNewTenant = true;
+      }
+
+      // Create the lease record
+      const lease = await prisma.lease.create({
+        data: {
+          unitId: input.unitId,
+          tenantId: tenant.id,
+          startDate: start,
+          endDate: end,
+          rentAmount: input.rentAmount,
+          rentFrequency: input.rentFrequency,
+          depositAmount: input.depositAmount ?? null,
+          renewalWindowDays: input.renewalWindowDays,
+        },
+      });
+
+      // Generate a one-time invite code if this is a newly created placeholder tenant
+      let inviteCode = null;
+      if (isNewTenant) {
+        const code = "PL-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7); // valid for 7 days
+
+        inviteCode = await prisma.inviteCode.create({
+          data: {
+            leaseId: lease.id,
+            code,
+            expiresAt,
+          },
+        });
+      }
+
+      return {
+        lease,
+        inviteCode: inviteCode ? inviteCode.code : null,
+      };
+    }),
+
+  getForUnit: authedProcedure
+    .input(z.object({ unitId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const unit = await prisma.unit.findUnique({
+        where: { id: input.unitId },
+        include: { property: true },
+      });
+
+      if (!unit || unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      return await prisma.lease.findMany({
+        where: { unitId: input.unitId },
+        include: {
+          tenant: {
+            select: { fullName: true, email: true },
+          },
+          inviteCodes: {
+            where: {
+              redeemedAt: null,
+              expiresAt: { gte: new Date() },
+            },
+            select: {
+              code: true,
+            },
+          },
+        },
+        orderBy: { startDate: "desc" },
+      });
+    }),
+
+  getTimeline: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: {
+            include: { property: true },
+          },
+          tenant: {
+            select: { fullName: true, email: true },
+          },
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lease not found.",
+        });
+      }
+
+      const isLandlord = lease.unit.property.landlordId === ctx.user.id;
+      const isTenant = lease.tenantId === ctx.user.id;
+
+      if (!isLandlord && !isTenant) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this lease timeline.",
+        });
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const start = new Date(lease.startDate);
+      const end = new Date(lease.endDate);
+
+      let status: "terminated" | "upcoming" | "active" | "renewal_due" | "expired" = "active";
+
+      if (lease.terminatedAt) {
+        status = "terminated";
+      } else if (today < start) {
+        status = "upcoming";
+      } else if (today > end) {
+        status = "expired";
+      } else {
+        const renewalStartDate = new Date(end);
+        renewalStartDate.setDate(renewalStartDate.getDate() - lease.renewalWindowDays);
+        if (today >= renewalStartDate) {
+          status = "renewal_due";
+        } else {
+          status = "active";
+        }
+      }
+
+      const renewalStartDate = new Date(end);
+      renewalStartDate.setDate(renewalStartDate.getDate() - lease.renewalWindowDays);
+
+      return {
+        id: lease.id,
+        unitNumber: lease.unit.unitNumber,
+        propertyName: lease.unit.property.name,
+        tenantName: lease.tenant.fullName,
+        startDate: lease.startDate,
+        endDate: lease.endDate,
+        rentAmount: lease.rentAmount,
+        rentFrequency: lease.rentFrequency,
+        renewalWindowDays: lease.renewalWindowDays,
+        renewalStartDate,
+        terminatedAt: lease.terminatedAt,
+        status,
+        today,
+      };
+    }),
+
+  uploadDocument: authedProcedure
+    .input(
+      z.object({
+        leaseId: z.string().uuid(),
+        fileName: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: {
+            include: { property: true },
+          },
+        },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this lease parent property.",
+        });
+      }
+
+      const fileExtension = input.fileName.split(".").pop() || "pdf";
+      const filePath = `${input.leaseId}/${Date.now()}.${fileExtension}`;
+
+      const supabase = createClient();
+      const { data, error } = await supabase.storage
+        .from("leases")
+        .createSignedUploadUrl(filePath);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create signed upload URL: ${error.message}`,
+        });
+      }
+
+      // Update DB with the document location reference
+      await prisma.lease.update({
+        where: { id: input.leaseId },
+        data: { documentUrl: filePath },
+      });
+
+      return {
+        signedUrl: data.signedUrl,
+        path: filePath,
+      };
+    }),
+
+  getDocumentUrl: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: {
+            include: { property: true },
+          },
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lease not found.",
+        });
+      }
+
+      const isLandlord = lease.unit.property.landlordId === ctx.user.id;
+      const isTenant = lease.tenantId === ctx.user.id;
+
+      if (!isLandlord && !isTenant) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Access denied.",
+        });
+      }
+
+      if (!lease.documentUrl) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No document has been uploaded for this lease.",
+        });
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase.storage
+        .from("leases")
+        .createSignedUrl(lease.documentUrl, 60); // valid for 60 seconds
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create signed download URL: ${error.message}`,
+        });
+      }
+
+      return {
+        signedUrl: data.signedUrl,
+      };
+    }),
+
+  getMine: authedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== "tenant") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only tenants can view their leases.",
+        });
+      }
+
+      return await prisma.lease.findMany({
+        where: { tenantId: ctx.user.id },
+        include: {
+          unit: {
+            include: {
+              property: true,
+            },
+          },
+        },
+        orderBy: { startDate: "desc" },
+      });
+    }),
+});
