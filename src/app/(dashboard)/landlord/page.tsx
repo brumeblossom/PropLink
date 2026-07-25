@@ -2,30 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PropertyType } from "@prisma/client";
 
 export default function LandlordDashboard() {
-  const router = useRouter();
   const { data: user, isLoading: isLoadingUser } = trpc.auth.me.useQuery();
   const { data: properties, isLoading: isLoadingProperties } = trpc.properties.list.useQuery();
-  const logoutMutation = trpc.auth.logout.useMutation();
 
   // Filters State
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>("all");
   const [leaseStatusFilter, setLeaseStatusFilter] = useState<string>("all");
-
-  const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync();
-      router.push("/login");
-      router.refresh();
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-  };
 
   if (isLoadingUser || isLoadingProperties) {
     return (
@@ -74,29 +61,8 @@ export default function LandlordDashboard() {
       {/* Navbar */}
       <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-6 ml-10 md:ml-0">
             <span className="text-xl font-bold tracking-tight">PropLink</span>
-            <nav className="hidden md:flex space-x-4 text-sm font-medium">
-              <Link href="/landlord" className="text-white hover:text-neutral-300">
-                Dashboard
-              </Link>
-              <Link href="/landlord/properties" className="text-neutral-400 hover:text-white transition-colors">
-                Properties
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-neutral-400 hidden sm:inline">
-              {user?.email}
-            </span>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="border-neutral-800 text-white hover:bg-neutral-900 text-sm h-9 px-4"
-            >
-              Sign Out
-            </Button>
           </div>
         </div>
       </header>

@@ -242,7 +242,7 @@ export default function UnitDetailPage() {
       {/* Top Navbar */}
       <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 ml-10 md:ml-0">
             <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
               PropLink
             </Link>
@@ -661,34 +661,19 @@ export default function UnitDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="depositAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Security Deposit (₦, optional)
-                    </label>
-                    <input
-                      id="depositAmount"
-                      type="number"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                      placeholder="e.g. 50000"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="renewalWindowDays" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Renewal Window (days)
-                    </label>
-                    <input
-                      id="renewalWindowDays"
-                      type="number"
-                      required
-                      value={renewalWindowDays}
-                      onChange={(e) => setRenewalWindowDays(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                      placeholder="60"
-                    />
-                  </div>
+                <div>
+                  <label htmlFor="renewalWindowDays" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Renewal Window (days)
+                  </label>
+                  <input
+                    id="renewalWindowDays"
+                    type="number"
+                    required
+                    value={renewalWindowDays}
+                    onChange={(e) => setRenewalWindowDays(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    placeholder="60"
+                  />
                 </div>
               </div>
 

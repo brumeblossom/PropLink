@@ -5,6 +5,7 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PropertyType } from "@prisma/client";
+import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 
 export default function PropertiesPage() {
   const utils = trpc.useUtils();
@@ -65,7 +66,7 @@ export default function PropertiesPage() {
       {/* Top Navbar */}
       <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 ml-10 md:ml-0">
             <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
               PropLink
             </Link>
@@ -207,32 +208,47 @@ export default function PropertiesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      City
-                    </label>
-                    <input
-                      id="city"
-                      type="text"
-                      required
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                      placeholder="Ikoyi"
-                    />
-                  </div>
-                  <div>
                     <label htmlFor="state" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       State
                     </label>
-                    <input
+                    <select
                       id="state"
-                      type="text"
                       required
                       value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                      placeholder="Lagos"
-                    />
+                      onChange={(e) => {
+                        setState(e.target.value);
+                        setCity(""); // Reset LGA (city column) when state changes
+                      }}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    >
+                      <option value="">Select State</option>
+                      {NIGERIA_STATES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Local Government Area
+                    </label>
+                    <select
+                      id="city"
+                      required
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      disabled={!state}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px] disabled:opacity-50"
+                    >
+                      <option value="">Select LGA</option>
+                      {state &&
+                        NIGERIA_LGAS[state as keyof typeof NIGERIA_LGAS]?.map((lga) => (
+                          <option key={lga} value={lga}>
+                            {lga}
+                          </option>
+                        ))}
+                    </select>
                   </div>
                 </div>
 
