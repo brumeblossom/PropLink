@@ -1,18 +1,22 @@
 'use client';
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PropertyType, UnitType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
+import { X, Trash2 } from "lucide-react";
 
 export default function PropertyDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const propertyId = params.id as string;
   const utils = trpc.useUtils();
+
+  const bulkAddParam = searchParams.get("bulkAdd");
 
   // Queries
   const { data: properties, isLoading: isLoadingProperty } = trpc.properties.list.useQuery();
@@ -48,9 +52,22 @@ export default function PropertyDetailPage() {
     },
   });
 
+  const createBulkUnits = trpc.units.createBulk.useMutation({
+    onSuccess: () => {
+      utils.units.listByProperty.invalidate({ propertyId });
+      utils.properties.list.invalidate();
+      setIsBulkAddOpen(false);
+      resetBulkForm();
+    },
+    onError: (err) => {
+      setBulkError(err.message);
+    },
+  });
+
   // State
   const [isEditPropertyOpen, setIsEditPropertyOpen] = useState(false);
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
+  const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
 
   // Property Form State
   const [propertyName, setPropertyName] = useState("");
@@ -65,6 +82,112 @@ export default function PropertyDetailPage() {
   const [unitType, setUnitType] = useState<UnitType>(UnitType.flat);
   const [sizeSqm, setSizeSqm] = useState("");
   const [unitError, setUnitError] = useState<string | null>(null);
+
+  // Bulk Form States
+  const [bulkMode, setBulkMode] = useState<"range" | "manual">("range");
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Range Generator State
+  const [rangePrefix, setRangePrefix] = useState("");
+  const [rangeStart, setRangeStart] = useState("1");
+  const [rangeEnd, setRangeEnd] = useState("10");
+  const [rangeType, setRangeType] = useState<UnitType>(UnitType.flat);
+
+  // Manual Multi-row State
+  const [manualRows, setManualRows] = useState<Array<{ unitNumber: string; unitType: UnitType }>>([
+    { unitNumber: "", unitType: UnitType.flat },
+    { unitNumber: "", unitType: UnitType.flat },
+    { unitNumber: "", unitType: UnitType.flat },
+  ]);
+
+  const resetBulkForm = () => {
+    setBulkMode("range");
+    setBulkError(null);
+    setRangePrefix("");
+    setRangeStart("1");
+    setRangeEnd("10");
+    setRangeType(UnitType.flat);
+    setManualRows([
+      { unitNumber: "", unitType: UnitType.flat },
+      { unitNumber: "", unitType: UnitType.flat },
+      { unitNumber: "", unitType: UnitType.flat },
+    ]);
+  };
+
+  useEffect(() => {
+    if (bulkAddParam === "true") {
+      setIsBulkAddOpen(true);
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [bulkAddParam]);
+
+  const handleBulkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBulkError(null);
+
+    let unitsToCreate: Array<{ unitNumber: string; unitType: UnitType }> = [];
+
+    if (bulkMode === "range") {
+      const start = parseInt(rangeStart, 10);
+      const end = parseInt(rangeEnd, 10);
+
+      if (isNaN(start) || isNaN(end)) {
+        setBulkError("Start and End must be valid numbers.");
+        return;
+      }
+
+      if (start <= 0 || end <= 0) {
+        setBulkError("Start and End must be positive integers.");
+        return;
+      }
+
+      if (start > end) {
+        setBulkError("Start number must be less than or equal to End number.");
+        return;
+      }
+
+      const totalCount = end - start + 1;
+      if (totalCount > 100) {
+        setBulkError("Range exceeds maximum limit of 100 units at once.");
+        return;
+      }
+
+      for (let i = start; i <= end; i++) {
+        unitsToCreate.push({
+          unitNumber: `${rangePrefix}${i}`.trim(),
+          unitType: rangeType,
+        });
+      }
+    } else {
+      const validRows = manualRows.filter((r) => r.unitNumber.trim() !== "");
+      if (validRows.length === 0) {
+        setBulkError("Please enter at least one unit number.");
+        return;
+      }
+
+      const unitNumbers = validRows.map(r => r.unitNumber.trim());
+      const uniqueUnitNumbers = new Set(unitNumbers);
+      if (uniqueUnitNumbers.size !== unitNumbers.length) {
+        setBulkError("Duplicate unit numbers are not allowed in your manual list.");
+        return;
+      }
+
+      unitsToCreate = validRows.map((r) => ({
+        unitNumber: r.unitNumber.trim(),
+        unitType: r.unitType,
+      }));
+    }
+
+    try {
+      await createBulkUnits.mutateAsync({
+        propertyId,
+        units: unitsToCreate,
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Find current property
   const property = properties?.find((p) => p.id === propertyId);
@@ -190,9 +313,16 @@ export default function PropertyDetailPage() {
             </Button>
             <Button
               onClick={() => setIsAddUnitOpen(true)}
-              className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm"
+              variant="outline"
+              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 px-4 text-sm"
             >
               Add Unit
+            </Button>
+            <Button
+              onClick={() => setIsBulkAddOpen(true)}
+              className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm font-semibold"
+            >
+              Bulk Add Units
             </Button>
           </div>
         </div>
@@ -295,12 +425,21 @@ export default function PropertyDetailPage() {
           ) : (
             <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center">
               <p className="text-neutral-400 text-sm">This property has no units yet.</p>
-              <Button
-                onClick={() => setIsAddUnitOpen(true)}
-                className="bg-white text-neutral-950 hover:bg-neutral-200 mt-4"
-              >
-                Add Your First Unit
-              </Button>
+              <div className="mt-4 flex justify-center space-x-3">
+                <Button
+                  onClick={() => setIsAddUnitOpen(true)}
+                  variant="outline"
+                  className="border-neutral-800 text-white hover:bg-neutral-900"
+                >
+                  Add Your First Unit
+                </Button>
+                <Button
+                  onClick={() => setIsBulkAddOpen(true)}
+                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                >
+                  Bulk Add Units
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -509,6 +648,217 @@ export default function PropertyDetailPage() {
                   className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
                 >
                   {createUnit.isPending ? "Adding..." : "Add Unit"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Add Unit Modal */}
+      {isBulkAddOpen && property && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl my-8">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-800">
+              <div>
+                <h2 className="text-xl font-bold text-white font-sans">Bulk Add Units</h2>
+                <p className="text-sm text-neutral-400 font-sans mt-0.5">Adding to {property.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkAddOpen(false);
+                  resetBulkForm();
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mode Selector Tabs */}
+            <div className="flex bg-neutral-900 p-1 rounded-lg mb-6 border border-neutral-800">
+              <button
+                type="button"
+                onClick={() => { setBulkMode("range"); setBulkError(null); }}
+                className={`w-1/2 py-2 text-sm font-semibold rounded-md transition-all ${
+                  bulkMode === "range"
+                    ? "bg-white text-neutral-950 shadow"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                Sequential Range Generator
+              </button>
+              <button
+                type="button"
+                onClick={() => { setBulkMode("manual"); setBulkError(null); }}
+                className={`w-1/2 py-2 text-sm font-semibold rounded-md transition-all ${
+                  bulkMode === "manual"
+                    ? "bg-white text-neutral-950 shadow"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                Manual Multi-Row Entry
+              </button>
+            </div>
+
+            <form onSubmit={handleBulkSubmit} className="space-y-4">
+              {bulkError && (
+                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400 font-sans">
+                  {bulkError}
+                </div>
+              )}
+
+              {bulkMode === "range" ? (
+                /* Range Mode Fields */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="rangePrefix" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Name Prefix (optional)
+                    </label>
+                    <input
+                      id="rangePrefix"
+                      type="text"
+                      value={rangePrefix}
+                      onChange={(e) => setRangePrefix(e.target.value)}
+                      placeholder="e.g. Flat, Shop, Room"
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rangeType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Unit Type
+                    </label>
+                    <select
+                      id="rangeType"
+                      value={rangeType}
+                      onChange={(e) => setRangeType(e.target.value as UnitType)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    >
+                      <option value={UnitType.flat}>Flat / Apartment</option>
+                      <option value={UnitType.shop}>Shop</option>
+                      <option value={UnitType.office}>Office</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="rangeStart" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Start Number
+                    </label>
+                    <input
+                      id="rangeStart"
+                      type="number"
+                      required
+                      min="1"
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rangeEnd" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      End Number
+                    </label>
+                    <input
+                      id="rangeEnd"
+                      type="number"
+                      required
+                      min="1"
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Manual Mode Form */
+                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
+                  <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-neutral-400 uppercase tracking-wider px-2">
+                    <div className="col-span-6">Unit Number / Name</div>
+                    <div className="col-span-5">Unit Type</div>
+                    <div className="col-span-1 text-center"></div>
+                  </div>
+
+                  {manualRows.map((row, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-3 items-center">
+                      <div className="col-span-6">
+                        <input
+                          type="text"
+                          required={idx === 0}
+                          value={row.unitNumber}
+                          onChange={(e) => {
+                            const newRows = [...manualRows];
+                            newRows[idx].unitNumber = e.target.value;
+                            setManualRows(newRows);
+                          }}
+                          placeholder={`e.g. Suite ${idx + 1}`}
+                          className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <select
+                          value={row.unitType}
+                          onChange={(e) => {
+                            const newRows = [...manualRows];
+                            newRows[idx].unitType = e.target.value as UnitType;
+                            setManualRows(newRows);
+                          }}
+                          className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                        >
+                          <option value={UnitType.flat}>Flat / Apartment</option>
+                          <option value={UnitType.shop}>Shop</option>
+                          <option value={UnitType.office}>Office</option>
+                        </select>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (manualRows.length > 1) {
+                              setManualRows(manualRows.filter((_, i) => i !== idx));
+                            } else {
+                              setManualRows([{ unitNumber: "", unitType: UnitType.flat }]);
+                            }
+                          }}
+                          className="text-red-400 hover:text-red-300 p-1.5"
+                          title="Remove unit"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setManualRows([...manualRows, { unitNumber: "", unitType: UnitType.flat }])}
+                    className="w-full py-2.5 rounded-lg border border-dashed border-neutral-800 text-sm font-medium text-neutral-400 hover:text-white hover:border-neutral-700 hover:bg-neutral-900/30 transition-colors flex items-center justify-center space-x-1.5 mt-2"
+                  >
+                    <span>+ Add Row</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="flex space-x-3 mt-8 pt-4 border-t border-neutral-800">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsBulkAddOpen(false);
+                    resetBulkForm();
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createBulkUnits.isPending}
+                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+                >
+                  {createBulkUnits.isPending ? "Adding..." : "Add Units"}
                 </Button>
               </div>
             </form>

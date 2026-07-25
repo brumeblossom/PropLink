@@ -168,4 +168,69 @@ export const unitsRouter = router({
           : null,
       };
     }),
+
+  createBulk: authedProcedure
+    .input(
+      z.object({
+        propertyId: z.string().uuid(),
+        units: z.array(
+          z.object({
+            unitNumber: z.string().min(1),
+            unitType: z.nativeEnum(UnitType),
+          })
+        ).min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const property = await prisma.property.findUnique({
+        where: { id: input.propertyId },
+      });
+
+      if (!property || property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this property.",
+        });
+      }
+
+      // Check for duplicates inside the incoming list
+      const incomingNumbers = input.units.map((u) => u.unitNumber.trim());
+      const uniqueIncomingNumbers = new Set(incomingNumbers);
+      if (uniqueIncomingNumbers.size !== incomingNumbers.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Duplicate unit numbers detected in the bulk list.",
+        });
+      }
+
+      // Check if any of these unit numbers already exist in the database for this property
+      const existingUnits = await prisma.unit.findMany({
+        where: {
+          propertyId: input.propertyId,
+          unitNumber: { in: incomingNumbers },
+        },
+        select: { unitNumber: true },
+      });
+
+      if (existingUnits.length > 0) {
+        const dupes = existingUnits.map((u) => u.unitNumber).join(", ");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `The following unit numbers already exist for this property: ${dupes}`,
+        });
+      }
+
+      // Create units
+      const createData = input.units.map((u) => ({
+        propertyId: input.propertyId,
+        unitNumber: u.unitNumber.trim(),
+        unitType: u.unitType,
+      }));
+
+      await prisma.unit.createMany({
+        data: createData,
+      });
+
+      return { count: createData.length };
+    }),
 });

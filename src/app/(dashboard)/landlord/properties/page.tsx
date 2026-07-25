@@ -2,19 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 
 export default function PropertiesPage() {
+  const router = useRouter();
   const utils = trpc.useUtils();
   const { data: properties, isLoading } = trpc.properties.list.useQuery();
+  
+  const [isNudgeOpen, setIsNudgeOpen] = useState(false);
+  const [createdPropertyInfo, setCreatedPropertyInfo] = useState<{ id: string; name: string } | null>(null);
+
   const createProperty = trpc.properties.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.properties.list.invalidate();
       setIsModalOpen(false);
       resetForm();
+      setCreatedPropertyInfo({ id: data.id, name: data.name });
+      setIsNudgeOpen(true);
     },
   });
 
@@ -290,6 +298,41 @@ export default function PropertiesPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Property Onboarding Nudge Modal */}
+      {isNudgeOpen && createdPropertyInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-2 font-sans">
+              Property Created!
+            </h2>
+            <p className="text-sm text-neutral-400 mb-6 font-sans">
+              Would you like to add units to <span className="text-white font-medium">{createdPropertyInfo.name}</span> now? You can generate multiple units at once using our bulk tools.
+            </p>
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => {
+                  setIsNudgeOpen(false);
+                  router.push(`/landlord/properties/${createdPropertyInfo.id}`);
+                }}
+                variant="outline"
+                className="w-1/2 border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 h-10 text-sm"
+              >
+                I&apos;ll do this later
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsNudgeOpen(false);
+                  router.push(`/landlord/properties/${createdPropertyInfo.id}?bulkAdd=true`);
+                }}
+                className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+              >
+                Add Units
+              </Button>
+            </div>
           </div>
         </div>
       )}
