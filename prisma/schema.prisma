@@ -76,6 +76,7 @@ model User {
   passwordHash  String?  @map("password_hash")
   role          Role
   fullName      String   @map("full_name")
+  avatarUrl     String?  @map("avatar_url")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

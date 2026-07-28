@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc";
+import { router, publicProcedure, authedProcedure } from "../trpc";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 
@@ -237,4 +237,65 @@ export const authRouter = router({
   me: publicProcedure.query(async ({ ctx }) => {
     return ctx.user;
   }),
+
+  updateProfile: authedProcedure
+    .input(
+      z.object({
+        fullName: z.string().min(2),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await prisma.user.update({
+        where: { id: ctx.user.id },
+        data: { fullName: input.fullName },
+      });
+      return { user };
+    }),
+
+  getAvatarUploadUrl: authedProcedure
+    .input(
+      z.object({
+        fileName: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const fileExtension = input.fileName.split(".").pop() || "jpg";
+      const filePath = `${ctx.user.id}/${Date.now()}.${fileExtension}`;
+
+      const supabase = createClient();
+      const { data, error } = await supabase.storage
+        .from("avatars")
+        .createSignedUploadUrl(filePath);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create signed upload URL: ${error.message}`,
+        });
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      return {
+        signedUrl: data.signedUrl,
+        path: filePath,
+        publicUrl: publicUrlData.publicUrl,
+      };
+    }),
+
+  updateAvatarUrl: authedProcedure
+    .input(
+      z.object({
+        avatarUrl: z.string().url(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = await prisma.user.update({
+        where: { id: ctx.user.id },
+        data: { avatarUrl: input.avatarUrl },
+      });
+      return { user };
+    }),
 });

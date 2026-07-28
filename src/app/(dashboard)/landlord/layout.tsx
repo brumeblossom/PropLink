@@ -49,6 +49,12 @@ export default function LandlordLayout({
       icon: Building2,
       active: pathname.startsWith("/landlord/properties"),
     },
+    {
+      name: "Profile",
+      href: "/landlord/profile",
+      icon: User,
+      active: pathname === "/landlord/profile",
+    },
   ];
 
   const SidebarContent = () => (
@@ -94,15 +100,27 @@ export default function LandlordLayout({
       <div className="p-4 border-t border-neutral-800 bg-neutral-900/50 backdrop-blur-md">
         {user && (
           <div className="flex flex-col space-y-3">
-            <div className="flex items-center space-x-3 px-2 py-1">
-              <div className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center text-white border border-neutral-700 flex-shrink-0">
-                <User className="w-4 h-4" />
-              </div>
-              <div className="overflow-hidden min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
+            <Link 
+              href="/landlord/profile"
+              onClick={() => setIsSidebarOpen(false)}
+              className="flex items-center space-x-3 px-2 py-1.5 hover:bg-neutral-900 rounded-xl transition-all group"
+            >
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.fullName}
+                  className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-neutral-700 group-hover:border-neutral-500"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center text-white border border-neutral-700 flex-shrink-0 group-hover:border-neutral-500">
+                  <User className="w-4 h-4" />
+                </div>
+              )}
+              <div className="overflow-hidden min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white truncate group-hover:text-neutral-200">{user.fullName}</p>
                 <p className="text-xs text-neutral-500 truncate">{user.email}</p>
               </div>
-            </div>
+            </Link>
             <Button
               onClick={handleLogout}
               variant="outline"

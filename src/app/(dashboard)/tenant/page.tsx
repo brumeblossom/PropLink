@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PaymentMethod } from "@prisma/client";
-import { X } from "lucide-react";
+import { X, User } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export default function TenantDashboard() {
@@ -273,9 +274,23 @@ export default function TenantDashboard() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-neutral-400 hidden sm:inline">
-              {user?.email}
-            </span>
+            <Link 
+              href="/tenant/profile"
+              className="flex items-center space-x-2 text-sm text-neutral-400 hover:text-white transition-all group"
+            >
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.fullName}
+                  className="w-8 h-8 rounded-full object-cover border border-neutral-850 group-hover:border-neutral-700"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-800 group-hover:border-neutral-700">
+                  <User className="w-4 h-4 text-neutral-400 group-hover:text-white" />
+                </div>
+              )}
+              <span className="hidden sm:inline font-medium">{user?.fullName || user?.email}</span>
+            </Link>
             <Button
               onClick={handleLogout}
               variant="outline"

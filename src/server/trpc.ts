@@ -9,6 +9,7 @@ export interface Context {
     email: string;
     role: Role;
     fullName: string;
+    avatarUrl: string | null;
   } | null;
 }
 
@@ -21,6 +22,11 @@ async function provisionStorage() {
     await prisma.$executeRawUnsafe(`
       INSERT INTO storage.buckets (id, name, public)
       VALUES ('leases', 'leases', false)
+      ON CONFLICT (id) DO NOTHING;
+    `);
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO storage.buckets (id, name, public)
+      VALUES ('avatars', 'avatars', true)
       ON CONFLICT (id) DO NOTHING;
     `);
     isStorageProvisioned = true;
@@ -56,6 +62,7 @@ export async function createContext(): Promise<Context> {
         email: dbUser.email,
         role: dbUser.role,
         fullName: dbUser.fullName,
+        avatarUrl: dbUser.avatarUrl,
       },
     };
   } catch {
