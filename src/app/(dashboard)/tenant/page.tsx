@@ -84,6 +84,10 @@ export default function TenantDashboard() {
   const [flagPaymentId, setFlagPaymentId] = useState("");
   const [flagReason, setFlagReason] = useState("");
 
+  // Payment Details Modal state
+  const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
+  const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
+
   const resetPaymentForm = () => {
     setPaymentAmount("");
     setPaymentDate(new Date().toISOString().split("T")[0]);
@@ -492,7 +496,7 @@ export default function TenantDashboard() {
                         <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Period Covered</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Method</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status / Verification</th>
                         <th className="px-6 py-3 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -566,7 +570,7 @@ export default function TenantDashboard() {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-sm text-right">
-                                {isPendingAck && (
+                                {isPendingAck ? (
                                   <div className="flex items-center justify-end space-x-2">
                                     <Button
                                       onClick={() => acknowledgePayment.mutate({ paymentId: p.id })}
@@ -589,6 +593,18 @@ export default function TenantDashboard() {
                                       Flag Incorrect
                                     </Button>
                                   </div>
+                                ) : (
+                                  <Button
+                                    onClick={() => {
+                                      setSelectedPayment(p);
+                                      setIsPaymentDetailsOpen(true);
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-neutral-800 text-neutral-300 hover:bg-neutral-900 h-8 text-xs font-semibold px-3"
+                                  >
+                                    Details
+                                  </Button>
                                 )}
                               </td>
                             </tr>
@@ -839,6 +855,132 @@ export default function TenantDashboard() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Details Modal */}
+      {isPaymentDetailsOpen && selectedPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-6">
+            <div className="flex justify-between items-center pb-4 border-b border-neutral-800">
+              <h2 className="text-xl font-bold text-white font-sans">Payment Details</h2>
+              <button
+                onClick={() => {
+                  setIsPaymentDetailsOpen(false);
+                  setSelectedPayment(null);
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Amount</span>
+                  <span className="text-base font-bold text-white mt-1 block">
+                    {formatCurrency(selectedPayment.amount)}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</span>
+                  <span className="mt-1 block">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize border ${
+                      selectedPayment.status === "confirmed"
+                        ? "bg-green-950/30 text-green-400 border-green-900/30"
+                        : selectedPayment.status === "disputed"
+                        ? "bg-red-950/30 text-red-400 border-red-900/30"
+                        : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                    }`}>
+                      {selectedPayment.status}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Payment Date</span>
+                  <span className="text-neutral-300 mt-1 block">
+                    {new Date(selectedPayment.paymentDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Method</span>
+                  <span className="text-neutral-300 mt-1 block capitalize">
+                    {selectedPayment.method.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Period Covered</span>
+                <span className="text-neutral-300 mt-1 block">
+                  {new Date(selectedPayment.periodStart).toLocaleDateString()} – {new Date(selectedPayment.periodEnd).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Logged By</span>
+                  <span className="text-neutral-300 mt-1 block capitalize">
+                    {selectedPayment.recorder?.fullName || "System"} ({selectedPayment.recordedByRole})
+                  </span>
+                </div>
+                {selectedPayment.confirmedAt && (
+                  <div>
+                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Confirmed At</span>
+                    <span className="text-neutral-300 mt-1 block">
+                      {new Date(selectedPayment.confirmedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {selectedPayment.notes && (
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Notes</span>
+                  <p className="text-neutral-300 mt-1 bg-neutral-900/50 p-2.5 rounded-lg border border-neutral-800 text-xs">
+                    {selectedPayment.notes}
+                  </p>
+                </div>
+              )}
+
+              {selectedPayment.disputedByTenant && (
+                <div>
+                  <span className="block text-xs font-semibold text-red-400 uppercase tracking-wider">Tenant Dispute Reason</span>
+                  <p className="text-red-400 mt-1 bg-red-950/10 p-2.5 rounded-lg border border-red-900/20 text-xs">
+                    {selectedPayment.disputedByReason}
+                  </p>
+                </div>
+              )}
+
+              {selectedPayment.proofUrl && (
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Proof Document</span>
+                  <button
+                    onClick={() => handleViewPaymentProof(selectedPayment.proofUrl!)}
+                    className="mt-2 inline-flex items-center text-xs text-white hover:underline bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-neutral-800"
+                  >
+                    View / Download Proof
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-neutral-800">
+              <Button
+                onClick={() => {
+                  setIsPaymentDetailsOpen(false);
+                  setSelectedPayment(null);
+                }}
+                className="w-full bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-[38px]"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}

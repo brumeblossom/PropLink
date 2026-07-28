@@ -1030,58 +1030,6 @@ export default function UnitDetailPage() {
           </div>
         )}
 
-        {/* Leases History table */}
-        {leases && leases.length > 0 && (
-          <div className="space-y-4 pt-6 border-t border-neutral-800">
-            <h2 className="text-xl font-bold tracking-tight">Lease History</h2>
-            <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
-              <table className="min-w-full divide-y divide-neutral-800">
-                <thead className="bg-neutral-900/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Tenant</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Start Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">End Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Rent</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800/60">
-                  {leases.map((l) => (
-                    <tr key={l.id} className="hover:bg-neutral-900/10">
-                      <td className="px-6 py-4 text-sm font-semibold text-white">{l.tenant.fullName}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-400">
-                        {new Date(l.startDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-neutral-400">
-                        {new Date(l.endDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-neutral-300">
-                        {formatCurrency(l.rentAmount)} / {l.rentFrequency}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
-                            l.terminatedAt
-                              ? "bg-red-950/20 text-red-400 border border-red-900/30"
-                              : new Date(l.endDate) < new Date()
-                              ? "bg-neutral-800 text-neutral-400"
-                              : "bg-green-950/20 text-green-400 border border-green-900/30"
-                          }`}
-                        >
-                          {l.terminatedAt
-                            ? "Terminated"
-                            : new Date(l.endDate) < new Date()
-                            ? "Expired"
-                            : "Active"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Edit Unit Modal */}
