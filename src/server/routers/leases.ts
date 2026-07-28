@@ -395,4 +395,89 @@ export const leasesRouter = router({
         orderBy: { startDate: "desc" },
       });
     }),
+
+  renew: authedProcedure
+    .input(
+      z.object({
+        sourceLeaseId: z.string().uuid(),
+        startDate: z.string(),
+        endDate: z.string(),
+        rentAmount: z.number().nonnegative(),
+        rentFrequency: z.nativeEnum(RentFrequency).default(RentFrequency.annually),
+        depositAmount: z.number().positive().optional().nullable(),
+        renewalWindowDays: z.number().int().positive().default(60),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // 1. Fetch the source lease
+      const sourceLease = await prisma.lease.findUnique({
+        where: { id: input.sourceLeaseId },
+        include: {
+          unit: { include: { property: true } },
+          tenant: { select: { fullName: true, email: true } },
+        },
+      });
+
+      if (!sourceLease) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Source lease not found." });
+      }
+
+      // 2. Auth: landlord must own the property
+      if (sourceLease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this lease's parent property.",
+        });
+      }
+
+      const start = new Date(input.startDate);
+      const end = new Date(input.endDate);
+
+      if (start >= end) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Renewal start date must be before end date.",
+        });
+      }
+
+      // 3. Overlap check — same logic as leases.create
+      const overlap = await prisma.lease.findFirst({
+        where: {
+          unitId: sourceLease.unitId,
+          terminatedAt: null,
+          NOT: {
+            OR: [{ endDate: { lt: start } }, { startDate: { gt: end } }],
+          },
+        },
+        include: {
+          tenant: { select: { fullName: true } },
+        },
+      });
+
+      if (overlap) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `This unit already has an active lease for ${
+            overlap.tenant.fullName
+          } until ${new Date(overlap.endDate).toLocaleDateString()}. The renewal start date must be after the existing lease ends.`,
+        });
+      }
+
+      // 4. Create the new lease — tenant linked directly, no invite code
+      const newLease = await prisma.lease.create({
+        data: {
+          unitId: sourceLease.unitId,
+          tenantId: sourceLease.tenantId,
+          startDate: start,
+          endDate: end,
+          rentAmount: input.rentAmount,
+          rentFrequency: input.rentFrequency,
+          depositAmount: input.depositAmount ?? null,
+          renewalWindowDays: input.renewalWindowDays,
+        },
+      });
+
+      return { lease: newLease };
+    }),
 });
+

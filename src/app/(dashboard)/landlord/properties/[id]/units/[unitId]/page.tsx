@@ -50,6 +50,22 @@ export default function UnitDetailPage() {
     },
   });
 
+  const renewLease = trpc.leases.renew.useMutation({
+    onSuccess: () => {
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      utils.properties.list.invalidate();
+      if (activeLease) {
+        utils.leases.getTimeline.invalidate({ leaseId: activeLease.id });
+      }
+      setIsRenewLeaseOpen(false);
+      resetRenewForm();
+    },
+    onError: (err) => {
+      setRenewError(err.message);
+    },
+  });
+
   const uploadDocMutation = trpc.leases.uploadDocument.useMutation();
 
   const [isEditLeaseOpen, setIsEditLeaseOpen] = useState(false);
@@ -332,6 +348,92 @@ export default function UnitDetailPage() {
     setLeaseError(null);
   };
 
+  // Renew Lease State
+  const [isRenewLeaseOpen, setIsRenewLeaseOpen] = useState(false);
+  const [renewStartDate, setRenewStartDate] = useState("");
+  const [renewEndDate, setRenewEndDate] = useState("");
+  const [renewRentAmount, setRenewRentAmount] = useState("");
+  const [renewRentFrequency, setRenewRentFrequency] = useState<RentFrequency>(RentFrequency.annually);
+  const [renewDepositAmount, setRenewDepositAmount] = useState("");
+  const [renewError, setRenewError] = useState<string | null>(null);
+
+  const resetRenewForm = () => {
+    setRenewStartDate("");
+    setRenewEndDate("");
+    setRenewRentAmount("");
+    setRenewRentFrequency(RentFrequency.annually);
+    setRenewDepositAmount("");
+    setRenewError(null);
+  };
+
+  const handleOpenRenewLease = () => {
+    if (!activeLease) return;
+    // Default start = old endDate + 1 day
+    const oldEnd = new Date(activeLease.endDate);
+    oldEnd.setDate(oldEnd.getDate() + 1);
+    const newStart = oldEnd.toISOString().split("T")[0];
+    setRenewStartDate(newStart);
+    // Auto-calc end date for residential units
+    if (unit && isResidentialUnitType(unit.unitType)) {
+      const newEnd = new Date(oldEnd);
+      newEnd.setFullYear(newEnd.getFullYear() + 1);
+      setRenewEndDate(newEnd.toISOString().split("T")[0]);
+    } else {
+      setRenewEndDate("");
+    }
+    setRenewRentAmount(Number(activeLease.rentAmount) === 0 ? "" : activeLease.rentAmount.toString());
+    setRenewRentFrequency(activeLease.rentFrequency);
+    setRenewDepositAmount(activeLease.depositAmount ? activeLease.depositAmount.toString() : "");
+    setRenewError(null);
+    setIsRenewLeaseOpen(true);
+  };
+
+  const handleRenewStartDateChange = (val: string) => {
+    setRenewStartDate(val);
+    if (unit && isResidentialUnitType(unit.unitType) && val) {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        d.setFullYear(d.getFullYear() + 1);
+        setRenewEndDate(d.toISOString().split("T")[0]);
+      }
+    }
+  };
+
+  const handleRenewLeaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRenewError(null);
+
+    const rent = renewRentAmount ? parseFloat(renewRentAmount) : 0;
+    const deposit = renewDepositAmount ? parseFloat(renewDepositAmount) : null;
+
+    if (renewRentAmount && (isNaN(rent) || rent < 0)) {
+      setRenewError("Rent amount must be a positive number.");
+      return;
+    }
+    if (renewDepositAmount && (isNaN(deposit!) || deposit! <= 0)) {
+      setRenewError("Deposit amount must be a positive number.");
+      return;
+    }
+    if (!renewEndDate) {
+      setRenewError("End date is required.");
+      return;
+    }
+
+    try {
+      await renewLease.mutateAsync({
+        sourceLeaseId: activeLease!.id,
+        startDate: renewStartDate,
+        endDate: renewEndDate,
+        rentAmount: rent,
+        rentFrequency: renewRentFrequency,
+        depositAmount: deposit,
+        renewalWindowDays: activeLease!.renewalWindowDays ?? 60,
+      });
+    } catch {
+      // handled by onError
+    }
+  };
+
   const resetPaymentForm = () => {
     setPaymentAmount("");
     setPaymentDate(new Date().toISOString().split("T")[0]);
@@ -593,6 +695,14 @@ export default function UnitDetailPage() {
                 className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm"
               >
                 Invite Tenant
+              </Button>
+            )}
+            {timeline && (timeline.status === "active" || timeline.status === "renewal_due") && (
+              <Button
+                onClick={handleOpenRenewLease}
+                className="bg-emerald-700 hover:bg-emerald-600 text-white h-9 px-4 text-sm font-semibold"
+              >
+                Renew Lease
               </Button>
             )}
           </div>
@@ -1132,6 +1242,151 @@ export default function UnitDetailPage() {
                   className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
                 >
                   {updateUnit.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Renew Lease Modal */}
+      {isRenewLeaseOpen && activeLease && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 my-8">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Renew Lease</h2>
+                <p className="text-neutral-400 text-sm mt-1">
+                  Creates a new lease for the same tenant. The current lease is preserved as history.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsRenewLeaseOpen(false);
+                  resetRenewForm();
+                }}
+                className="text-neutral-400 hover:text-white ml-4 flex-shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Read-only tenant/unit info */}
+            <div className="grid grid-cols-2 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 text-sm">
+              <div>
+                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Tenant</span>
+                <span className="text-white font-semibold mt-1 block">{activeLease.tenant.fullName}</span>
+              </div>
+              <div>
+                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Unit</span>
+                <span className="text-white font-semibold mt-1 block">Unit {unit?.unitNumber}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleRenewLeaseSubmit} className="space-y-4">
+              {renewError && (
+                <div className="rounded bg-red-950/20 border border-red-900/30 p-2.5 text-xs text-red-400">
+                  {renewError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="renewStartDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    New Start Date
+                  </label>
+                  <input
+                    id="renewStartDate"
+                    type="date"
+                    required
+                    value={renewStartDate}
+                    onChange={(e) => handleRenewStartDateChange(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="renewEndDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    New End Date {unit && !isResidentialUnitType(unit.unitType) && <span className="text-neutral-500 normal-case font-normal">(required)</span>}
+                  </label>
+                  <input
+                    id="renewEndDate"
+                    type="date"
+                    required
+                    value={renewEndDate}
+                    onChange={(e) => setRenewEndDate(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  />
+                  {unit && isResidentialUnitType(unit.unitType) && (
+                    <p className="text-xs text-neutral-500 mt-1">Auto-set to 1 year from start date</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="renewRentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Rent Amount (₦)
+                  </label>
+                  <input
+                    id="renewRentAmount"
+                    type="number"
+                    min="0"
+                    value={renewRentAmount}
+                    onChange={(e) => setRenewRentAmount(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    placeholder="e.g. 1500000"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="renewRentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Frequency
+                  </label>
+                  <select
+                    id="renewRentFrequency"
+                    value={renewRentFrequency}
+                    onChange={(e) => setRenewRentFrequency(e.target.value as RentFrequency)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  >
+                    {Object.values(RentFrequency).map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="renewDepositAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Security Deposit (₦) <span className="text-neutral-500 normal-case font-normal">— optional</span>
+                </label>
+                <input
+                  id="renewDepositAmount"
+                  type="number"
+                  min="0"
+                  value={renewDepositAmount}
+                  onChange={(e) => setRenewDepositAmount(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  placeholder="e.g. 300000"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsRenewLeaseOpen(false);
+                    resetRenewForm();
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={renewLease.isPending}
+                  className="w-1/2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold h-10 text-sm"
+                >
+                  {renewLease.isPending ? "Creating..." : "Create Renewal Lease"}
                 </Button>
               </div>
             </form>
