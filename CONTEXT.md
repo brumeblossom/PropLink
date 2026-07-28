@@ -1,7 +1,7 @@
 # PropLink — Build Context
 
 ## Current state
-A Next.js 14 application with fully operational user authentication (Supabase Auth), complete property and unit management (Epic A), lease lifecycle management (Epic B), and tenant invite/redemption onboarding flow (Epic F). Tenants can sign up using a valid, unredeemed invite code, which links their new account directly to their pre-existing lease in a PostgreSQL transaction using foreign key CASCADE ON UPDATE. A high-fidelity, minimal tenant dashboard renders the active lease summary, unit details, rent terms, and document downloads. Complete row-level security and data isolation are enforced across all tRPC operations.
+A Next.js 14 multi-tenant SaaS application with fully operational user authentication (Supabase Auth), complete property and unit management (Epic A), lease lifecycle management (Epic B), tenant invite/redemption onboarding flow (Epic F), dual-party payment logging and confirmation workflow (Epic C), in-app and email notice broadcasting, unit-level tenant/landlord realtime chat (Epic G), automated rent reminders via daily cron jobs (Epic H), and full unit metadata edit/delete and global currency formatting controls. All data boundaries are locked via Supabase Row-Level Security (RLS) policies.
 
 ## Completed steps
 - [x] Prompt 0 — Scaffolding
@@ -10,6 +10,10 @@ A Next.js 14 application with fully operational user authentication (Supabase Au
 - [x] Prompt 3 — Property & Unit Management (Epic A)
 - [x] Prompt 4 — Lease Lifecycle (Epic B)
 - [x] Prompt 5 — Tenant Onboarding & Redemption (Epic F)
+- [x] Prompt 6 — Payments Logging & Proof Attachments (Epic C)
+- [x] Prompt 7 — Notices & Realtime Chat Communication (Epic G)
+- [x] Prompt 8 — Automated Reminders & Cron Setup (Epic H)
+- [x] Prompt 9 — Polish & Deployment Hardening (Epic I)
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -30,11 +34,16 @@ A Next.js 14 application with fully operational user authentication (Supabase Au
 - **Invite Code Generation**: When a landlord creates a lease for an email address not yet in the `users` table, a placeholder `User` row is created with `role: "tenant"` and a 6-character alphanumeric `InviteCode` (prefixed `PL-`) is issued, valid for 7 days. The invite code is displayed in the lease timeline card until redeemed.
 - **Tenant Invite Code Redemption and Primary Key Cascade**: Validated invite codes at database query level (existence, expiry, matching email check). Upon successful signup, the placeholder profile ID in the `users` table is updated to the newly generated Supabase Auth UUID inside a Prisma transaction. The database `ON UPDATE CASCADE` trigger automatically propagates this change to all related tables (e.g. `leases.tenantId`), preventing orphan records.
 - **Tenant Dashboard (Minimal)**: Set up a dedicated visual panel at `/tenant` that queries `leases.getMine` to display an active lease summary card, rent rate, security deposit details, and a short-lived download link wrapper for documents stored in the private `leases` bucket.
+- **Nigerian Unit Types**: Supported residential (`apartment/flat`, `self-contained`, `mini flat`, `duplex`, `bungalow`, `terrace`, `room and parlour`, `storey building`) and commercial (`shop`, `office`, `warehouse`, `showroom`) categories, stored as validation strings in `src/lib/unit-types.ts`.
+- **Redesigned Tenant Invitation**: Landlords can invite tenants directly from vacant units using a quick-start form (start date, end date, optional rent). Submitting auto-generates the invite code and lease.
+- **Unit Metadata Edit & Soft-Delete**: Built Edit Unit forms and Delete Unit workflows on both the property page and unit details page. vacancy status checks prevent hard-deletions when active leases exist. Vacant units are soft-deleted by setting the `deletedAt` field.
+- **Unified Currency Formatter**: Integrated `formatCurrency` in `src/lib/utils.ts` to format values using standard English-US formatting with thousands separators (commas), replacing raw `.toLocaleString()` rendering.
+- **Vercel Build Fixes**: Explicitly returned units arrays in mapped database list queries rather than using shorthand object spreads to avoid compiler type widening. Configured `"postinstall": "prisma generate"` script in `package.json` to ensure types build correctly.
 - **Library Versions**:
   - Next.js: `14.2.35`
   - React: `^18`
   - Tailwind CSS: `^3.4.1`
-  - shadcn/ui: `^4.14.1` (defaults to oklch-neutral css custom variables)
+  - shadcn/ui: `^4.14.1`
   - Zustand: `^5.0.14`
   - TanStack Query: `^5.101.4`
   - tRPC client & server: `^11.18.0`
@@ -44,5 +53,6 @@ A Next.js 14 application with fully operational user authentication (Supabase Au
 
 ## Known issues / TODO
 - **Overlap UI Guard**: The "Create Lease" button is intentionally hidden on the unit detail page when an active lease exists (the form is only shown when the unit is vacant). Attempting to create a second overlapping lease via a direct API call will be rejected by the tRPC `leases.create` procedure with a descriptive error. The UI guard and API guard together satisfy B1/AC2.
+
 
 
