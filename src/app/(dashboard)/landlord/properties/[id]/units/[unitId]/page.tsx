@@ -313,6 +313,17 @@ export default function UnitDetailPage() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Landlord payment detail modal
+  const [selectedLandlordPayment, setSelectedLandlordPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
+  const [isLandlordPaymentDetailOpen, setIsLandlordPaymentDetailOpen] = useState(false);
+
+  // Human-readable status labels
+  const paymentStatusLabel: Record<string, string> = {
+    confirmed: "Confirmed",
+    pending: "Pending",
+    disputed: "Rejected",
+  };
+
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
@@ -1006,7 +1017,14 @@ export default function UnitDetailPage() {
                       payments.map((p) => {
                         const hasTenantDispute = p.disputedByTenant && !p.disputedByResolvedAt;
                         return (
-                          <tr key={p.id} className="hover:bg-neutral-900/10 transition-colors">
+                          <tr
+                            key={p.id}
+                            className="hover:bg-neutral-900/20 transition-colors cursor-pointer"
+                            onClick={() => {
+                              setSelectedLandlordPayment(p);
+                              setIsLandlordPaymentDetailOpen(true);
+                            }}
+                          >
                             <td className="px-6 py-4 text-sm text-neutral-300">
                               {new Date(p.paymentDate).toLocaleDateString()}
                               {p.notes && (
@@ -1027,23 +1045,15 @@ export default function UnitDetailPage() {
                             <td className="px-6 py-4 text-sm">
                               <div className="flex flex-col space-y-1">
                                 <div className="flex items-center space-x-2">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize border ${
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
                                     p.status === "confirmed"
                                       ? "bg-green-950/30 text-green-400 border-green-900/30"
                                       : p.status === "disputed"
                                       ? "bg-red-950/30 text-red-400 border-red-900/30"
                                       : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
                                   }`}>
-                                    {p.status}
+                                    {paymentStatusLabel[p.status] ?? p.status}
                                   </span>
-                                  {p.proofUrl && (
-                                    <button
-                                      onClick={() => handleViewPaymentProof(p.proofUrl!)}
-                                      className="text-xs text-neutral-400 hover:text-white underline ml-2"
-                                    >
-                                      View Proof
-                                    </button>
-                                  )}
                                 </div>
                                 {p.counterVerifiedAt && (
                                   <span className="text-[11px] text-green-500 font-medium">
@@ -1057,11 +1067,20 @@ export default function UnitDetailPage() {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-right space-x-2">
+                            <td className="px-6 py-4 text-sm text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSelectedLandlordPayment(p); setIsLandlordPaymentDetailOpen(true); }}
+                                className="text-xs text-neutral-400 hover:text-white underline mr-2"
+                              >
+                                Details
+                              </button>
                               {p.status === "pending" && (
                                 <div className="flex items-center justify-end space-x-2">
                                   <Button
-                                    onClick={() => confirmPayment.mutate({ paymentId: p.id })}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmPayment.mutate({ paymentId: p.id });
+                                    }}
                                     disabled={confirmPayment.isPending}
                                     size="sm"
                                     className="bg-green-600 hover:bg-green-500 text-white h-8 text-xs font-semibold px-3"
@@ -1069,7 +1088,8 @@ export default function UnitDetailPage() {
                                     Confirm
                                   </Button>
                                   <Button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setRejectPaymentId(p.id);
                                       setRejectReason("");
                                       setIsRejectOpen(true);
@@ -1085,7 +1105,8 @@ export default function UnitDetailPage() {
                               {hasTenantDispute && (
                                 <div className="flex items-center justify-end space-x-2">
                                   <Button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setEditPaymentId(p.id);
                                       setEditAmount(String(p.amount));
                                       setEditPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
@@ -1099,7 +1120,8 @@ export default function UnitDetailPage() {
                                     Correct Details
                                   </Button>
                                   <Button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       if (confirm("Are you sure you want to void this payment record? This will exclude it from outstanding balance calculations.")) {
                                         resolvePayment.mutate({
                                           paymentId: p.id,
@@ -1836,13 +1858,128 @@ export default function UnitDetailPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={rejectPayment.isPending}
-                  className="w-1/2 bg-red-600 hover:bg-red-500 text-white font-semibold h-[38px]"
+                  disabled={!rejectReason.trim() || rejectPayment.isPending}
+                  className="w-1/2 bg-red-600 hover:bg-red-500 text-white font-semibold h-[38px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {rejectPayment.isPending ? "Submitting..." : "Reject & Dispute"}
+                  {rejectPayment.isPending ? "Submitting..." : "Submit"}
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Landlord Payment Detail Modal */}
+      {isLandlordPaymentDetailOpen && selectedLandlordPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-6">
+            <div className="flex justify-between items-center pb-4 border-b border-neutral-800">
+              <h2 className="text-xl font-bold text-white font-sans">Payment Details</h2>
+              <button
+                onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Amount</span>
+                  <span className="text-base font-bold text-white mt-1 block">{formatCurrency(selectedLandlordPayment.amount)}</span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</span>
+                  <span className="mt-1 block">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                      selectedLandlordPayment.status === "confirmed"
+                        ? "bg-green-950/30 text-green-400 border-green-900/30"
+                        : selectedLandlordPayment.status === "disputed"
+                        ? "bg-red-950/30 text-red-400 border-red-900/30"
+                        : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                    }`}>
+                      {paymentStatusLabel[selectedLandlordPayment.status] ?? selectedLandlordPayment.status}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Payment Date</span>
+                  <span className="text-neutral-300 mt-1 block">{new Date(selectedLandlordPayment.paymentDate).toLocaleDateString()}</span>
+                </div>
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Method</span>
+                  <span className="text-neutral-300 mt-1 block capitalize">{selectedLandlordPayment.method.replace('_', ' ')}</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Period Covered</span>
+                <span className="text-neutral-300 mt-1 block">
+                  {new Date(selectedLandlordPayment.periodStart).toLocaleDateString()} – {new Date(selectedLandlordPayment.periodEnd).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Logged By</span>
+                  <span className="text-neutral-300 mt-1 block capitalize">
+                    {selectedLandlordPayment.recorder?.fullName || "System"} ({selectedLandlordPayment.recordedByRole})
+                  </span>
+                </div>
+                {selectedLandlordPayment.confirmedAt && (
+                  <div>
+                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Confirmed At</span>
+                    <span className="text-neutral-300 mt-1 block">{new Date(selectedLandlordPayment.confirmedAt).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+
+              {selectedLandlordPayment.notes && (
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Notes</span>
+                  <p className="text-neutral-300 mt-1 bg-neutral-900/50 p-2.5 rounded-lg border border-neutral-800 text-xs">{selectedLandlordPayment.notes}</p>
+                </div>
+              )}
+
+              {selectedLandlordPayment.disputeReason && (
+                <div>
+                  <span className="block text-xs font-semibold text-red-400 uppercase tracking-wider">Rejection Reason</span>
+                  <p className="text-red-400 mt-1 bg-red-950/10 p-2.5 rounded-lg border border-red-900/20 text-xs">{selectedLandlordPayment.disputeReason}</p>
+                </div>
+              )}
+
+              {selectedLandlordPayment.disputedByReason && (
+                <div>
+                  <span className="block text-xs font-semibold text-orange-400 uppercase tracking-wider">Tenant Dispute Reason</span>
+                  <p className="text-orange-400 mt-1 bg-orange-950/10 p-2.5 rounded-lg border border-orange-900/20 text-xs">{selectedLandlordPayment.disputedByReason}</p>
+                </div>
+              )}
+
+              {selectedLandlordPayment.proofUrl && (
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Proof Document</span>
+                  <button
+                    onClick={() => handleViewPaymentProof(selectedLandlordPayment.proofUrl!)}
+                    className="mt-2 inline-flex items-center text-xs text-white hover:underline bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-neutral-800"
+                  >
+                    View / Download Proof
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-neutral-800">
+              <Button
+                onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
+                className="w-full bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-[38px]"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       )}

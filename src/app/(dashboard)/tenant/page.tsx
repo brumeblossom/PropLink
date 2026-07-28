@@ -22,7 +22,7 @@ export default function TenantDashboard() {
   // Payments queries
   const { data: payments, isLoading: isLoadingPayments } = trpc.payments.list.useQuery(
     { leaseId: activeLease?.id || "" },
-    { enabled: !!activeLease?.id }
+    { enabled: !!activeLease?.id, refetchInterval: 10000 }
   );
 
   const { data: billingSummary } = trpc.payments.getBillingSummary.useQuery(
@@ -87,6 +87,13 @@ export default function TenantDashboard() {
   // Payment Details Modal state
   const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
+
+  // Human-readable status labels
+  const paymentStatusLabel: Record<string, string> = {
+    confirmed: "Confirmed",
+    pending: "Pending",
+    disputed: "Rejected",
+  };
 
   const resetPaymentForm = () => {
     setPaymentAmount("");
@@ -625,6 +632,168 @@ export default function TenantDashboard() {
             </p>
           </div>
         )}
+
+        {/* Billing & Payments Section — full width, outside the 3-col grid */}
+        {activeLease && (
+          <div className="pt-6 border-t border-neutral-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h2>
+                <p className="text-neutral-400 text-sm mt-1">
+                  Log new payments, track your billing period ledger, and counter-verify landlord records.
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setIsLogPaymentOpen(true);
+                  setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
+                  setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
+                  setPaymentAmount(billingSummary?.amountOutstanding ? String(billingSummary.amountOutstanding) : "");
+                  setPaymentError(null);
+                }}
+                className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold self-start sm:self-auto"
+              >
+                Log My Payment
+              </Button>
+            </div>
+
+            {/* Billing Summary Banner */}
+            {billingSummary && (
+              (() => {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const dueDate = new Date(billingSummary.periodEnd);
+                const isNearDue = (dueDate.getTime() - today.getTime()) <= 7 * 24 * 60 * 60 * 1000 && (dueDate.getTime() - today.getTime()) >= 0;
+                const isOverdue = today > dueDate && billingSummary.amountOutstanding > 0;
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/10 p-5">
+                    <div className="space-y-1">
+                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Next Rent Due Date</span>
+                      <span className={`text-sm font-semibold block ${isOverdue ? 'text-red-400 font-semibold' : isNearDue ? 'text-yellow-400 animate-pulse' : 'text-neutral-300'}`}>
+                        {dueDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                        {isOverdue && " (Overdue)"}
+                        {isNearDue && " (Due soon)"}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Rent / Total Confirmed Paid</span>
+                      <span className="text-lg font-bold text-white block">
+                        {formatCurrency(billingSummary.rentAmount)} <span className="text-neutral-500 font-normal text-sm">/ {formatCurrency(billingSummary.amountPaid)} paid</span>
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Outstanding Balance</span>
+                      <span className={`text-lg font-bold block ${billingSummary.amountOutstanding > 0 ? 'text-red-400 font-semibold' : 'text-green-400'}`}>
+                        {formatCurrency(billingSummary.amountOutstanding)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
+            {/* Payment Ledger Table */}
+            <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
+              <table className="min-w-full divide-y divide-neutral-800">
+                <thead className="bg-neutral-900/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Logged</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Period Covered</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Method</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status / Verification</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {isLoadingPayments ? (
+                    <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 animate-pulse">Loading ledger entries...</td></tr>
+                  ) : !payments || payments.length === 0 ? (
+                    <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">No payments logged yet.</td></tr>
+                  ) : (
+                    payments.map((p) => {
+                      const isLandlordLogged = p.recordedByRole === "landlord";
+                      const isPendingAck = isLandlordLogged && !p.counterVerifiedAt && !p.disputedByTenant;
+                      return (
+                        <tr
+                          key={p.id}
+                          onClick={() => { setSelectedPayment(p); setIsPaymentDetailsOpen(true); }}
+                          className="hover:bg-neutral-900/20 transition-colors cursor-pointer"
+                        >
+                          <td className="px-6 py-4 text-sm text-neutral-300">
+                            {new Date(p.paymentDate).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-white">
+                            {formatCurrency(p.amount)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-400">
+                            {new Date(p.periodStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – {new Date(p.periodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
+                            {p.method.replace('_', ' ')}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="flex flex-col space-y-1">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border w-fit ${
+                                p.status === "confirmed"
+                                  ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                  : p.status === "disputed"
+                                  ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                  : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                              }`}>
+                                {paymentStatusLabel[p.status] ?? p.status}
+                              </span>
+                              {p.counterVerifiedAt && (
+                                <span className="text-[11px] text-green-500 font-medium">✓ You Acknowledged</span>
+                              )}
+                              {p.disputedByTenant && !p.disputedByResolvedAt && (
+                                <span className="text-[11px] text-red-400 font-medium bg-red-950/20 border border-red-900/30 rounded p-1.5 mt-1 block">
+                                  ⚠️ You Disputed: {p.disputedByReason}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-right" onClick={(e) => e.stopPropagation()}>
+                            {isPendingAck ? (
+                              <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  onClick={() => acknowledgePayment.mutate({ paymentId: p.id })}
+                                  disabled={acknowledgePayment.isPending}
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-500 text-white h-8 text-xs font-semibold px-3"
+                                >
+                                  Acknowledge
+                                </Button>
+                                <Button
+                                  onClick={() => { setFlagPaymentId(p.id); setFlagReason(""); setIsFlagOpen(true); }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 h-8 text-xs font-semibold px-3"
+                                >
+                                  Flag Incorrect
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={() => { setSelectedPayment(p); setIsPaymentDetailsOpen(true); }}
+                                variant="outline"
+                                size="sm"
+                                className="border-neutral-800 text-neutral-300 hover:bg-neutral-900 h-8 text-xs font-semibold px-3"
+                              >
+                                Details
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       {/* Log Payment Modal */}
       {isLogPaymentOpen && activeLease && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
@@ -887,14 +1056,14 @@ export default function TenantDashboard() {
                 <div>
                   <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</span>
                   <span className="mt-1 block">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize border ${
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                       selectedPayment.status === "confirmed"
                         ? "bg-green-950/30 text-green-400 border-green-900/30"
                         : selectedPayment.status === "disputed"
                         ? "bg-red-950/30 text-red-400 border-red-900/30"
                         : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
                     }`}>
-                      {selectedPayment.status}
+                      {paymentStatusLabel[selectedPayment.status] ?? selectedPayment.status}
                     </span>
                   </span>
                 </div>
