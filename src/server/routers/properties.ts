@@ -39,7 +39,16 @@ export const propertiesRouter = router({
       const vacantUnits = totalUnits - occupiedUnits;
 
       return {
-        ...property,
+        id: property.id,
+        name: property.name,
+        address: property.address,
+        city: property.city,
+        state: property.state,
+        propertyType: property.propertyType,
+        landlordId: property.landlordId,
+        createdAt: property.createdAt,
+        expectedUnits: property.expectedUnits,
+        units: property.units,
         stats: {
           totalUnits,
           occupiedUnits,
