@@ -15,7 +15,11 @@ export default function TenantProfilePage() {
 
   // Queries & Mutations
   const { data: user } = trpc.auth.me.useQuery();
+  const { data: leases } = trpc.leases.getMine.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation();
+
+  const activeLease = leases?.find((l) => !l.terminatedAt);
+  const landlord = activeLease?.unit.property.landlord;
   
   const updateProfile = trpc.auth.updateProfile.useMutation({
     onSuccess: () => {
@@ -222,57 +226,113 @@ export default function TenantProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Left Column: Avatar Management */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex flex-col items-center justify-center text-center space-y-4">
-            <div className="relative group">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.fullName}
-                  className="w-32 h-32 rounded-full object-cover border-2 border-neutral-800 group-hover:border-neutral-600 transition-colors"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-full bg-neutral-900 border-2 border-neutral-800 flex items-center justify-center text-neutral-400 group-hover:border-neutral-600 transition-colors">
-                  <User className="w-12 h-12" />
+          {/* Left Column: Avatar & Landlord Info */}
+          <div className="space-y-6 flex flex-col">
+            {/* Avatar Management Card */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex flex-col items-center justify-center text-center space-y-4">
+              <div className="relative group">
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.fullName}
+                    className="w-32 h-32 rounded-full object-cover border-2 border-neutral-800 group-hover:border-neutral-600 transition-colors"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-neutral-900 border-2 border-neutral-800 flex items-center justify-center text-neutral-400 group-hover:border-neutral-600 transition-colors">
+                    <User className="w-12 h-12" />
+                  </div>
+                )}
+                
+                <label className="absolute bottom-0 right-0 p-2 rounded-full bg-white text-neutral-950 hover:bg-neutral-200 border border-neutral-800 shadow-md cursor-pointer transition-transform hover:scale-105">
+                  <Camera className="w-4 h-4" />
+                  <input
+                    type="file"
+                    accept="image/jpeg, image/png, image/webp"
+                    onChange={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-1">
+                <h2 className="font-bold text-white text-lg">{user?.fullName}</h2>
+                <p className="text-xs text-neutral-500 capitalize">{user?.role}</p>
+              </div>
+
+              <p className="text-xs text-neutral-500 leading-relaxed">
+                Upload a JPG, PNG or WEBP image. Max size 5MB.
+              </p>
+
+              {uploadingAvatar && (
+                <p className="text-xs text-neutral-400 animate-pulse">Uploading profile picture...</p>
+              )}
+
+              {avatarError && (
+                <div className="rounded bg-red-950/20 border border-red-900/30 p-2 text-xs text-red-400 w-full">
+                  {avatarError}
                 </div>
               )}
+
+              {avatarSuccess && (
+                <div className="rounded bg-green-950/20 border border-green-900/30 p-2 text-xs text-green-400 w-full">
+                  {avatarSuccess}
+                </div>
+              )}
+            </div>
+
+            {/* Your Landlord Card */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-4 text-left">
+              <div className="flex items-center space-x-2 border-b border-neutral-850 pb-3">
+                <Shield className="w-4 h-4 text-neutral-400" />
+                <h3 className="font-bold text-white text-xs uppercase tracking-wider">Your Landlord</h3>
+              </div>
               
-              <label className="absolute bottom-0 right-0 p-2 rounded-full bg-white text-neutral-950 hover:bg-neutral-200 border border-neutral-800 shadow-md cursor-pointer transition-transform hover:scale-105">
-                <Camera className="w-4 h-4" />
-                <input
-                  type="file"
-                  accept="image/jpeg, image/png, image/webp"
-                  onChange={handleAvatarUpload}
-                  disabled={uploadingAvatar}
-                  className="hidden"
-                />
-              </label>
+              {landlord ? (
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    {landlord.avatarUrl ? (
+                      <img
+                        src={landlord.avatarUrl}
+                        alt={landlord.fullName}
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-700"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700">
+                        <User className="w-5 h-5 text-neutral-400" />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{landlord.fullName}</h4>
+                      <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider">Active Landlord</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-xs text-neutral-400 pt-2 border-t border-neutral-850">
+                    <div>
+                      <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Email Address</span>
+                      <span className="text-white font-medium block mt-0.5">{landlord.email}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Phone Number</span>
+                      <span className="text-white font-medium block mt-0.5">{landlord.phone || "—"}</span>
+                    </div>
+                    {activeLease?.unit?.property && (
+                      <div>
+                        <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Property / Unit</span>
+                        <span className="text-white font-medium block mt-0.5">
+                          {activeLease.unit.property.name} (Unit {activeLease.unit.unitNumber})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-500 italic leading-relaxed">
+                  No active landlord found. Your account is not currently linked to an active lease.
+                </p>
+              )}
             </div>
-
-            <div className="space-y-1">
-              <h2 className="font-bold text-white text-lg">{user?.fullName}</h2>
-              <p className="text-xs text-neutral-500 capitalize">{user?.role}</p>
-            </div>
-
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Upload a JPG, PNG or WEBP image. Max size 5MB.
-            </p>
-
-            {uploadingAvatar && (
-              <p className="text-xs text-neutral-400 animate-pulse">Uploading profile picture...</p>
-            )}
-
-            {avatarError && (
-              <div className="rounded bg-red-950/20 border border-red-900/30 p-2 text-xs text-red-400 w-full">
-                {avatarError}
-              </div>
-            )}
-
-            {avatarSuccess && (
-              <div className="rounded bg-green-950/20 border border-green-900/30 p-2 text-xs text-green-400 w-full">
-                {avatarSuccess}
-              </div>
-            )}
           </div>
 
           {/* Right Column: Profile and Security details */}

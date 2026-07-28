@@ -178,7 +178,7 @@ export const leasesRouter = router({
         where: { unitId: input.unitId },
         include: {
           tenant: {
-            select: { fullName: true, email: true },
+            select: { fullName: true, email: true, phone: true, avatarUrl: true },
           },
           inviteCodes: {
             where: {
@@ -388,7 +388,18 @@ export const leasesRouter = router({
         include: {
           unit: {
             include: {
-              property: true,
+              property: {
+                include: {
+                  landlord: {
+                    select: {
+                      fullName: true,
+                      email: true,
+                      phone: true,
+                      avatarUrl: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },

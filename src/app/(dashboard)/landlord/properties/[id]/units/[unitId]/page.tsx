@@ -6,7 +6,7 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X } from "lucide-react";
+import { X, User } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency } from "@/lib/utils";
@@ -729,24 +729,53 @@ export default function UnitDetailPage() {
           </div>
         )}
         {/* Unit Info Card */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex justify-between items-start">
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                  unitStatus?.status === "occupied"
+                    ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                    : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                }`}
+              >
+                {unitStatus?.status}
+              </span>
+            </div>
             <p className="text-neutral-400 text-sm mt-1 capitalize">
               {unit.unitType} {unit.sizeSqm ? `• ${unit.sizeSqm} sqm` : ""}
             </p>
           </div>
-          <div>
-            <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                unitStatus?.status === "occupied"
-                  ? "bg-green-950/30 text-green-400 border border-green-900/30"
-                  : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
-              }`}
-            >
-              {unitStatus?.status}
-            </span>
-          </div>
+
+          {activeLease ? (
+            <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Current Tenant</span>
+              <div className="flex items-center space-x-2">
+                {activeLease.tenant.avatarUrl ? (
+                  <img
+                    src={activeLease.tenant.avatarUrl}
+                    alt={activeLease.tenant.fullName}
+                    className="w-6 h-6 rounded-full object-cover border border-neutral-700"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-750">
+                    <User className="w-3 h-3 text-neutral-400" />
+                  </div>
+                )}
+                <span className="text-sm font-semibold text-white">{activeLease.tenant.fullName}</span>
+              </div>
+              <div className="text-xs text-neutral-400 space-y-0.5">
+                <p className="truncate">Email: {activeLease.tenant.email}</p>
+                <p>Phone: {activeLease.tenant.phone || "—"}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1 min-w-[200px]">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Current Tenant</span>
+              <p className="text-sm text-neutral-500 italic">Vacant, no active tenant</p>
+            </div>
+          )}
         </div>
 
         {/* Active Lease Section */}
