@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { PaymentMethod } from "@prisma/client";
 import { X, User } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { NotificationBell } from "@/components/NotificationBell";
+import { UnitChatPanel } from "@/components/UnitChatPanel";
 
 export default function TenantDashboard() {
   const router = useRouter();
@@ -88,6 +90,22 @@ export default function TenantDashboard() {
   // Payment Details Modal state
   const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"lease" | "chat">("lease");
+
+  // Read URL query parameter for tab selection (for deep-linking from notifications)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "chat") {
+        setActiveTab("chat");
+      } else {
+        setActiveTab("lease");
+      }
+    }
+  }, [router]);
 
   // Human-readable status labels
   const paymentStatusLabel: Record<string, string> = {
@@ -274,6 +292,7 @@ export default function TenantDashboard() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <NotificationBell />
             <Link 
               href="/tenant/profile"
               className="flex items-center space-x-2 text-sm text-neutral-400 hover:text-white transition-all group"
@@ -313,8 +332,43 @@ export default function TenantDashboard() {
           </p>
         </div>
 
+        {/* Tabs navigation */}
+        {activeLease && (
+          <div className="flex border-b border-neutral-800 space-x-6 text-sm">
+            <button
+              onClick={() => {
+                setActiveTab("lease");
+                window.history.replaceState(null, "", "/tenant");
+              }}
+              className={`pb-3 font-semibold transition-all relative ${
+                activeTab === "lease" ? "text-white" : "text-neutral-500 hover:text-neutral-350"
+              }`}
+            >
+              Lease & Payments
+              {activeTab === "lease" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("chat");
+                window.history.replaceState(null, "", "/tenant?tab=chat");
+              }}
+              className={`pb-3 font-semibold transition-all relative ${
+                activeTab === "chat" ? "text-white" : "text-neutral-500 hover:text-neutral-350"
+              }`}
+            >
+              Landlord Chat
+              {activeTab === "chat" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
+              )}
+            </button>
+          </div>
+        )}
+
         {activeLease ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          activeTab === "lease" ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Lease Summary Card */}
             <div className="lg:col-span-2 rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-6 flex flex-col justify-between">
               <div className="space-y-4">
@@ -640,16 +694,21 @@ export default function TenantDashboard() {
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">
-            <h3 className="text-lg font-medium text-white">No active lease found</h3>
-            <p className="text-neutral-400 text-sm">
-              Your account has successfully registered, but is not currently linked to an active tenancy. Please contact your landlord to request an invitation.
-            </p>
+          <div className="max-w-4xl mx-auto">
+            <UnitChatPanel unitId={activeLease.unitId} />
           </div>
-        )}
+        )
+      ) : (
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">
+          <h3 className="text-lg font-medium text-white">No active lease found</h3>
+          <p className="text-neutral-400 text-sm">
+            Your account has successfully registered, but is not currently linked to an active tenancy. Please contact your landlord to request an invitation.
+          </p>
+        </div>
+      )}
 
-        {/* Billing & Payments Section — full width, outside the 3-col grid */}
-        {activeLease && (
+      {/* Billing & Payments Section — full width, outside the 3-col grid */}
+      {activeLease && activeTab === "lease" && (
           <div className="pt-6 border-t border-neutral-800 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>

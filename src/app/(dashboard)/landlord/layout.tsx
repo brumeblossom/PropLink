@@ -11,8 +11,10 @@ import {
   Menu, 
   X, 
   LogOut,
-  User
+  User,
+  Megaphone
 } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function LandlordLayout({
   children,
@@ -48,6 +50,12 @@ export default function LandlordLayout({
       href: "/landlord/properties",
       icon: Building2,
       active: pathname.startsWith("/landlord/properties"),
+    },
+    {
+      name: "Notices",
+      href: "/landlord/notices",
+      icon: Megaphone,
+      active: pathname.startsWith("/landlord/notices"),
     },
     {
       name: "Profile",
@@ -87,7 +95,7 @@ export default function LandlordLayout({
                 item.active
                   ? "bg-white text-neutral-950 font-semibold shadow-lg"
                   : "text-neutral-400 hover:text-white hover:bg-neutral-900"
-              }`}
+               }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
               <span>{item.name}</span>
@@ -170,7 +178,10 @@ export default function LandlordLayout({
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:pl-64 flex flex-col min-h-screen relative">
+        <div className="absolute top-4 right-6 z-30">
+          <NotificationBell />
+        </div>
         {children}
       </div>
     </div>

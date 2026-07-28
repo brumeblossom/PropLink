@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { createClient } from "@/utils/supabase/client";
 import { User, Camera, Shield, Save, Key } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export default function TenantProfilePage() {
   const router = useRouter();
@@ -196,6 +197,7 @@ export default function TenantProfilePage() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <NotificationBell />
             <Link 
               href="/tenant"
               className="text-sm font-semibold text-neutral-400 hover:text-white transition-all"

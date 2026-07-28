@@ -4,6 +4,7 @@ import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { RentFrequency } from "@prisma/client";
 import { createClient } from "@/utils/supabase/server";
+import { createNotification } from "../utils/notifications";
 
 export const leasesRouter = router({
   create: authedProcedure
@@ -115,6 +116,21 @@ export const leasesRouter = router({
             expiresAt,
           },
         });
+      }
+
+      if (!isNewTenant) {
+        try {
+          await createNotification({
+            recipientId: tenant.id,
+            type: "lease_created",
+            title: "New Lease Agreement",
+            body: `A new lease agreement has been created for you at unit ${unit.unitNumber}.`,
+            relatedType: "lease",
+            relatedId: lease.id,
+          });
+        } catch (err) {
+          console.error("Failed to trigger lease notification:", err);
+        }
       }
 
       return {
@@ -489,6 +505,19 @@ export const leasesRouter = router({
       });
 
       return { lease: newLease };
+    }),
+
+  // Get redirect routing information for a lease
+  getRedirectInfo: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { select: { id: true, propertyId: true } }
+        }
+      });
+      return lease ? { unitId: lease.unit.id, propertyId: lease.unit.propertyId } : null;
     }),
 });
 

@@ -5,6 +5,9 @@ import { propertiesRouter } from "./properties";
 import { unitsRouter } from "./units";
 import { leasesRouter } from "./leases";
 import { paymentsRouter } from "./payments";
+import { noticesRouter } from "./notices";
+import { conversationsRouter } from "./conversations";
+import { notificationsRouter } from "./notifications";
 
 export const appRouter = router({
   auth: authRouter,
@@ -12,6 +15,9 @@ export const appRouter = router({
   units: unitsRouter,
   leases: leasesRouter,
   payments: paymentsRouter,
+  notices: noticesRouter,
+  conversations: conversationsRouter,
+  notifications: notificationsRouter,
   hello: publicProcedure
     .input(
       z.object({

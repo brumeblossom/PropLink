@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
 import { X, User } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
+import { UnitChatPanel } from "@/components/UnitChatPanel";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -1175,6 +1176,16 @@ export default function UnitDetailPage() {
                 </table>
               </div>
             </div>
+
+            {/* Tenant Chat Section */}
+            <div className="pt-6 border-t border-neutral-800 space-y-6">
+              <div>
+                <h3 className="font-bold text-white text-xl">Tenant Chat</h3>
+                <p className="text-neutral-400 text-sm mt-0.5">Send messages and chat with the tenant of this unit.</p>
+              </div>
+              <UnitChatPanel unitId={unitId} />
+            </div>
+
           </div>
         ) : (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">

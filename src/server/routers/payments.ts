@@ -4,6 +4,7 @@ import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod, PaymentStatus, Role } from "@prisma/client";
 import { createClient } from "@/utils/supabase/server";
+import { createNotification } from "../utils/notifications";
 
 export const paymentsRouter = router({
   // List all payments for a specific lease
@@ -121,7 +122,7 @@ export const paymentsRouter = router({
         },
       });
 
-      // If tenant: notify landlord via In-App (create NotificationLog record)
+      // If tenant: notify landlord via In-App (create NotificationLog record and system Notification)
       if (isTenant) {
         try {
           await prisma.notificationLog.create({
@@ -133,6 +134,15 @@ export const paymentsRouter = router({
               status: "sent",
               sentAt: new Date(),
             },
+          });
+
+          await createNotification({
+            recipientId: lease.unit.property.landlordId,
+            type: "payment_logged",
+            title: "New Payment Logged",
+            body: `${ctx.user.fullName} logged a payment of $${input.amount} for unit ${lease.unit.unitNumber}.`,
+            relatedType: "payment",
+            relatedId: payment.id,
           });
         } catch (err) {
           console.error("Failed to create in-app notification:", err);
@@ -187,7 +197,7 @@ export const paymentsRouter = router({
         });
       }
 
-      return await prisma.payment.update({
+      const updatedPayment = await prisma.payment.update({
         where: { id: input.paymentId },
         data: {
           status: PaymentStatus.confirmed,
@@ -195,6 +205,21 @@ export const paymentsRouter = router({
           confirmedAt: new Date(),
         },
       });
+
+      try {
+        await createNotification({
+          recipientId: payment.lease.tenantId,
+          type: "payment_confirmed",
+          title: "Payment Confirmed",
+          body: `Your payment of $${payment.amount} has been confirmed by the landlord.`,
+          relatedType: "payment",
+          relatedId: payment.id,
+        });
+      } catch (err) {
+        console.error("Failed to create payment confirmed notification:", err);
+      }
+
+      return updatedPayment;
     }),
 
   // Reject a tenant-logged pending payment (Landlord only)
@@ -247,13 +272,28 @@ export const paymentsRouter = router({
         });
       }
 
-      return await prisma.payment.update({
+      const updatedPayment = await prisma.payment.update({
         where: { id: input.paymentId },
         data: {
           status: PaymentStatus.disputed,
           disputeReason: input.reason,
         },
       });
+
+      try {
+        await createNotification({
+          recipientId: payment.lease.tenantId,
+          type: "payment_rejected",
+          title: "Payment Rejected",
+          body: `Your payment of $${payment.amount} has been rejected/disputed: ${input.reason}.`,
+          relatedType: "payment",
+          relatedId: payment.id,
+        });
+      } catch (err) {
+        console.error("Failed to create payment rejected notification:", err);
+      }
+
+      return updatedPayment;
     }),
 
   // Acknowledge a landlord-logged payment (Tenant only)
@@ -320,7 +360,17 @@ export const paymentsRouter = router({
 
       const payment = await prisma.payment.findUnique({
         where: { id: input.paymentId },
-        include: { lease: true },
+        include: {
+          lease: {
+            include: {
+              unit: {
+                include: {
+                  property: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!payment) {
@@ -344,7 +394,7 @@ export const paymentsRouter = router({
         });
       }
 
-      return await prisma.payment.update({
+      const updatedPayment = await prisma.payment.update({
         where: { id: input.paymentId },
         data: {
           disputedByTenant: true,
@@ -352,6 +402,21 @@ export const paymentsRouter = router({
           disputedByResolvedAt: null, // Reset if re-flagged
         },
       });
+
+      try {
+        await createNotification({
+          recipientId: payment.lease.unit.property.landlordId,
+          type: "payment_flagged",
+          title: "Payment Flagged by Tenant",
+          body: `${ctx.user.fullName} flagged a payment of $${payment.amount} as incorrect.`,
+          relatedType: "payment",
+          relatedId: payment.id,
+        });
+      } catch (err) {
+        console.error("Failed to create payment flagged notification:", err);
+      }
+
+      return updatedPayment;
     }),
 
   // Edit or void a tenant-flagged dispute on landlord-logged payment (Landlord only)
@@ -407,8 +472,9 @@ export const paymentsRouter = router({
         });
       }
 
+      let updatedPayment;
       if (input.action === "void") {
-        return await prisma.payment.update({
+        updatedPayment = await prisma.payment.update({
           where: { id: input.paymentId },
           data: {
             status: PaymentStatus.disputed,
@@ -424,7 +490,7 @@ export const paymentsRouter = router({
           });
         }
 
-        return await prisma.payment.update({
+        updatedPayment = await prisma.payment.update({
           where: { id: input.paymentId },
           data: {
             amount: input.amount,
@@ -436,6 +502,21 @@ export const paymentsRouter = router({
           },
         });
       }
+
+      try {
+        await createNotification({
+          recipientId: payment.lease.tenantId,
+          type: "payment_resolved",
+          title: "Disputed Payment Resolved",
+          body: `The landlord resolved the dispute for your payment of $${payment.amount}.`,
+          relatedType: "payment",
+          relatedId: payment.id,
+        });
+      } catch (err) {
+        console.error("Failed to create payment resolved notification:", err);
+      }
+
+      return updatedPayment;
     }),
 
   // Get signed upload URL for payment proof (both roles)
@@ -639,5 +720,22 @@ export const paymentsRouter = router({
         amountPaid,
         amountOutstanding,
       };
+    }),
+
+  // Get redirect routing information for a payment
+  getRedirectInfo: authedProcedure
+    .input(z.object({ paymentId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const payment = await prisma.payment.findUnique({
+        where: { id: input.paymentId },
+        include: {
+          lease: {
+            include: {
+              unit: { select: { id: true, propertyId: true } }
+            }
+          }
+        }
+      });
+      return payment ? { unitId: payment.lease.unit.id, propertyId: payment.lease.unit.propertyId } : null;
     }),
 });

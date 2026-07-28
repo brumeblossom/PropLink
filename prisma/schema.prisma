@@ -92,6 +92,7 @@ model User {
   conversationsAsTenant    Conversation[]     @relation("TenantConversations")
   messagesSent             Message[]          @relation("SenderMessages")
   notificationsReceived    NotificationLog[]  @relation("RecipientNotifications")
+  notificationsReceivedList Notification[]    @relation("RecipientNotificationsList")
 
   @@map("users")
 }
@@ -291,4 +292,21 @@ model NotificationLog {
   recipient User @relation("RecipientNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
 
   @@map("notification_log")
+}
+
+model Notification {
+  id          String    @id @default(uuid()) @db.Uuid
+  recipientId String    @map("recipient_id") @db.Uuid
+  type        String    // e.g. "payment_logged", "payment_confirmed", etc.
+  title       String
+  body        String
+  relatedType String?   @map("related_type") // e.g. "lease", "payment", "unit", "conversation"
+  relatedId   String?   @map("related_id") @db.Uuid
+  readAt      DateTime? @map("read_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  recipient   User      @relation("RecipientNotificationsList", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

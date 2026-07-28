@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, authedProcedure } from "../trpc";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "../utils/notifications";
 
 export const authRouter = router({
   signupLandlord: publicProcedure
@@ -84,6 +85,11 @@ export const authRouter = router({
           lease: {
             include: {
               tenant: true,
+              unit: {
+                include: {
+                  property: true,
+                },
+              },
             },
           },
         },
@@ -167,6 +173,30 @@ export const authRouter = router({
             },
           }),
         ]);
+
+        try {
+          // Notify the landlord
+          await createNotification({
+            recipientId: invite.lease.unit.property.landlordId,
+            type: "invite_redeemed",
+            title: "Tenant Invite Redeemed",
+            body: `${input.fullName} has redeemed their invite code for unit ${invite.lease.unit.unitNumber}.`,
+            relatedType: "unit",
+            relatedId: invite.lease.unitId,
+          });
+
+          // Notify the tenant
+          await createNotification({
+            recipientId: data.user.id,
+            type: "lease_created",
+            title: "Lease Agreement Linked",
+            body: `Your lease agreement for unit ${invite.lease.unit.unitNumber} has been successfully linked to your account.`,
+            relatedType: "lease",
+            relatedId: invite.leaseId,
+          });
+        } catch (err) {
+          console.error("Failed to create notifications on invite redemption:", err);
+        }
 
         return { success: true };
       } catch (dbError) {
