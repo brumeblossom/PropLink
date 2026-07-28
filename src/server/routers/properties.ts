@@ -11,6 +11,7 @@ export const propertiesRouter = router({
       where: { landlordId: ctx.user.id },
       include: {
         units: {
+          where: { deletedAt: null },
           include: {
             leases: {
               where: {
@@ -56,6 +57,7 @@ export const propertiesRouter = router({
         city: z.string().min(2),
         state: z.string().min(2),
         propertyType: z.nativeEnum(PropertyType),
+        expectedUnits: z.number().int().positive().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -67,6 +69,7 @@ export const propertiesRouter = router({
           city: input.city,
           state: input.state,
           propertyType: input.propertyType,
+          expectedUnits: input.expectedUnits ?? null,
         },
       });
     }),
@@ -80,6 +83,7 @@ export const propertiesRouter = router({
         city: z.string().min(2),
         state: z.string().min(2),
         propertyType: z.nativeEnum(PropertyType),
+        expectedUnits: z.number().int().positive().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -102,6 +106,7 @@ export const propertiesRouter = router({
           city: input.city,
           state: input.state,
           propertyType: input.propertyType,
+          expectedUnits: input.expectedUnits ?? null,
         },
       });
     }),
@@ -114,6 +119,7 @@ export const propertiesRouter = router({
         where: { id: input.id },
         include: {
           units: {
+            where: { deletedAt: null },
             include: {
               leases: {
                 where: {

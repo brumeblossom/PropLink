@@ -5,9 +5,11 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
-import { PropertyType, UnitType } from "@prisma/client";
+import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { X, Trash2 } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
+import { getUnitTypesByPropertyType, isResidentialUnitType } from "@/lib/unit-types";
 
 export default function PropertyDetailPage() {
   const router = useRouter();
@@ -64,6 +66,28 @@ export default function PropertyDetailPage() {
     },
   });
 
+  const updateUnit = trpc.units.update.useMutation({
+    onSuccess: () => {
+      utils.units.listByProperty.invalidate({ propertyId });
+      utils.properties.list.invalidate();
+      setIsEditUnitOpen(false);
+      resetEditUnitForm();
+    },
+    onError: (err) => {
+      setEditUnitError(err.message);
+    },
+  });
+
+  const deleteUnit = trpc.units.delete.useMutation({
+    onSuccess: () => {
+      utils.units.listByProperty.invalidate({ propertyId });
+      utils.properties.list.invalidate();
+    },
+    onError: (err) => {
+      setDeleteError(err.message);
+    },
+  });
+
   // State
   const [isEditPropertyOpen, setIsEditPropertyOpen] = useState(false);
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
@@ -75,11 +99,28 @@ export default function PropertyDetailPage() {
   const [propertyCity, setPropertyCity] = useState("");
   const [propertyState, setPropertyState] = useState("");
   const [propertyType, setPropertyType] = useState<PropertyType>(PropertyType.residential);
+  const [expectedUnits, setExpectedUnits] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Unit Edit Form State
+  const [isEditUnitOpen, setIsEditUnitOpen] = useState(false);
+  const [editUnitId, setEditUnitId] = useState("");
+  const [editUnitNumber, setEditUnitNumber] = useState("");
+  const [editUnitType, setEditUnitType] = useState("");
+  const [editRoomsCount, setEditRoomsCount] = useState("");
+  const [editUnitError, setEditUnitError] = useState<string | null>(null);
+
+  // Find current property
+  const property = properties?.find((p) => p.id === propertyId);
+
+  // Dynamic unit types logic based on property type
+  const allowedUnitTypes = property ? getUnitTypesByPropertyType(property.propertyType) : [];
+  const defaultUnitType = allowedUnitTypes[0] || "";
 
   // Unit Form State
   const [unitNumber, setUnitNumber] = useState("");
-  const [unitType, setUnitType] = useState<UnitType>(UnitType.flat);
+  const [unitType, setUnitType] = useState("");
+  const [roomsCount, setRoomsCount] = useState("");
   const [sizeSqm, setSizeSqm] = useState("");
   const [unitError, setUnitError] = useState<string | null>(null);
 
@@ -91,14 +132,24 @@ export default function PropertyDetailPage() {
   const [rangePrefix, setRangePrefix] = useState("");
   const [rangeStart, setRangeStart] = useState("1");
   const [rangeEnd, setRangeEnd] = useState("10");
-  const [rangeType, setRangeType] = useState<UnitType>(UnitType.flat);
+  const [rangeType, setRangeType] = useState("");
+  const [rangeRoomsCount, setRangeRoomsCount] = useState("");
 
   // Manual Multi-row State
-  const [manualRows, setManualRows] = useState<Array<{ unitNumber: string; unitType: UnitType }>>([
-    { unitNumber: "", unitType: UnitType.flat },
-    { unitNumber: "", unitType: UnitType.flat },
-    { unitNumber: "", unitType: UnitType.flat },
-  ]);
+  const [manualRows, setManualRows] = useState<Array<{ unitNumber: string; unitType: string; roomsCount: string }>>([]);
+
+  // Auto-init types when property type loads
+  useEffect(() => {
+    if (defaultUnitType) {
+      setUnitType(defaultUnitType);
+      setRangeType(defaultUnitType);
+      setManualRows([
+        { unitNumber: "", unitType: defaultUnitType, roomsCount: "" },
+        { unitNumber: "", unitType: defaultUnitType, roomsCount: "" },
+        { unitNumber: "", unitType: defaultUnitType, roomsCount: "" },
+      ]);
+    }
+  }, [defaultUnitType]);
 
   const resetBulkForm = () => {
     setBulkMode("range");
@@ -106,11 +157,12 @@ export default function PropertyDetailPage() {
     setRangePrefix("");
     setRangeStart("1");
     setRangeEnd("10");
-    setRangeType(UnitType.flat);
+    setRangeType(defaultUnitType);
+    setRangeRoomsCount("");
     setManualRows([
-      { unitNumber: "", unitType: UnitType.flat },
-      { unitNumber: "", unitType: UnitType.flat },
-      { unitNumber: "", unitType: UnitType.flat },
+      { unitNumber: "", unitType: defaultUnitType, roomsCount: "" },
+      { unitNumber: "", unitType: defaultUnitType, roomsCount: "" },
+      { unitNumber: "", unitType: defaultUnitType, roomsCount: "" },
     ]);
   };
 
@@ -126,7 +178,7 @@ export default function PropertyDetailPage() {
     e.preventDefault();
     setBulkError(null);
 
-    let unitsToCreate: Array<{ unitNumber: string; unitType: UnitType }> = [];
+    let unitsToCreate: Array<{ unitNumber: string; unitType: string; roomsCount?: number | null }> = [];
 
     if (bulkMode === "range") {
       const start = parseInt(rangeStart, 10);
@@ -153,10 +205,14 @@ export default function PropertyDetailPage() {
         return;
       }
 
+      const isResidential = isResidentialUnitType(rangeType);
+      const parsedRooms = isResidential && rangeRoomsCount ? parseInt(rangeRoomsCount, 10) : null;
+
       for (let i = start; i <= end; i++) {
         unitsToCreate.push({
           unitNumber: `${rangePrefix}${i}`.trim(),
           unitType: rangeType,
+          roomsCount: parsedRooms,
         });
       }
     } else {
@@ -173,10 +229,14 @@ export default function PropertyDetailPage() {
         return;
       }
 
-      unitsToCreate = validRows.map((r) => ({
-        unitNumber: r.unitNumber.trim(),
-        unitType: r.unitType,
-      }));
+      unitsToCreate = validRows.map((r) => {
+        const isResidential = isResidentialUnitType(r.unitType);
+        return {
+          unitNumber: r.unitNumber.trim(),
+          unitType: r.unitType,
+          roomsCount: isResidential && r.roomsCount ? parseInt(r.roomsCount, 10) : null,
+        };
+      });
     }
 
     try {
@@ -189,9 +249,6 @@ export default function PropertyDetailPage() {
     }
   };
 
-  // Find current property
-  const property = properties?.find((p) => p.id === propertyId);
-
   const handleOpenEdit = () => {
     if (property) {
       setPropertyName(property.name);
@@ -199,6 +256,7 @@ export default function PropertyDetailPage() {
       setPropertyCity(property.city);
       setPropertyState(property.state);
       setPropertyType(property.propertyType);
+      setExpectedUnits(property.expectedUnits ? property.expectedUnits.toString() : "");
       setIsEditPropertyOpen(true);
     }
   };
@@ -213,6 +271,7 @@ export default function PropertyDetailPage() {
         city: propertyCity,
         state: propertyState,
         propertyType,
+        expectedUnits: expectedUnits ? parseInt(expectedUnits, 10) : null,
       });
     } catch (err) {
       console.error(err);
@@ -232,9 +291,59 @@ export default function PropertyDetailPage() {
 
   const resetUnitForm = () => {
     setUnitNumber("");
-    setUnitType(UnitType.flat);
+    setUnitType(defaultUnitType);
+    setRoomsCount("");
     setSizeSqm("");
     setUnitError(null);
+  };
+
+  const resetEditUnitForm = () => {
+    setEditUnitId("");
+    setEditUnitNumber("");
+    setEditUnitType("");
+    setEditRoomsCount("");
+    setEditUnitError(null);
+  };
+
+  const handleOpenEditUnit = (unit: {
+    id: string;
+    unitNumber: string;
+    unitType: string;
+    roomsCount?: number | null;
+  }) => {
+    setEditUnitId(unit.id);
+    setEditUnitNumber(unit.unitNumber);
+    setEditUnitType(unit.unitType);
+    setEditRoomsCount(unit.roomsCount ? unit.roomsCount.toString() : "");
+    setEditUnitError(null);
+    setIsEditUnitOpen(true);
+  };
+
+  const handleUpdateUnit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditUnitError(null);
+
+    try {
+      await updateUnit.mutateAsync({
+        id: editUnitId,
+        unitNumber: editUnitNumber,
+        unitType: editUnitType,
+        roomsCount: isResidentialUnitType(editUnitType) && editRoomsCount ? parseInt(editRoomsCount, 10) : null,
+      });
+    } catch {
+      // handled
+    }
+  };
+
+  const handleDeleteUnit = async (id: string) => {
+    setDeleteError(null);
+    if (confirm("Are you sure you want to delete this unit? This action is permanent.")) {
+      try {
+        await deleteUnit.mutateAsync({ id });
+      } catch {
+        // handled
+      }
+    }
   };
 
   const handleCreateUnit = async (e: React.FormEvent) => {
@@ -252,6 +361,7 @@ export default function PropertyDetailPage() {
         propertyId,
         unitNumber,
         unitType,
+        roomsCount: isResidentialUnitType(unitType) && roomsCount ? parseInt(roomsCount, 10) : null,
         sizeSqm: parsedSize,
       });
     } catch (err) {
@@ -330,6 +440,7 @@ export default function PropertyDetailPage() {
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <BackButton href="/landlord/properties" label="Back to Properties" />
         {deleteError && (
           <div className="mb-6 rounded-lg border border-red-900/30 bg-red-950/20 p-4 text-sm text-red-400">
             {deleteError}
@@ -369,16 +480,16 @@ export default function PropertyDetailPage() {
                       Unit Type
                     </th>
                     <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                      Size (sqm)
-                    </th>
-                    <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                       Status
                     </th>
                     <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                       Current Tenant
                     </th>
-                    <th scope="col" className="px-6 py-3.5 className=text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                       Lease Range
+                    </th>
+                    <th scope="col" className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -394,9 +505,6 @@ export default function PropertyDetailPage() {
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300 capitalize">
                         {unit.unitType}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-400">
-                        {unit.sizeSqm ? `${unit.sizeSqm} sqm` : "—"}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span
@@ -416,6 +524,22 @@ export default function PropertyDetailPage() {
                         {unit.activeLease
                           ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
                           : "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-right font-medium" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => handleOpenEditUnit(unit)}
+                            className="text-xs text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 px-2 py-1 rounded transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUnit(unit.id)}
+                            className="text-xs text-red-400 hover:text-red-300 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 px-2 py-1 rounded transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -547,6 +671,23 @@ export default function PropertyDetailPage() {
                     <option value={PropertyType.mixed}>Mixed-Use</option>
                   </select>
                 </div>
+
+                {propertyType !== PropertyType.residential && (
+                  <div className="mt-4">
+                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Expected Number of Units
+                    </label>
+                    <input
+                      id="edit-expectedUnits"
+                      type="number"
+                      min="1"
+                      value={expectedUnits}
+                      onChange={(e) => setExpectedUnits(e.target.value)}
+                      placeholder="e.g. 20"
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
@@ -618,16 +759,36 @@ export default function PropertyDetailPage() {
                   <select
                     id="unitType"
                     value={unitType}
-                    onChange={(e) => setUnitType(e.target.value as UnitType)}
+                    onChange={(e) => {
+                      setUnitType(e.target.value);
+                      setRoomsCount("");
+                    }}
                     className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
                   >
-                    <option value={UnitType.flat}>Flat / Apartment</option>
-                    <option value={UnitType.shop}>Shop</option>
-                    <option value={UnitType.office}>Office</option>
+                    {allowedUnitTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                {/* Size (sqm) field removed from UI */}
+                {isResidentialUnitType(unitType) && (
+                  <div>
+                    <label htmlFor="roomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Number of Rooms
+                    </label>
+                    <input
+                      id="roomsCount"
+                      type="number"
+                      min="0"
+                      value={roomsCount}
+                      onChange={(e) => setRoomsCount(e.target.value)}
+                      placeholder="e.g. 3"
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
@@ -648,6 +809,113 @@ export default function PropertyDetailPage() {
                   className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
                 >
                   {createUnit.isPending ? "Adding..." : "Add Unit"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Unit Modal */}
+      {isEditUnitOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold tracking-tight">Edit Unit</h2>
+              <button
+                onClick={() => {
+                  setIsEditUnitOpen(false);
+                  resetEditUnitForm();
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUnit} className="space-y-4">
+              {editUnitError && (
+                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                  {editUnitError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Unit Number / Name
+                  </label>
+                  <input
+                    id="editUnitNumber"
+                    type="text"
+                    required
+                    value={editUnitNumber}
+                    onChange={(e) => setEditUnitNumber(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    placeholder="e.g. Flat 101, Shop 5"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Unit Type
+                  </label>
+                  <select
+                    id="editUnitType"
+                    value={editUnitType}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditUnitType(val);
+                      if (!isResidentialUnitType(val)) {
+                        setEditRoomsCount("");
+                      }
+                    }}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                  >
+                    {allowedUnitTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {isResidentialUnitType(editUnitType) && (
+                  <div>
+                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Number of Rooms
+                    </label>
+                    <input
+                      id="editRoomsCount"
+                      type="number"
+                      min="0"
+                      value={editRoomsCount}
+                      onChange={(e) => setEditRoomsCount(e.target.value)}
+                      placeholder="e.g. 3"
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsEditUnitOpen(false);
+                    resetEditUnitForm();
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateUnit.isPending}
+                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                >
+                  {updateUnit.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -733,14 +1001,36 @@ export default function PropertyDetailPage() {
                     <select
                       id="rangeType"
                       value={rangeType}
-                      onChange={(e) => setRangeType(e.target.value as UnitType)}
+                      onChange={(e) => {
+                        setRangeType(e.target.value);
+                        setRangeRoomsCount("");
+                      }}
                       className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                     >
-                      <option value={UnitType.flat}>Flat / Apartment</option>
-                      <option value={UnitType.shop}>Shop</option>
-                      <option value={UnitType.office}>Office</option>
+                      {allowedUnitTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
                     </select>
                   </div>
+
+                  {isResidentialUnitType(rangeType) && (
+                    <div>
+                      <label htmlFor="rangeRoomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                        Number of Rooms
+                      </label>
+                      <input
+                        id="rangeRoomsCount"
+                        type="number"
+                        min="0"
+                        value={rangeRoomsCount}
+                        onChange={(e) => setRangeRoomsCount(e.target.value)}
+                        placeholder="e.g. 3"
+                        className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label htmlFor="rangeStart" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
@@ -776,14 +1066,15 @@ export default function PropertyDetailPage() {
                 /* Manual Mode Form */
                 <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
                   <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-neutral-400 uppercase tracking-wider px-2">
-                    <div className="col-span-6">Unit Number / Name</div>
-                    <div className="col-span-5">Unit Type</div>
+                    <div className="col-span-5">Unit Number / Name</div>
+                    <div className="col-span-4">Unit Type</div>
+                    <div className="col-span-2 text-center">Rooms</div>
                     <div className="col-span-1 text-center"></div>
                   </div>
 
                   {manualRows.map((row, idx) => (
                     <div key={idx} className="grid grid-cols-12 gap-3 items-center">
-                      <div className="col-span-6">
+                      <div className="col-span-5">
                         <input
                           type="text"
                           required={idx === 0}
@@ -797,20 +1088,40 @@ export default function PropertyDetailPage() {
                           className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                         />
                       </div>
-                      <div className="col-span-5">
+                      <div className="col-span-4">
                         <select
                           value={row.unitType}
                           onChange={(e) => {
                             const newRows = [...manualRows];
-                            newRows[idx].unitType = e.target.value as UnitType;
+                            newRows[idx].unitType = e.target.value;
+                            if (!isResidentialUnitType(e.target.value)) {
+                              newRows[idx].roomsCount = "";
+                            }
                             setManualRows(newRows);
                           }}
                           className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                         >
-                          <option value={UnitType.flat}>Flat / Apartment</option>
-                          <option value={UnitType.shop}>Shop</option>
-                          <option value={UnitType.office}>Office</option>
+                          {allowedUnitTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
                         </select>
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={!isResidentialUnitType(row.unitType)}
+                          value={row.roomsCount}
+                          onChange={(e) => {
+                            const newRows = [...manualRows];
+                            newRows[idx].roomsCount = e.target.value;
+                            setManualRows(newRows);
+                          }}
+                          placeholder="-"
+                          className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-2 text-white text-center placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10 disabled:opacity-30 disabled:cursor-not-allowed"
+                        />
                       </div>
                       <div className="col-span-1 text-center">
                         <button
@@ -819,7 +1130,7 @@ export default function PropertyDetailPage() {
                             if (manualRows.length > 1) {
                               setManualRows(manualRows.filter((_, i) => i !== idx));
                             } else {
-                              setManualRows([{ unitNumber: "", unitType: UnitType.flat }]);
+                              setManualRows([{ unitNumber: "", unitType: defaultUnitType, roomsCount: "" }]);
                             }
                           }}
                           className="text-red-400 hover:text-red-300 p-1.5"
@@ -833,7 +1144,7 @@ export default function PropertyDetailPage() {
 
                   <button
                     type="button"
-                    onClick={() => setManualRows([...manualRows, { unitNumber: "", unitType: UnitType.flat }])}
+                    onClick={() => setManualRows([...manualRows, { unitNumber: "", unitType: defaultUnitType, roomsCount: "" }])}
                     className="w-full py-2.5 rounded-lg border border-dashed border-neutral-800 text-sm font-medium text-neutral-400 hover:text-white hover:border-neutral-700 hover:bg-neutral-900/30 transition-colors flex items-center justify-center space-x-1.5 mt-2"
                   >
                     <span>+ Add Row</span>

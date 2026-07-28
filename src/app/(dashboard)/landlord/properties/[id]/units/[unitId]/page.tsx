@@ -1,13 +1,18 @@
 'use client';
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
-import { RentFrequency } from "@prisma/client";
+import { RentFrequency, PaymentMethod } from "@prisma/client";
+import { X } from "lucide-react";
+import { BackButton } from "@/components/ui/back-button";
+import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
+import { formatCurrency } from "@/lib/utils";
 
 export default function UnitDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const propertyId = params.id as string;
   const unitId = params.unitId as string;
@@ -23,12 +28,7 @@ export default function UnitDetailPage() {
   const unit = property?.units.find((u) => u.id === unitId);
 
   // Active Lease if exists
-  const activeLease = leases?.find(
-    (l) =>
-      !l.terminatedAt &&
-      new Date(l.startDate) <= new Date() &&
-      new Date(l.endDate) >= new Date()
-  );
+  const activeLease = leases?.find((l) => !l.terminatedAt);
 
   // Timeline query
   const { data: timeline } = trpc.leases.getTimeline.useQuery(
@@ -52,8 +52,234 @@ export default function UnitDetailPage() {
 
   const uploadDocMutation = trpc.leases.uploadDocument.useMutation();
 
+  const [isEditLeaseOpen, setIsEditLeaseOpen] = useState(false);
+  const [editRentAmount, setEditRentAmount] = useState("");
+  const [editRentFrequency, setEditRentFrequency] = useState<RentFrequency>(RentFrequency.annually);
+  const [editDepositAmount, setEditDepositAmount] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editLeaseError, setEditLeaseError] = useState<string | null>(null);
+
+  const updateLease = trpc.leases.update.useMutation({
+    onSuccess: () => {
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      utils.properties.list.invalidate();
+      if (activeLease) {
+        utils.leases.getTimeline.invalidate({ leaseId: activeLease.id });
+        utils.payments.getBillingSummary.invalidate({ leaseId: activeLease.id });
+      }
+      setIsEditLeaseOpen(false);
+    },
+    onError: (err) => {
+      setEditLeaseError(err.message);
+    },
+  });
+
+  const handleOpenEditLease = () => {
+    if (activeLease) {
+      setEditRentAmount(Number(activeLease.rentAmount) === 0 ? "" : activeLease.rentAmount.toString());
+      setEditRentFrequency(activeLease.rentFrequency);
+      setEditDepositAmount(activeLease.depositAmount ? activeLease.depositAmount.toString() : "");
+      setEditStartDate(new Date(activeLease.startDate).toISOString().split("T")[0]);
+      setEditEndDate(new Date(activeLease.endDate).toISOString().split("T")[0]);
+      setEditLeaseError(null);
+      setIsEditLeaseOpen(true);
+    }
+  };
+
+  const handleEditStartDateChange = (val: string) => {
+    setEditStartDate(val);
+    if (unit && isResidentialUnitType(unit.unitType) && val) {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        d.setFullYear(d.getFullYear() + 1);
+        setEditEndDate(d.toISOString().split("T")[0]);
+      }
+    }
+  };
+
+  const handleUpdateLeaseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditLeaseError(null);
+
+    const rent = editRentAmount ? parseFloat(editRentAmount) : 0;
+    const deposit = editDepositAmount ? parseFloat(editDepositAmount) : null;
+
+    if (editRentAmount && (isNaN(rent) || rent < 0)) {
+      setEditLeaseError("Rent amount must be a positive number.");
+      return;
+    }
+
+    try {
+      await updateLease.mutateAsync({
+        id: activeLease!.id,
+        startDate: editStartDate,
+        endDate: editEndDate,
+        rentAmount: rent,
+        rentFrequency: editRentFrequency,
+        depositAmount: deposit,
+      });
+    } catch {
+      // handled
+    }
+  };
+
+  // Unit edit / delete states and actions
+  const [isEditUnitOpen, setIsEditUnitOpen] = useState(false);
+  const [editUnitNumber, setEditUnitNumber] = useState("");
+  const [editUnitType, setEditUnitType] = useState("");
+  const [editRoomsCount, setEditRoomsCount] = useState("");
+  const [editUnitError, setEditUnitError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const allowedUnitTypes = property ? getUnitTypesByPropertyType(property.propertyType) : [];
+
+  const updateUnit = trpc.units.update.useMutation({
+    onSuccess: () => {
+      utils.units.listByProperty.invalidate({ propertyId });
+      utils.properties.list.invalidate();
+      utils.units.getStatus.invalidate({ id: unitId });
+      setIsEditUnitOpen(false);
+      setEditUnitError(null);
+    },
+    onError: (err) => {
+      setEditUnitError(err.message);
+    },
+  });
+
+  const deleteUnit = trpc.units.delete.useMutation({
+    onSuccess: () => {
+      utils.units.listByProperty.invalidate({ propertyId });
+      utils.properties.list.invalidate();
+      router.push(`/landlord/properties/${propertyId}`);
+    },
+    onError: (err) => {
+      setDeleteError(err.message);
+    },
+  });
+
+  const handleOpenEditUnit = () => {
+    if (unit) {
+      setEditUnitNumber(unit.unitNumber);
+      setEditUnitType(unit.unitType);
+      setEditRoomsCount(unit.roomsCount ? unit.roomsCount.toString() : "");
+      setEditUnitError(null);
+      setIsEditUnitOpen(true);
+    }
+  };
+
+  const handleUpdateUnitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditUnitError(null);
+
+    try {
+      await updateUnit.mutateAsync({
+        id: unitId,
+        unitNumber: editUnitNumber,
+        unitType: editUnitType,
+        roomsCount: isResidentialUnitType(editUnitType) && editRoomsCount ? parseInt(editRoomsCount, 10) : null,
+      });
+    } catch {
+      // handled
+    }
+  };
+
+  const handleDeleteUnit = async () => {
+    setDeleteError(null);
+    if (confirm("Are you sure you want to delete this unit? This action is permanent.")) {
+      try {
+        await deleteUnit.mutateAsync({ id: unitId });
+      } catch {
+        // handled
+      }
+    }
+  };
+
+  // Payments queries
+  const { data: payments, isLoading: isLoadingPayments } = trpc.payments.list.useQuery(
+    { leaseId: activeLease?.id || "" },
+    { enabled: !!activeLease?.id }
+  );
+
+  const { data: billingSummary } = trpc.payments.getBillingSummary.useQuery(
+    { leaseId: activeLease?.id || "" },
+    { enabled: !!activeLease?.id }
+  );
+
+  // Payments mutations
+  const createPayment = trpc.payments.create.useMutation({
+    onSuccess: () => {
+      utils.payments.list.invalidate({ leaseId: activeLease?.id });
+      utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+      setIsLogPaymentOpen(false);
+      resetPaymentForm();
+    },
+    onError: (err) => {
+      setPaymentError(err.message);
+    },
+  });
+
+  const confirmPayment = trpc.payments.confirm.useMutation({
+    onSuccess: () => {
+      utils.payments.list.invalidate({ leaseId: activeLease?.id });
+      utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
+
+  const rejectPayment = trpc.payments.reject.useMutation({
+    onSuccess: () => {
+      utils.payments.list.invalidate({ leaseId: activeLease?.id });
+      utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+      setIsRejectOpen(false);
+      setRejectReason("");
+      setRejectPaymentId("");
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
+
+  const resolvePayment = trpc.payments.resolve.useMutation({
+    onSuccess: () => {
+      utils.payments.list.invalidate({ leaseId: activeLease?.id });
+      utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+      setIsEditOpen(false);
+      resetEditForm();
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
+
   // States
   const [isAddLeaseOpen, setIsAddLeaseOpen] = useState(false);
+
+  // Payment Ledger States
+  const [isLogPaymentOpen, setIsLogPaymentOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [paymentPeriodStart, setPaymentPeriodStart] = useState("");
+  const [paymentPeriodEnd, setPaymentPeriodEnd] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.cash);
+  const [paymentNotes, setPaymentNotes] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Reject State
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [rejectPaymentId, setRejectPaymentId] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+
+  // Edit/Resolve State
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editPaymentId, setEditPaymentId] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editPaymentDate, setEditPaymentDate] = useState("");
+  const [editMethod, setEditMethod] = useState<PaymentMethod>(PaymentMethod.cash);
+  const [editAction, setEditAction] = useState<"edit" | "void">("edit");
   const [tenantName, setTenantName] = useState("");
   const [tenantEmail, setTenantEmail] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -61,7 +287,6 @@ export default function UnitDetailPage() {
   const [rentAmount, setRentAmount] = useState("");
   const [rentFrequency, setRentFrequency] = useState<RentFrequency>(RentFrequency.monthly);
   const [depositAmount, setDepositAmount] = useState("");
-  const [renewalWindowDays, setRenewalWindowDays] = useState("60");
   const [leaseError, setLeaseError] = useState<string | null>(null);
 
   // File Upload State
@@ -85,6 +310,17 @@ export default function UnitDetailPage() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    if (unit && isResidentialUnitType(unit.unitType) && val) {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        d.setFullYear(d.getFullYear() + 1);
+        setEndDate(d.toISOString().split("T")[0]);
+      }
+    }
+  };
+
   const resetLeaseForm = () => {
     setTenantName("");
     setTenantEmail("");
@@ -93,28 +329,40 @@ export default function UnitDetailPage() {
     setRentAmount("");
     setRentFrequency(RentFrequency.monthly);
     setDepositAmount("");
-    setRenewalWindowDays("60");
     setLeaseError(null);
+  };
+
+  const resetPaymentForm = () => {
+    setPaymentAmount("");
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+    setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
+    setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
+    setPaymentMethod(PaymentMethod.cash);
+    setPaymentNotes("");
+    setPaymentError(null);
+  };
+
+  const resetEditForm = () => {
+    setEditPaymentId("");
+    setEditAmount("");
+    setEditPaymentDate("");
+    setEditMethod(PaymentMethod.cash);
+    setEditAction("edit");
   };
 
   const handleCreateLease = async (e: React.FormEvent) => {
     e.preventDefault();
     setLeaseError(null);
 
-    const rent = parseFloat(rentAmount);
+    const rent = rentAmount ? parseFloat(rentAmount) : undefined;
     const deposit = depositAmount ? parseFloat(depositAmount) : undefined;
-    const renewalDays = parseInt(renewalWindowDays);
 
-    if (isNaN(rent) || rent <= 0) {
+    if (rentAmount && (isNaN(rent!) || rent! < 0)) {
       setLeaseError("Rent amount must be a positive number.");
       return;
     }
     if (depositAmount && (isNaN(deposit!) || deposit! <= 0)) {
       setLeaseError("Deposit amount must be a positive number.");
-      return;
-    }
-    if (isNaN(renewalDays) || renewalDays <= 0) {
-      setLeaseError("Renewal window days must be a positive integer.");
       return;
     }
 
@@ -128,11 +376,78 @@ export default function UnitDetailPage() {
         rentAmount: rent,
         rentFrequency,
         depositAmount: deposit,
-        renewalWindowDays: renewalDays,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create lease.";
       setLeaseError(message);
+    }
+  };
+
+  const handleLogPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPaymentError(null);
+
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setPaymentError("Amount must be a positive number.");
+      return;
+    }
+
+    if (!paymentPeriodStart || !paymentPeriodEnd) {
+      setPaymentError("Period start and end dates are required.");
+      return;
+    }
+
+    if (new Date(paymentPeriodStart) >= new Date(paymentPeriodEnd)) {
+      setPaymentError("Period start date must be before period end date.");
+      return;
+    }
+
+    try {
+      await createPayment.mutateAsync({
+        leaseId: activeLease!.id,
+        amount,
+        paymentDate: new Date(paymentDate).toISOString(),
+        periodStart: new Date(paymentPeriodStart).toISOString(),
+        periodEnd: new Date(paymentPeriodEnd).toISOString(),
+        method: paymentMethod,
+        notes: paymentNotes || undefined,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to log payment.";
+      setPaymentError(message);
+    }
+  };
+
+  const handleEditPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(editAmount);
+    if (editAction === "edit" && (isNaN(amount) || amount <= 0)) {
+      alert("Amount must be a positive number.");
+      return;
+    }
+
+    try {
+      await resolvePayment.mutateAsync({
+        paymentId: editPaymentId,
+        action: editAction,
+        amount: editAction === "edit" ? amount : undefined,
+        paymentDate: editAction === "edit" ? new Date(editPaymentDate).toISOString() : undefined,
+        method: editAction === "edit" ? editMethod : undefined,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to resolve payment.";
+      alert(message);
+    }
+  };
+
+  const handleViewPaymentProof = async (path: string) => {
+    try {
+      const { signedUrl } = await utils.client.payments.getDownloadUrl.query({ path });
+      window.open(signedUrl, "_blank");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch proof file URL.";
+      alert(message);
     }
   };
 
@@ -258,12 +573,26 @@ export default function UnitDetailPage() {
           </div>
 
           <div className="flex items-center space-x-3">
+            <Button
+              onClick={handleOpenEditUnit}
+              variant="outline"
+              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 px-4 text-sm"
+            >
+              Edit Unit
+            </Button>
+            <Button
+              onClick={handleDeleteUnit}
+              variant="outline"
+              className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:text-red-300 h-9 px-4 text-sm"
+            >
+              Delete Unit
+            </Button>
             {!activeLease && (
               <Button
                 onClick={() => setIsAddLeaseOpen(true)}
                 className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm"
               >
-                Create Lease
+                Invite Tenant
               </Button>
             )}
           </div>
@@ -272,6 +601,12 @@ export default function UnitDetailPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <BackButton href={`/landlord/properties/${propertyId}`} label="Back to Property" />
+        {deleteError && (
+          <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-4 text-sm text-red-400">
+            {deleteError}
+          </div>
+        )}
         {/* Unit Info Card */}
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex justify-between items-start">
           <div>
@@ -302,7 +637,15 @@ export default function UnitDetailPage() {
               {/* Timeline Display Card */}
               <div className="md:col-span-2 rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 space-y-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-white text-lg">Lease Timeline</h3>
+                  <div className="flex items-center space-x-3">
+                    <h3 className="font-bold text-white text-lg">Lease Timeline</h3>
+                    <button
+                      onClick={handleOpenEditLease}
+                      className="text-xs text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 px-2 py-1 rounded transition-colors"
+                    >
+                      Edit Details
+                    </button>
+                  </div>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
                       timeline.status === "renewal_due"
@@ -341,7 +684,7 @@ export default function UnitDetailPage() {
                       style={{ marginRight: `${renewalPercent / 2}%` }}
                       className="text-yellow-500 font-semibold"
                     >
-                      Renewal Window (60d before end)
+                      Renewal Window
                     </span>
                     <span>End: {new Date(timeline.endDate).toLocaleDateString()}</span>
                   </div>
@@ -356,13 +699,15 @@ export default function UnitDetailPage() {
                   <div>
                     <span className="block text-neutral-500 text-xs">Rent</span>
                     <span className="font-semibold text-white mt-0.5 block">
-                      ₦{timeline.rentAmount.toLocaleString()} / {timeline.rentFrequency}
+                      {Number(timeline.rentAmount) === 0
+                        ? "TBD"
+                        : `${formatCurrency(timeline.rentAmount)} / ${timeline.rentFrequency}`}
                     </span>
                   </div>
                   <div>
                     <span className="block text-neutral-500 text-xs">Deposit</span>
                     <span className="font-semibold text-white mt-0.5 block">
-                      {activeLease.depositAmount ? `₦${Number(activeLease.depositAmount).toLocaleString()}` : "—"}
+                      {activeLease.depositAmount ? formatCurrency(activeLease.depositAmount) : "—"}
                     </span>
                   </div>
                   <div>
@@ -474,6 +819,201 @@ export default function UnitDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Payment Ledger Section */}
+            <div className="pt-6 border-t border-neutral-800 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-white text-xl">Payment Ledger</h3>
+                  <p className="text-neutral-400 text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setIsLogPaymentOpen(true);
+                    setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
+                    setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
+                    setPaymentAmount(billingSummary?.amountOutstanding ? String(billingSummary.amountOutstanding) : "");
+                    setPaymentError(null);
+                  }}
+                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold self-start sm:self-auto"
+                >
+                  Log Payment
+                </Button>
+              </div>
+
+              {/* Billing Summary Banner */}
+              {billingSummary && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/10 p-5">
+                  <div className="space-y-1">
+                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Current Period</span>
+                    <span className="text-sm font-semibold text-neutral-300 block">
+                      {new Date(billingSummary.periodStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – {new Date(billingSummary.periodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Rent Due / Paid</span>
+                    <span className="text-lg font-bold text-white block">
+                      {billingSummary.rentAmount === 0 ? "TBD" : formatCurrency(billingSummary.rentAmount)}{" "}
+                      <span className="text-neutral-500 font-normal text-sm">/ {formatCurrency(billingSummary.amountPaid)} paid</span>
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Outstanding Balance</span>
+                    <span className={`text-lg font-bold block ${billingSummary.amountOutstanding > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {formatCurrency(billingSummary.amountOutstanding)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Payments Ledger List */}
+              <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
+                <table className="min-w-full divide-y divide-neutral-800">
+                  <thead className="bg-neutral-900/50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Logged</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Period Covered</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Method</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status / Verification</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60">
+                    {isLoadingPayments ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 animate-pulse">
+                          Loading ledger entries...
+                        </td>
+                      </tr>
+                    ) : !payments || payments.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
+                          No payments recorded yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      payments.map((p) => {
+                        const hasTenantDispute = p.disputedByTenant && !p.disputedByResolvedAt;
+                        return (
+                          <tr key={p.id} className="hover:bg-neutral-900/10 transition-colors">
+                            <td className="px-6 py-4 text-sm text-neutral-300">
+                              {new Date(p.paymentDate).toLocaleDateString()}
+                              {p.notes && (
+                                <span className="block text-xs text-neutral-500 mt-0.5 truncate max-w-xs" title={p.notes}>
+                                  Note: {p.notes}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-white">
+                              {formatCurrency(p.amount)}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-neutral-400">
+                              {new Date(p.periodStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – {new Date(p.periodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
+                              {p.method.replace('_', ' ')}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <div className="flex flex-col space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize border ${
+                                    p.status === "confirmed"
+                                      ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                      : p.status === "disputed"
+                                      ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                      : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                  }`}>
+                                    {p.status}
+                                  </span>
+                                  {p.proofUrl && (
+                                    <button
+                                      onClick={() => handleViewPaymentProof(p.proofUrl!)}
+                                      className="text-xs text-neutral-400 hover:text-white underline ml-2"
+                                    >
+                                      View Proof
+                                    </button>
+                                  )}
+                                </div>
+                                {p.counterVerifiedAt && (
+                                  <span className="text-[11px] text-green-500 font-medium">
+                                    ✓ Acknowledged by tenant
+                                  </span>
+                                )}
+                                {hasTenantDispute && (
+                                  <span className="text-[11px] text-red-400 font-medium bg-red-950/20 border border-red-900/30 rounded p-1.5 mt-1 block">
+                                    ⚠️ Tenant Flagged: {p.disputedByReason}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-right space-x-2">
+                              {p.status === "pending" && (
+                                <div className="flex items-center justify-end space-x-2">
+                                  <Button
+                                    onClick={() => confirmPayment.mutate({ paymentId: p.id })}
+                                    disabled={confirmPayment.isPending}
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-500 text-white h-8 text-xs font-semibold px-3"
+                                  >
+                                    Confirm
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      setRejectPaymentId(p.id);
+                                      setRejectReason("");
+                                      setIsRejectOpen(true);
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 h-8 text-xs font-semibold px-3"
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              )}
+                              {hasTenantDispute && (
+                                <div className="flex items-center justify-end space-x-2">
+                                  <Button
+                                    onClick={() => {
+                                      setEditPaymentId(p.id);
+                                      setEditAmount(String(p.amount));
+                                      setEditPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
+                                      setEditMethod(p.method);
+                                      setEditAction("edit");
+                                      setIsEditOpen(true);
+                                    }}
+                                    size="sm"
+                                    className="bg-white text-neutral-950 hover:bg-neutral-200 h-8 text-xs font-semibold px-3"
+                                  >
+                                    Correct Details
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      if (confirm("Are you sure you want to void this payment record? This will exclude it from outstanding balance calculations.")) {
+                                        resolvePayment.mutate({
+                                          paymentId: p.id,
+                                          action: "void"
+                                        });
+                                      }
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 h-8 text-xs font-semibold px-3"
+                                  >
+                                    Void
+                                  </Button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">
@@ -516,7 +1056,7 @@ export default function UnitDetailPage() {
                         {new Date(l.endDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm text-neutral-300">
-                        ₦{Number(l.rentAmount).toLocaleString()} / {l.rentFrequency}
+                        {formatCurrency(l.rentAmount)} / {l.rentFrequency}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span
@@ -544,12 +1084,119 @@ export default function UnitDetailPage() {
         )}
       </main>
 
+      {/* Edit Unit Modal */}
+      {isEditUnitOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold tracking-tight">Edit Unit</h2>
+              <button
+                onClick={() => {
+                  setIsEditUnitOpen(false);
+                  setEditUnitError(null);
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUnitSubmit} className="space-y-4">
+              {editUnitError && (
+                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                  {editUnitError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Unit Number / Name
+                  </label>
+                  <input
+                    id="editUnitNumber"
+                    type="text"
+                    required
+                    value={editUnitNumber}
+                    onChange={(e) => setEditUnitNumber(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    placeholder="e.g. Flat 101, Shop 5"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Unit Type
+                  </label>
+                  <select
+                    id="editUnitType"
+                    value={editUnitType}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditUnitType(val);
+                      if (!isResidentialUnitType(val)) {
+                        setEditRoomsCount("");
+                      }
+                    }}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                  >
+                    {allowedUnitTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {isResidentialUnitType(editUnitType) && (
+                  <div>
+                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Number of Rooms
+                    </label>
+                    <input
+                      id="editRoomsCount"
+                      type="number"
+                      min="0"
+                      value={editRoomsCount}
+                      onChange={(e) => setEditRoomsCount(e.target.value)}
+                      placeholder="e.g. 3"
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsEditUnitOpen(false);
+                    setEditUnitError(null);
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateUnit.isPending}
+                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                >
+                  {updateUnit.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add Lease Modal */}
       {isAddLeaseOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
           <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Create Tenancy Lease</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Invite Tenant</h2>
               <button
                 onClick={() => {
                   setIsAddLeaseOpen(false);
@@ -610,7 +1257,7 @@ export default function UnitDetailPage() {
                       type="date"
                       required
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
                     />
                   </div>
@@ -629,50 +1276,17 @@ export default function UnitDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="rentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Rent Amount (₦)
-                    </label>
-                    <input
-                      id="rentAmount"
-                      type="number"
-                      required
-                      value={rentAmount}
-                      onChange={(e) => setRentAmount(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                      placeholder="e.g. 150000"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="rentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Frequency
-                    </label>
-                    <select
-                      id="rentFrequency"
-                      value={rentFrequency}
-                      onChange={(e) => setRentFrequency(e.target.value as RentFrequency)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
-                    >
-                      <option value={RentFrequency.monthly}>Monthly</option>
-                      <option value={RentFrequency.quarterly}>Quarterly</option>
-                      <option value={RentFrequency.annually}>Annually</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div>
-                  <label htmlFor="renewalWindowDays" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Renewal Window (days)
+                  <label htmlFor="rentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Rent Amount (₦) - Optional
                   </label>
                   <input
-                    id="renewalWindowDays"
+                    id="rentAmount"
                     type="number"
-                    required
-                    value={renewalWindowDays}
-                    onChange={(e) => setRenewalWindowDays(e.target.value)}
+                    value={rentAmount}
+                    onChange={(e) => setRentAmount(e.target.value)}
                     className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="60"
+                    placeholder="e.g. 150000 (can be left blank / TBD)"
                   />
                 </div>
               </div>
@@ -694,7 +1308,444 @@ export default function UnitDetailPage() {
                   disabled={createLease.isPending}
                   className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
                 >
-                  {createLease.isPending ? "Creating..." : "Save Lease"}
+                  {createLease.isPending ? "Sending..." : "Send Invite"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Lease Modal */}
+      {isEditLeaseOpen && activeLease && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold tracking-tight">Edit Lease Details</h2>
+              <button
+                onClick={() => setIsEditLeaseOpen(false)}
+                className="text-neutral-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLeaseSubmit} className="space-y-4">
+              {editLeaseError && (
+                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                  {editLeaseError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="editStartDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Start Date
+                    </label>
+                    <input
+                      id="editStartDate"
+                      type="date"
+                      required
+                      value={editStartDate}
+                      onChange={(e) => handleEditStartDateChange(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editEndDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      End Date
+                    </label>
+                    <input
+                      id="editEndDate"
+                      type="date"
+                      required
+                      value={editEndDate}
+                      onChange={(e) => setEditEndDate(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="editRentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Rent Amount (₦)
+                    </label>
+                    <input
+                      id="editRentAmount"
+                      type="number"
+                      value={editRentAmount}
+                      onChange={(e) => setEditRentAmount(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                      placeholder="e.g. 150000"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editRentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Frequency
+                    </label>
+                    <select
+                      id="editRentFrequency"
+                      value={editRentFrequency}
+                      onChange={(e) => setEditRentFrequency(e.target.value as RentFrequency)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    >
+                      <option value={RentFrequency.monthly}>Monthly</option>
+                      <option value={RentFrequency.quarterly}>Quarterly</option>
+                      <option value={RentFrequency.annually}>Annually</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="editDepositAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Deposit Amount (₦) - Optional
+                  </label>
+                  <input
+                    id="editDepositAmount"
+                    type="number"
+                    value={editDepositAmount}
+                    onChange={(e) => setEditDepositAmount(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    placeholder="e.g. 50000"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+                <Button
+                  type="button"
+                  onClick={() => setIsEditLeaseOpen(false)}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateLease.isPending}
+                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                >
+                  {updateLease.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Log Payment Modal */}
+      {isLogPaymentOpen && activeLease && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl my-8">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-800">
+              <h2 className="text-xl font-bold text-white font-sans">Log Manual Payment</h2>
+              <button
+                onClick={() => {
+                  setIsLogPaymentOpen(false);
+                  resetPaymentForm();
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleLogPaymentSubmit} className="space-y-4">
+              {paymentError && (
+                <div className="rounded bg-red-950/20 border border-red-900/30 p-2.5 text-xs text-red-400">
+                  {paymentError}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="paymentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Amount (₦)
+                </label>
+                <input
+                  id="paymentAmount"
+                  type="number"
+                  required
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  placeholder="e.g. 150000"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="paymentDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Payment Date
+                </label>
+                <input
+                  id="paymentDate"
+                  type="date"
+                  required
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="paymentPeriodStart" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Period Start
+                  </label>
+                  <input
+                    id="paymentPeriodStart"
+                    type="date"
+                    required
+                    value={paymentPeriodStart}
+                    onChange={(e) => setPaymentPeriodStart(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="paymentPeriodEnd" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Period End
+                  </label>
+                  <input
+                    id="paymentPeriodEnd"
+                    type="date"
+                    required
+                    value={paymentPeriodEnd}
+                    onChange={(e) => setPaymentPeriodEnd(e.target.value)}
+                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="paymentMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Payment Method
+                </label>
+                <select
+                  id="paymentMethod"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                >
+                  <option value={PaymentMethod.cash}>Cash</option>
+                  <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
+                  <option value={PaymentMethod.cheque}>Cheque</option>
+                  <option value={PaymentMethod.other}>Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="paymentNotes" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Notes
+                </label>
+                <textarea
+                  id="paymentNotes"
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-20"
+                  placeholder="Reference, receipt numbers or bank metadata..."
+                />
+              </div>
+
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsLogPaymentOpen(false);
+                    resetPaymentForm();
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createPayment.isPending}
+                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+                >
+                  {createPayment.isPending ? "Logging..." : "Log Payment"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Payment Modal */}
+      {isRejectOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
+              <h2 className="text-lg font-bold text-white font-sans">Dispute Tenant Payment</h2>
+              <button
+                onClick={() => {
+                  setIsRejectOpen(false);
+                  setRejectReason("");
+                  setRejectPaymentId("");
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!rejectReason.trim()) {
+                  alert("Reason is required.");
+                  return;
+                }
+                await rejectPayment.mutateAsync({
+                  paymentId: rejectPaymentId,
+                  reason: rejectReason,
+                });
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label htmlFor="rejectReason" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Reason for dispute
+                </label>
+                <textarea
+                  id="rejectReason"
+                  required
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-24"
+                  placeholder="Specify why this payment is incorrect (e.g. money never received, wrong amount)..."
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsRejectOpen(false);
+                    setRejectReason("");
+                    setRejectPaymentId("");
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-[38px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={rejectPayment.isPending}
+                  className="w-1/2 bg-red-600 hover:bg-red-500 text-white font-semibold h-[38px]"
+                >
+                  {rejectPayment.isPending ? "Submitting..." : "Reject & Dispute"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit/Resolve Dispute Modal */}
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
+              <h2 className="text-lg font-bold text-white font-sans">Resolve Payment Dispute</h2>
+              <button
+                onClick={() => {
+                  setIsEditOpen(false);
+                  resetEditForm();
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditPaymentSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="editAction" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  Resolution Action
+                </label>
+                <select
+                  id="editAction"
+                  value={editAction}
+                  onChange={(e) => setEditAction(e.target.value as "edit" | "void")}
+                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                >
+                  <option value="edit">Correct Details & Keep Confirmed</option>
+                  <option value="void">Void Payment Entirely</option>
+                </select>
+              </div>
+
+              {editAction === "edit" ? (
+                <>
+                  <div>
+                    <label htmlFor="editAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Corrected Amount (₦)
+                    </label>
+                    <input
+                      id="editAmount"
+                      type="number"
+                      required
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editPaymentDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Corrected Date
+                    </label>
+                    <input
+                      id="editPaymentDate"
+                      type="date"
+                      required
+                      value={editPaymentDate}
+                      onChange={(e) => setEditPaymentDate(e.target.value)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Corrected Method
+                    </label>
+                    <select
+                      id="editMethod"
+                      value={editMethod}
+                      onChange={(e) => setEditMethod(e.target.value as PaymentMethod)}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    >
+                      <option value={PaymentMethod.cash}>Cash</option>
+                      <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
+                      <option value={PaymentMethod.cheque}>Cheque</option>
+                      <option value={PaymentMethod.other}>Other</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-neutral-400 bg-red-950/20 border border-red-900/30 p-2.5 rounded">
+                  ⚠️ Voiding this payment marks it as disputed and removes it from outstanding balance calculations.
+                </p>
+              )}
+
+              <div className="flex space-x-3 pt-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsEditOpen(false);
+                    resetEditForm();
+                  }}
+                  variant="outline"
+                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-[38px]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={resolvePayment.isPending}
+                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-[38px]"
+                >
+                  {resolvePayment.isPending ? "Saving..." : "Apply Resolution"}
                 </Button>
               </div>
             </form>

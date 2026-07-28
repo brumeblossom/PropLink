@@ -171,9 +171,10 @@ export default function LandlordDashboard() {
                       const activeLease = isOccupied ? unit.leases[0] : null;
 
                       return (
-                        <div
+                        <Link
                           key={unit.id}
-                          className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 flex flex-col justify-between hover:border-neutral-700 transition-colors"
+                          href={`/landlord/properties/${property.id}/units/${unit.id}`}
+                          className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 flex flex-col justify-between hover:border-neutral-700 transition-colors cursor-pointer block"
                         >
                           <div>
                             <div className="flex justify-between items-start">
@@ -210,7 +211,7 @@ export default function LandlordDashboard() {
                               </>
                             )}
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>

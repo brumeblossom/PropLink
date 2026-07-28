@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
-import { UnitType } from "@prisma/client";
+
 
 export const unitsRouter = router({
   listByProperty: authedProcedure
@@ -21,7 +21,7 @@ export const unitsRouter = router({
 
       const now = new Date();
       const units = await prisma.unit.findMany({
-        where: { propertyId: input.propertyId },
+        where: { propertyId: input.propertyId, deletedAt: null },
         include: {
           leases: {
             where: {
@@ -67,7 +67,8 @@ export const unitsRouter = router({
       z.object({
         propertyId: z.string().uuid(),
         unitNumber: z.string().min(1),
-        unitType: z.nativeEnum(UnitType),
+        unitType: z.string().min(1),
+        roomsCount: z.number().int().nonnegative().optional().nullable(),
         sizeSqm: z.number().positive().optional(),
       })
     )
@@ -88,6 +89,7 @@ export const unitsRouter = router({
           propertyId: input.propertyId,
           unitNumber: input.unitNumber,
           unitType: input.unitType,
+          roomsCount: input.roomsCount ?? null,
           sizeSqm: input.sizeSqm ?? null,
         },
       });
@@ -98,13 +100,14 @@ export const unitsRouter = router({
       z.object({
         id: z.string().uuid(),
         unitNumber: z.string().min(1),
-        unitType: z.nativeEnum(UnitType),
+        unitType: z.string().min(1),
+        roomsCount: z.number().int().nonnegative().optional().nullable(),
         sizeSqm: z.number().positive().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const unit = await prisma.unit.findUnique({
-        where: { id: input.id },
+      const unit = await prisma.unit.findFirst({
+        where: { id: input.id, deletedAt: null },
         include: { property: true },
       });
 
@@ -120,6 +123,7 @@ export const unitsRouter = router({
         data: {
           unitNumber: input.unitNumber,
           unitType: input.unitType,
+          roomsCount: input.roomsCount ?? null,
           sizeSqm: input.sizeSqm ?? null,
         },
       });
@@ -128,8 +132,8 @@ export const unitsRouter = router({
   getStatus: authedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const unit = await prisma.unit.findUnique({
-        where: { id: input.id },
+      const unit = await prisma.unit.findFirst({
+        where: { id: input.id, deletedAt: null },
         include: { property: true },
       });
 
@@ -176,7 +180,8 @@ export const unitsRouter = router({
         units: z.array(
           z.object({
             unitNumber: z.string().min(1),
-            unitType: z.nativeEnum(UnitType),
+            unitType: z.string().min(1),
+            roomsCount: z.number().int().nonnegative().optional().nullable(),
           })
         ).min(1),
       })
@@ -208,6 +213,7 @@ export const unitsRouter = router({
         where: {
           propertyId: input.propertyId,
           unitNumber: { in: incomingNumbers },
+          deletedAt: null,
         },
         select: { unitNumber: true },
       });
@@ -225,6 +231,7 @@ export const unitsRouter = router({
         propertyId: input.propertyId,
         unitNumber: u.unitNumber.trim(),
         unitType: u.unitType,
+        roomsCount: u.roomsCount ?? null,
       }));
 
       await prisma.unit.createMany({
@@ -232,5 +239,53 @@ export const unitsRouter = router({
       });
 
       return { count: createData.length };
+    }),
+
+  delete: authedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const now = new Date();
+      const unit = await prisma.unit.findFirst({
+        where: { id: input.id, deletedAt: null },
+        include: {
+          property: true,
+          leases: {
+            where: {
+              terminatedAt: null,
+              startDate: { lte: now },
+              endDate: { gte: now },
+            },
+            include: {
+              tenant: { select: { fullName: true } }
+            }
+          },
+        },
+      });
+
+      if (!unit || unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      // Block deletion if unit has active lease
+      const activeLease = unit.leases[0];
+      if (activeLease) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Cannot delete unit with an active lease. Blocking lease: ${
+            activeLease.tenant.fullName
+          } from ${new Date(activeLease.startDate).toLocaleDateString()} to ${new Date(
+            activeLease.endDate
+          ).toLocaleDateString()}. Please terminate active leases first.`,
+        });
+      }
+
+      // Soft-delete: update deletedAt
+      return await prisma.unit.update({
+        where: { id: input.id },
+        data: { deletedAt: now },
+      });
     }),
 });

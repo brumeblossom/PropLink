@@ -14,9 +14,9 @@ export const leasesRouter = router({
         tenantName: z.string().min(2),
         startDate: z.string(), // ISO String
         endDate: z.string(), // ISO String
-        rentAmount: z.number().positive(),
-        rentFrequency: z.nativeEnum(RentFrequency),
-        depositAmount: z.number().positive().optional(),
+        rentAmount: z.number().nonnegative().optional().nullable(),
+        rentFrequency: z.nativeEnum(RentFrequency).optional().default(RentFrequency.annually),
+        depositAmount: z.number().positive().optional().nullable(),
         renewalWindowDays: z.number().int().positive().default(60),
       })
     )
@@ -94,8 +94,8 @@ export const leasesRouter = router({
           tenantId: tenant.id,
           startDate: start,
           endDate: end,
-          rentAmount: input.rentAmount,
-          rentFrequency: input.rentFrequency,
+          rentAmount: input.rentAmount ?? 0,
+          rentFrequency: input.rentFrequency ?? RentFrequency.annually,
           depositAmount: input.depositAmount ?? null,
           renewalWindowDays: input.renewalWindowDays,
         },
@@ -121,6 +121,42 @@ export const leasesRouter = router({
         lease,
         inviteCode: inviteCode ? inviteCode.code : null,
       };
+    }),
+
+  update: authedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        rentAmount: z.number().nonnegative().optional(),
+        rentFrequency: z.nativeEnum(RentFrequency).optional(),
+        depositAmount: z.number().positive().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.id },
+        include: { unit: { include: { property: true } } },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this lease's parent property.",
+        });
+      }
+
+      return await prisma.lease.update({
+        where: { id: input.id },
+        data: {
+          startDate: input.startDate ? new Date(input.startDate) : undefined,
+          endDate: input.endDate ? new Date(input.endDate) : undefined,
+          rentAmount: input.rentAmount !== undefined ? input.rentAmount : undefined,
+          rentFrequency: input.rentFrequency,
+          depositAmount: input.depositAmount,
+        },
+      });
     }),
 
   getForUnit: authedProcedure

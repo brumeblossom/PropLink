@@ -32,6 +32,7 @@ export default function PropertiesPage() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [propertyType, setPropertyType] = useState<PropertyType>(PropertyType.residential);
+  const [expectedUnits, setExpectedUnits] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const resetForm = () => {
@@ -40,6 +41,7 @@ export default function PropertiesPage() {
     setCity("");
     setState("");
     setPropertyType(PropertyType.residential);
+    setExpectedUnits("");
     setError(null);
   };
 
@@ -54,6 +56,7 @@ export default function PropertiesPage() {
         city,
         state,
         propertyType,
+        expectedUnits: expectedUnits ? parseInt(expectedUnits, 10) : null,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create property. Please try again.";
@@ -275,6 +278,23 @@ export default function PropertiesPage() {
                     <option value={PropertyType.mixed}>Mixed-Use</option>
                   </select>
                 </div>
+
+                {propertyType !== PropertyType.residential && (
+                  <div>
+                    <label htmlFor="expectedUnits" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Expected Number of Units
+                    </label>
+                    <input
+                      id="expectedUnits"
+                      type="number"
+                      min="1"
+                      value={expectedUnits}
+                      onChange={(e) => setExpectedUnits(e.target.value)}
+                      placeholder="e.g. 20"
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
