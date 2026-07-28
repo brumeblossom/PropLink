@@ -98,8 +98,8 @@ export default function LandlordLayout({
 
       {/* Sidebar Footer (Profile / Logout) */}
       <div className="p-4 border-t border-neutral-800 bg-neutral-900/50 backdrop-blur-md">
-        {user && (
-          <div className="flex flex-col space-y-3">
+        <div className="flex flex-col space-y-3">
+          {user && (
             <Link 
               href="/landlord/profile"
               onClick={() => setIsSidebarOpen(false)}
@@ -121,17 +121,17 @@ export default function LandlordLayout({
                 <p className="text-xs text-neutral-500 truncate">{user.email}</p>
               </div>
             </Link>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              disabled={logoutMutation.isPending}
-              className="w-full justify-start border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 hover:border-neutral-700 h-10 px-4 flex items-center space-x-2 text-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>{logoutMutation.isPending ? "Signing out..." : "Sign Out"}</span>
-            </Button>
-          </div>
-        )}
+          )}
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            disabled={logoutMutation.isPending}
+            className="w-full justify-start border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 hover:border-neutral-700 h-10 px-4 flex items-center space-x-2 text-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{logoutMutation.isPending ? "Signing out..." : "Sign Out"}</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
