@@ -80,6 +80,7 @@ ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invite_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 
 -- ==========================================
@@ -374,5 +375,14 @@ CREATE POLICY tenant_read_invite_codes_policy ON invite_codes
 DROP POLICY IF EXISTS recipient_notification_log_policy ON notification_log;
 CREATE POLICY recipient_notification_log_policy ON notification_log
   FOR ALL
+  USING (recipient_id = auth.uid())
+  WITH CHECK (recipient_id = auth.uid());
+
+
+-- NOTIFICATIONS Table
+DROP POLICY IF EXISTS recipient_notifications_policy ON notifications;
+CREATE POLICY recipient_notifications_policy ON notifications
+  FOR ALL
+  TO authenticated
   USING (recipient_id = auth.uid())
   WITH CHECK (recipient_id = auth.uid());
