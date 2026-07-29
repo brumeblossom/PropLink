@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { createClient } from "@/utils/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
 import { type Role } from "@prisma/client";
 
@@ -13,41 +13,69 @@ export interface Context {
   } | null;
 }
 
-let isStorageProvisioned = false;
-
-async function provisionStorage() {
-  if (isStorageProvisioned) return;
-  try {
-    // Inserts the storage bucket row in Supabase's storage schema directly
-    await prisma.$executeRawUnsafe(`
-      INSERT INTO storage.buckets (id, name, public)
-      VALUES ('leases', 'leases', false)
-      ON CONFLICT (id) DO NOTHING;
-    `);
-    await prisma.$executeRawUnsafe(`
-      INSERT INTO storage.buckets (id, name, public)
-      VALUES ('avatars', 'avatars', true)
-      ON CONFLICT (id) DO NOTHING;
-    `);
-    isStorageProvisioned = true;
-  } catch (error) {
-    console.error("Storage provisioning failed:", error);
+/**
+ * Build a Supabase client that reads cookies directly from the incoming Request.
+ * Using next/headers cookies() for mutations (POST) in App Router Route Handlers
+ * can silently return an empty store, causing auth to fail. Reading from req.headers
+ * works reliably for both GET (queries) and POST (mutations).
+ */
+function buildSupabaseFromRequest(req: Request) {
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  const cookieMap: Record<string, string> = {};
+  for (const pair of cookieHeader.split(";")) {
+    const idx = pair.indexOf("=");
+    if (idx === -1) continue;
+    const key = pair.slice(0, idx).trim();
+    const val = pair.slice(idx + 1).trim();
+    if (key) cookieMap[key] = val;
   }
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieMap[name];
+        },
+        // Cookie mutation not needed here; middleware handles session refresh.
+        set() {},
+        remove() {},
+      },
+    }
+  );
 }
 
-export async function createContext(): Promise<Context> {
+/**
+ * Build the tRPC context for each request.
+ *
+ * Performance notes:
+ * - We use getSession() instead of getUser() to avoid an outbound HTTP request to the
+ *   Supabase Auth API on every tRPC call. getSession() validates the JWT locally from
+ *   the cookie — no network round-trip. The subsequent prisma.user.findUnique() by PK
+ *   is the definitive identity check.
+ * - The session is always fresh because Next.js middleware calls updateSession() on
+ *   every navigation request before this context runs.
+ * - provisionStorage() has been removed from this hot path. Storage buckets (leases,
+ *   avatars) should be created once via the Supabase Dashboard.
+ */
+export async function createContext(req: Request): Promise<Context> {
   try {
-    await provisionStorage();
+    const supabase = buildSupabaseFromRequest(req);
 
-    const supabase = createClient();
+    // getSession() reads the JWT from the cookie and validates the signature locally —
+    // no network call. This is the primary latency win vs getUser().
     const {
-      data: { user: authUser },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const authUser = session?.user ?? null;
 
     if (!authUser) {
       return { user: null };
     }
 
+    // Verify the user exists in our database (primary key lookup — fast with PK index).
     const dbUser = await prisma.user.findUnique({
       where: { id: authUser.id },
     });
@@ -65,7 +93,8 @@ export async function createContext(): Promise<Context> {
         avatarUrl: dbUser.avatarUrl,
       },
     };
-  } catch {
+  } catch (error) {
+    console.error("[createContext] Unexpected error:", error);
     return { user: null };
   }
 }

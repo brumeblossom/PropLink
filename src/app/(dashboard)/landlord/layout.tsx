@@ -12,7 +12,8 @@ import {
   X, 
   LogOut,
   User,
-  Megaphone
+  Megaphone,
+  Bell
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 
@@ -27,6 +28,14 @@ export default function LandlordLayout({
 
   const { data: user } = trpc.auth.me.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation();
+
+  // Unread count: piggyback on the NotificationBell's existing 10s subscription.
+  // Calling useQuery here with the same key joins the same cache entry — no extra HTTP
+  // request — but we intentionally omit refetchInterval so the Bell's 10s interval wins.
+  const { data: notifications } = trpc.notifications.listReceived.useQuery(undefined, {
+    staleTime: 10000, // treat data as fresh for 10s to avoid redundant background fetches
+  });
+  const unreadCount = notifications?.filter((n) => !n.readAt).length ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -44,24 +53,35 @@ export default function LandlordLayout({
       href: "/landlord",
       icon: LayoutDashboard,
       active: pathname === "/landlord",
+      badge: 0,
     },
     {
       name: "Properties",
       href: "/landlord/properties",
       icon: Building2,
       active: pathname.startsWith("/landlord/properties"),
+      badge: 0,
     },
     {
       name: "Notices",
       href: "/landlord/notices",
       icon: Megaphone,
       active: pathname.startsWith("/landlord/notices"),
+      badge: 0,
+    },
+    {
+      name: "Notifications",
+      href: "/landlord/notifications",
+      icon: Bell,
+      active: pathname.startsWith("/landlord/notifications"),
+      badge: unreadCount,
     },
     {
       name: "Profile",
       href: "/landlord/profile",
       icon: User,
       active: pathname === "/landlord/profile",
+      badge: 0,
     },
   ];
 
@@ -98,7 +118,12 @@ export default function LandlordLayout({
                }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
-              <span>{item.name}</span>
+              <span className="flex-1">{item.name}</span>
+              {item.badge > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -178,8 +203,9 @@ export default function LandlordLayout({
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 md:pl-64 flex flex-col min-h-screen relative">
-        <div className="absolute top-4 right-6 z-30">
+      <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
+        {/* Topbar with bell */}
+        <div className="h-14 flex items-center justify-end px-6 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-sm sticky top-0 z-20">
           <NotificationBell />
         </div>
         {children}

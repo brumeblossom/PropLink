@@ -53,6 +53,21 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 
 ## Known issues / TODO
 - **Overlap UI Guard**: The "Create Lease" button is intentionally hidden on the unit detail page when an active lease exists (the form is only shown when the unit is vacant). Attempting to create a second overlapping lease via a direct API call will be rejected by the tRPC `leases.create` procedure with a descriptive error. The UI guard and API guard together satisfy B1/AC2.
+- **Document upload**: Lease document upload flow has a known issue (parked — not yet re-investigated).
 
+## Performance Audit (2026-07-29)
 
+Full audit written to `performance_audit.md` (in brain artifacts). Summary of what was found and fixed:
 
+### Fixed
+- **Duplicate `notifications.listReceived` polling** in `landlord/layout.tsx`: Removed the independent 15s `refetchInterval`. Layout now reads from the same TanStack Query cache entry the NotificationBell owns at 10s — one HTTP call, two subscribers.
+- **Property detail page over-fetch**: `properties/[id]/page.tsx` was calling `properties.list` (loads every property + all units + leases) just to show one property. Added `properties.getById` procedure and switched the detail page to use it. Mutation cache invalidations updated to also invalidate `getById`.
+- **Four missing database indexes** added to `schema.prisma` and migration `20260729_add_performance_indexes`:
+  - `leases(start_date, end_date)` — the active-lease date range filter used in every property list, unit list, notice send, and cron job.
+  - `notices(landlord_id, created_at DESC)` — covers the ORDER BY in `notices.listSent` without an in-memory sort.
+  - `notifications(recipient_id, created_at DESC)` — covers the ORDER BY in `notifications.listReceived`, polled every 10s.
+  - `payments(lease_id, period_start, period_end)` — covers the period filter in `payments.getBillingSummary`.
+
+### Not fixable with code (documented)
+- **RLS 3-table chains** on `payments` and `invite_codes`: `leases → units → properties` JOIN on every row. All three legs already have supporting indexes; this is the minimum cost for the current schema shape. Not worth denormalizing.
+- **Vercel free-tier cold-start** (first-request ~300ms–2s delay after idle): Expected behavior on the free plan. Subsequent requests in the same session are fast. Not a code issue.

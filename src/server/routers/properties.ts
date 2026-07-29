@@ -58,6 +58,54 @@ export const propertiesRouter = router({
     });
   }),
 
+  // Fetch a single property owned by the authenticated landlord.
+  // Use this on detail pages instead of properties.list to avoid loading all properties.
+  getById: authedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const now = new Date();
+      const property = await prisma.property.findFirst({
+        where: { id: input.id, landlordId: ctx.user.id },
+        include: {
+          units: {
+            where: { deletedAt: null },
+            include: {
+              leases: {
+                where: {
+                  terminatedAt: null,
+                  startDate: { lte: now },
+                  endDate: { gte: now },
+                },
+                include: {
+                  tenant: { select: { fullName: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!property) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Property not found or you do not own it.",
+        });
+      }
+
+      const totalUnits = property.units.length;
+      const occupiedUnits = property.units.filter((u) => u.leases.length > 0).length;
+
+      return {
+        ...property,
+        stats: {
+          totalUnits,
+          occupiedUnits,
+          vacantUnits: totalUnits - occupiedUnits,
+        },
+      };
+    }),
+
+
   create: authedProcedure
     .input(
       z.object({

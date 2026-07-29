@@ -113,6 +113,7 @@ model Property {
   units    Unit[]
   notices  Notice[]
 
+  @@index([landlordId])
   @@map("properties")
 }
 
@@ -132,6 +133,7 @@ model Unit {
   notices       Notice[]
   conversations Conversation[]
 
+  @@index([propertyId])
   @@map("units")
 }
 
@@ -158,6 +160,16 @@ model Lease {
   payments    Payment[]
   inviteCodes InviteCode[]
 
+  // unitId alone — for joins and active-lease detection per unit
+  @@index([unitId])
+  // tenantId alone — for tenant dashboard and lease.getForTenant
+  @@index([tenantId])
+  // Compound: the active-lease filter (WHERE unit_id=? AND terminated_at IS NULL) runs on
+  // every property list, unit status check, and delete guard.
+  @@index([unitId, terminatedAt])
+  // Date range: WHERE start_date <= now AND end_date >= now — used in every active-lease check.
+  // Without this index, Postgres falls back to a seq scan on all non-terminated leases.
+  @@index([startDate, endDate])
   @@map("leases")
 }
 
@@ -192,6 +204,13 @@ model Payment {
   confirmer       User?  @relation("ConfirmedPayments", fields: [confirmedBy], references: [id], onDelete: SetNull)
   counterVerifier User?  @relation("CounterVerifiedPayments", fields: [counterVerifiedBy], references: [id], onDelete: SetNull)
 
+  // leaseId alone — for payments.list which fetches all payments for a lease
+  @@index([leaseId])
+  // Compound: getBillingSummary filters by lease_id AND status = 'confirmed'
+  @@index([leaseId, status])
+  // Compound: getBillingSummary also filters by period_start and period_end to find
+  // payments covering the current billing period.
+  @@index([leaseId, periodStart, periodEnd])
   @@map("payments")
 }
 
@@ -212,6 +231,10 @@ model Notice {
   unit       Unit?             @relation(fields: [unitId], references: [id], onDelete: SetNull)
   recipients NoticeRecipient[]
 
+  @@index([landlordId])
+  // Compound: listSent orders by created_at DESC after filtering by landlord_id.
+  // Without this, Postgres sorts in-memory after the index scan.
+  @@index([landlordId, createdAt])
   @@map("notices")
 }
 
@@ -228,6 +251,10 @@ model NoticeRecipient {
   notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
   tenant User   @relation("TenantNoticeRecipients", fields: [tenantId], references: [id], onDelete: Cascade)
 
+  // noticeId — for fan-out join when loading sent notices
+  @@index([noticeId])
+  // tenantId — for tenant notices.listReceived
+  @@index([tenantId])
   @@map("notice_recipients")
 }
 
@@ -245,6 +272,8 @@ model Conversation {
   messages Message[]
 
   @@unique([unitId, tenantId])
+  @@index([landlordId])
+  @@index([tenantId])
   @@map("conversations")
 }
 
@@ -261,6 +290,8 @@ model Message {
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
+  // conversationId — every chat message fetch filters and orders by this
+  @@index([conversationId, createdAt])
   @@map("messages")
 }
 
@@ -275,6 +306,7 @@ model InviteCode {
   // Relations
   lease Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
 
+  @@index([leaseId])
   @@map("invite_codes")
 }
 
@@ -291,6 +323,7 @@ model NotificationLog {
   // Relations
   recipient User @relation("RecipientNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
 
+  @@index([recipientId])
   @@map("notification_log")
 }
 
@@ -308,5 +341,11 @@ model Notification {
   // Relations
   recipient   User      @relation("RecipientNotificationsList", fields: [recipientId], references: [id], onDelete: Cascade)
 
+  // recipientId — polled every 10s by NotificationBell; must be indexed
+  @@index([recipientId])
+  // Compound: unread-count filter (WHERE recipient_id=? AND read_at IS NULL)
+  @@index([recipientId, readAt])
+  // Compound: listReceived orders by created_at DESC — covers the ORDER BY without a separate sort step
+  @@index([recipientId, createdAt])
   @@map("notifications")
 }

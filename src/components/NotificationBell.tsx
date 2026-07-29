@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import { 
@@ -33,8 +34,11 @@ interface MergedNotificationItem {
 
 export function NotificationBell() {
   const router = useRouter();
+  const bellButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
   const [selectedNotice, setSelectedNotice] = useState<MergedNotificationItem | null>(null);
 
   const utils = trpc.useContext();
@@ -70,10 +74,18 @@ export function NotificationBell() {
     },
   });
 
-  // Close dropdown on outside click
+  // Mount flag — needed for createPortal (avoids SSR mismatch)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Close dropdown on outside click — checks both the portal div and the bell button
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isInsideDropdown = dropdownRef.current?.contains(target);
+      const isInsideBell = bellButtonRef.current?.contains(target);
+      if (!isInsideDropdown && !isInsideBell) {
         setIsOpen(false);
       }
     }
@@ -114,6 +126,18 @@ export function NotificationBell() {
 
   const unreadCount = mergedNotifications.filter((n) => n.readAt === null).length;
 
+  // Calculate fixed dropdown position from the bell button rect
+  const handleBellToggle = () => {
+    if (!isOpen && bellButtonRef.current) {
+      const rect = bellButtonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setIsOpen((prev) => !prev);
+  };
+
   // Handle click on notification items
   const handleItemClick = async (item: MergedNotificationItem) => {
     // 1. Mark as read on backend if not already read
@@ -137,7 +161,6 @@ export function NotificationBell() {
         if (userRole === "tenant") {
           router.push(`/tenant?paymentId=${item.relatedId}`);
         } else {
-          // Landlord side: Resolve redirect coordinates first
           try {
             const redirectInfo = await utils.client.payments.getRedirectInfo.query({ paymentId: item.relatedId });
             if (redirectInfo) {
@@ -151,7 +174,6 @@ export function NotificationBell() {
         if (userRole === "tenant") {
           router.push(`/tenant?tab=chat&conversationId=${item.relatedId}`);
         } else {
-          // Landlord side: Resolve redirect coordinates
           try {
             const redirectInfo = await utils.client.conversations.getRedirectInfo.query({ conversationId: item.relatedId });
             if (redirectInfo) {
@@ -165,7 +187,6 @@ export function NotificationBell() {
         if (userRole === "tenant") {
           router.push(`/tenant?leaseId=${item.relatedId}`);
         } else {
-          // Landlord side: Resolve redirect coordinates
           try {
             const redirectInfo = await utils.client.leases.getRedirectInfo.query({ leaseId: item.relatedId });
             if (redirectInfo) {
@@ -204,95 +225,101 @@ export function NotificationBell() {
     }
   };
 
-  return (
-    <>
-      <div className="relative" ref={dropdownRef}>
-        {/* Bell Button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="relative p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-all focus:outline-none"
-        >
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-neutral-950">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-
-        {/* Dropdown Menu */}
-        {isOpen && (
-          <div className="absolute right-0 mt-2.5 w-80 sm:w-96 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl z-50 animate-in fade-in slide-in-from-top-3 duration-200">
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-3">
-              <h2 className="text-sm font-semibold text-white">Notifications</h2>
-              {unreadCount > 0 && (
-                <button
-                  onClick={() => markAllReadMutation.mutate()}
-                  disabled={markAllReadMutation.isPending}
-                  className="text-xs text-neutral-400 hover:text-white flex items-center space-x-1 font-medium transition-colors"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Mark all read</span>
-                </button>
-              )}
-            </div>
-
-            {/* Notification List */}
-            <div className="max-h-[350px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
-              {mergedNotifications.length === 0 ? (
-                <div className="py-8 text-center text-neutral-500">
-                  <Inbox className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">Your notification feed is empty.</p>
-                </div>
-              ) : (
-                mergedNotifications.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    className={cn(
-                      "flex items-start space-x-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent",
-                      item.readAt === null 
-                        ? "bg-neutral-900/40 border-neutral-800/40 hover:bg-neutral-900/60" 
-                        : "hover:bg-neutral-900/20 opacity-75"
-                    )}
-                  >
-                    <div className="flex-shrink-0 mt-0.5 p-1.5 bg-neutral-900 rounded-lg border border-neutral-850">
-                      {getIcon(item.type)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={cn("text-xs text-white", item.readAt === null ? "font-semibold" : "font-normal")}>
-                        {item.title}
-                      </p>
-                      <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-2">
-                        {item.body}
-                      </p>
-                      <div className="flex items-center space-x-2 mt-1.5">
-                        {item.senderName && (
-                          <span className="text-[10px] text-neutral-500 truncate flex items-center space-x-1">
-                            {item.senderAvatar ? (
-                              <img src={item.senderAvatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
-                            ) : (
-                              <span className="w-3.5 h-3.5 rounded-full bg-neutral-800 flex items-center justify-center text-[8px]"><User className="w-2 h-2" /></span>
-                            )}
-                            <span className="font-medium text-neutral-400">{item.senderName}</span>
-                          </span>
-                        )}
-                        <span className="text-[9px] text-neutral-500 font-medium font-sans ml-auto">
-                          {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+  const dropdownContent = (
+    <div
+      ref={dropdownRef}
+      style={{ top: dropdownPos.top, right: dropdownPos.right }}
+      className="fixed w-80 sm:w-96 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl z-[9999] animate-in fade-in slide-in-from-top-3 duration-200"
+    >
+      <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-3">
+        <h2 className="text-sm font-semibold text-white">Notifications</h2>
+        {unreadCount > 0 && (
+          <button
+            onClick={() => markAllReadMutation.mutate()}
+            disabled={markAllReadMutation.isPending}
+            className="text-xs text-neutral-400 hover:text-white flex items-center space-x-1 font-medium transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Mark all read</span>
+          </button>
         )}
       </div>
 
+      {/* Notification List */}
+      <div className="max-h-[350px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+        {mergedNotifications.length === 0 ? (
+          <div className="py-8 text-center text-neutral-500">
+            <Inbox className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-xs">Your notification feed is empty.</p>
+          </div>
+        ) : (
+          mergedNotifications.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => handleItemClick(item)}
+              className={cn(
+                "flex items-start space-x-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent",
+                item.readAt === null 
+                  ? "bg-neutral-900/40 border-neutral-800/40 hover:bg-neutral-900/60" 
+                  : "hover:bg-neutral-900/20 opacity-75"
+              )}
+            >
+              <div className="flex-shrink-0 mt-0.5 p-1.5 bg-neutral-900 rounded-lg border border-neutral-800">
+                {getIcon(item.type)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className={cn("text-xs text-white", item.readAt === null ? "font-semibold" : "font-normal")}>
+                  {item.title}
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-2">
+                  {item.body}
+                </p>
+                <div className="flex items-center space-x-2 mt-1.5">
+                  {item.senderName && (
+                    <span className="text-[10px] text-neutral-500 truncate flex items-center space-x-1">
+                      {item.senderAvatar ? (
+                        <img src={item.senderAvatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
+                      ) : (
+                        <span className="w-3.5 h-3.5 rounded-full bg-neutral-800 flex items-center justify-center text-[8px]"><User className="w-2 h-2" /></span>
+                      )}
+                      <span className="font-medium text-neutral-400">{item.senderName}</span>
+                    </span>
+                  )}
+                  <span className="text-[9px] text-neutral-500 font-medium font-sans ml-auto">
+                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Bell Button */}
+      <button
+        ref={bellButtonRef}
+        onClick={handleBellToggle}
+        className="relative p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-all focus:outline-none"
+        aria-label="Open notifications"
+      >
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-neutral-950">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {/* Dropdown — rendered as a portal to escape any parent stacking context */}
+      {isOpen && mounted && createPortal(dropdownContent, document.body)}
+
       {/* Notice Detail Dialog Modal */}
-      {selectedNotice && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+      {selectedNotice && mounted && createPortal(
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] p-4">
           <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedNotice(null)}
@@ -302,7 +329,7 @@ export function NotificationBell() {
             </button>
 
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-neutral-900 rounded-xl border border-neutral-850">
+              <div className="p-2 bg-neutral-900 rounded-xl border border-neutral-800">
                 <Megaphone className="w-5 h-5 text-amber-400" />
               </div>
               <div>
@@ -311,7 +338,7 @@ export function NotificationBell() {
               </div>
             </div>
 
-            <div className="bg-neutral-900/30 rounded-xl border border-neutral-850 p-4 min-h-[120px] text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">
+            <div className="bg-neutral-900/30 rounded-xl border border-neutral-800 p-4 min-h-[120px] text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">
               {selectedNotice.body}
             </div>
 
@@ -332,7 +359,8 @@ export function NotificationBell() {
               </span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

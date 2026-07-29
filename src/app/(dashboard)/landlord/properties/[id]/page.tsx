@@ -21,13 +21,16 @@ export default function PropertyDetailPage() {
   const bulkAddParam = searchParams.get("bulkAdd");
 
   // Queries
-  const { data: properties, isLoading: isLoadingProperty } = trpc.properties.list.useQuery();
+  // Use getById — fetches only this property instead of all properties + their units
+  const { data: property, isLoading: isLoadingProperty } = trpc.properties.getById.useQuery({ id: propertyId });
   const { data: units, isLoading: isLoadingUnits } = trpc.units.listByProperty.useQuery({ propertyId });
+
 
   // Mutations
   const updateProperty = trpc.properties.update.useMutation({
     onSuccess: () => {
       utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
       setIsEditPropertyOpen(false);
     },
   });
@@ -35,6 +38,7 @@ export default function PropertyDetailPage() {
   const deleteProperty = trpc.properties.delete.useMutation({
     onSuccess: () => {
       utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
       router.push("/landlord/properties");
     },
     onError: (err) => {
@@ -46,6 +50,7 @@ export default function PropertyDetailPage() {
     onSuccess: () => {
       utils.units.listByProperty.invalidate({ propertyId });
       utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
       setIsAddUnitOpen(false);
       resetUnitForm();
     },
@@ -58,6 +63,7 @@ export default function PropertyDetailPage() {
     onSuccess: () => {
       utils.units.listByProperty.invalidate({ propertyId });
       utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
       setIsBulkAddOpen(false);
       resetBulkForm();
     },
@@ -70,6 +76,7 @@ export default function PropertyDetailPage() {
     onSuccess: () => {
       utils.units.listByProperty.invalidate({ propertyId });
       utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
       setIsEditUnitOpen(false);
       resetEditUnitForm();
     },
@@ -82,6 +89,7 @@ export default function PropertyDetailPage() {
     onSuccess: () => {
       utils.units.listByProperty.invalidate({ propertyId });
       utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
     },
     onError: (err) => {
       setDeleteError(err.message);
@@ -110,8 +118,7 @@ export default function PropertyDetailPage() {
   const [editRoomsCount, setEditRoomsCount] = useState("");
   const [editUnitError, setEditUnitError] = useState<string | null>(null);
 
-  // Find current property
-  const property = properties?.find((p) => p.id === propertyId);
+  // property is directly returned from getById query above
 
   // Dynamic unit types logic based on property type
   const allowedUnitTypes = property ? getUnitTypesByPropertyType(property.propertyType) : [];
