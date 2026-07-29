@@ -38,7 +38,10 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - **Redesigned Tenant Invitation**: Landlords can invite tenants directly from vacant units using a quick-start form (start date, end date, optional rent). Submitting auto-generates the invite code and lease.
 - **Unit Metadata Edit & Soft-Delete**: Built Edit Unit forms and Delete Unit workflows on both the property page and unit details page. vacancy status checks prevent hard-deletions when active leases exist. Vacant units are soft-deleted by setting the `deletedAt` field.
 - **Unified Currency Formatter**: Integrated `formatCurrency` in `src/lib/utils.ts` to format values using standard English-US formatting with thousands separators (commas), replacing raw `.toLocaleString()` rendering.
-- **Vercel Build Fixes**: Explicitly returned units arrays in mapped database list queries rather than using shorthand object spreads to avoid compiler type widening. Configured `"postinstall": "prisma generate"` script in `package.json` to ensure types build correctly.
+- **Tenant Portal Multi-page Layout Refactor**: Refactored the tenant portal into a structured layout with a persistent left sidebar containing Dashboard, Payments, Notices, and Profile sub-routes, matching the landlord layout pattern.
+- **Persistent Floating Chat Widget**: Replaced the full-page and inline chat interfaces with a role-aware floating FAB and expandable chat panel at the bottom-right of the viewport. Integrated with `NotificationBell` deep-linking to open the conversation target in-place without page routing.
+- **Hook Placement Hardening**: Restructured hooks in `UnitDetailPage` (specifically `availableYears` and `filteredPayments` `useMemo`) to live strictly at the top of the component to resolve the Rules of Hooks violation that caused runtime crashes after conditional loading/not-found returns.
+- **Vercel Build Alignment**: Cleaned up ESLint build errors in `ChatWidget.tsx` by removing unused imports/destructures and escaping literal quote characters.
 - **Library Versions**:
   - Next.js: `14.2.35`
   - React: `^18`
