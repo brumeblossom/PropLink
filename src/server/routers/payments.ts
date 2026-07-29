@@ -557,8 +557,7 @@ export const paymentsRouter = router({
       const fileExtension = input.fileName.split(".").pop() || "pdf";
       const filePath = `payments/${input.leaseId}/${Date.now()}.${fileExtension}`;
 
-      const supabase = createClient();
-      const { data, error } = await supabase.storage
+      const { data, error } = await ctx.supabase.storage
         .from("leases")
         .createSignedUploadUrl(filePath);
 
@@ -614,8 +613,7 @@ export const paymentsRouter = router({
         });
       }
 
-      const supabase = createClient();
-      const { data, error } = await supabase.storage
+      const { data, error } = await ctx.supabase.storage
         .from("leases")
         .createSignedUrl(input.path, 60);
 

@@ -71,3 +71,10 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
 ### Not fixable with code (documented)
 - **RLS 3-table chains** on `payments` and `invite_codes`: `leases → units → properties` JOIN on every row. All three legs already have supporting indexes; this is the minimum cost for the current schema shape. Not worth denormalizing.
 - **Vercel free-tier cold-start** (first-request ~300ms–2s delay after idle): Expected behavior on the free plan. Subsequent requests in the same session are fast. Not a code issue.
+
+## Storage Upload Fix (2026-07-29)
+
+- **Issue**: Next.js `cookies()` returns an empty cookie store inside App Router Route Handler POST requests (like tRPC mutations). As a result, calling `createClient()` inside tRPC mutations created an anonymous/unauthenticated client instance. When requesting a signed upload URL via `createSignedUploadUrl`, the request was treated as anonymous, causing Supabase Storage RLS policies (which check `auth.uid()`) to fail with "new row violates row-level security policy".
+- **Fix**: Exposed the request-header-authenticated Supabase client (`ctx.supabase` built via `buildSupabaseFromRequest`) in the tRPC Context, and updated all storage operations in `leases.ts`, `payments.ts`, and `auth.ts` to use `ctx.supabase`.
+- **Avatars Bucket RLS**: Discovered that no RLS policies existed for the `avatars` bucket. Added policies to allow authenticated inserts/updates/deletes for user-owned paths, and public selects.
+

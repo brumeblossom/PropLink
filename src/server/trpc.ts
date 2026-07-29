@@ -11,6 +11,7 @@ export interface Context {
     fullName: string;
     avatarUrl: string | null;
   } | null;
+  supabase: ReturnType<typeof buildSupabaseFromRequest>;
 }
 
 /**
@@ -60,9 +61,8 @@ function buildSupabaseFromRequest(req: Request) {
  *   avatars) should be created once via the Supabase Dashboard.
  */
 export async function createContext(req: Request): Promise<Context> {
+  const supabase = buildSupabaseFromRequest(req);
   try {
-    const supabase = buildSupabaseFromRequest(req);
-
     // getSession() reads the JWT from the cookie and validates the signature locally —
     // no network call. This is the primary latency win vs getUser().
     const {
@@ -72,7 +72,7 @@ export async function createContext(req: Request): Promise<Context> {
     const authUser = session?.user ?? null;
 
     if (!authUser) {
-      return { user: null };
+      return { user: null, supabase };
     }
 
     // Verify the user exists in our database (primary key lookup — fast with PK index).
@@ -81,7 +81,7 @@ export async function createContext(req: Request): Promise<Context> {
     });
 
     if (!dbUser) {
-      return { user: null };
+      return { user: null, supabase };
     }
 
     return {
@@ -92,10 +92,11 @@ export async function createContext(req: Request): Promise<Context> {
         fullName: dbUser.fullName,
         avatarUrl: dbUser.avatarUrl,
       },
+      supabase,
     };
   } catch (error) {
     console.error("[createContext] Unexpected error:", error);
-    return { user: null };
+    return { user: null, supabase };
   }
 }
 
@@ -111,6 +112,7 @@ export const authedProcedure = t.procedure.use(async ({ ctx, next }) => {
   return next({
     ctx: {
       user: ctx.user,
+      supabase: ctx.supabase,
     },
   });
 });

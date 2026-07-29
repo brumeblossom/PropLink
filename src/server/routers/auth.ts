@@ -292,8 +292,7 @@ export const authRouter = router({
       const fileExtension = input.fileName.split(".").pop() || "jpg";
       const filePath = `${ctx.user.id}/${Date.now()}.${fileExtension}`;
 
-      const supabase = createClient();
-      const { data, error } = await supabase.storage
+      const { data, error } = await ctx.supabase.storage
         .from("avatars")
         .createSignedUploadUrl(filePath);
 
@@ -304,7 +303,7 @@ export const authRouter = router({
         });
       }
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicUrlData } = ctx.supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
