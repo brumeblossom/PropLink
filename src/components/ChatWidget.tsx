@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { trpc } from "@/utils/trpc";
 import { UnitChatPanel } from "@/components/UnitChatPanel";
 import { useChatWidget } from "@/components/ChatWidgetContext";
-import { MessageSquare, X, Loader2 } from "lucide-react";
+import { MessageSquare, X } from "lucide-react";
 
 /**
  * Floating chat bubble (FAB) that expands into a compact chat panel.
@@ -14,7 +14,7 @@ import { MessageSquare, X, Loader2 } from "lucide-react";
  *   either from a "Chat" button on the unit detail page or from a notification click.
  */
 export function ChatWidget() {
-  const { unitId: contextUnitId, isOpen, open, close, toggle } = useChatWidget();
+  const { unitId: contextUnitId, isOpen, close, toggle } = useChatWidget();
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Resolve current user role
@@ -113,7 +113,7 @@ export function ChatWidget() {
                 </div>
                 <p className="text-sm font-semibold text-neutral-300">No conversation selected</p>
                 <p className="text-xs text-neutral-500 leading-relaxed">
-                  Click <strong className="text-neutral-400">"Chat with Tenant"</strong> on a unit
+                  Click <strong className="text-neutral-400">&quot;Chat with Tenant&quot;</strong> on a unit
                   page, or tap a chat notification to open a conversation here.
                 </p>
               </div>
