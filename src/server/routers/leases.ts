@@ -3,7 +3,6 @@ import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { RentFrequency } from "@prisma/client";
-import { createClient } from "@/utils/supabase/server";
 import { createNotification } from "../utils/notifications";
 
 export const leasesRouter = router({

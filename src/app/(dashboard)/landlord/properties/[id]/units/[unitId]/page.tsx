@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
 import { X, User } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
-import { UnitChatPanel } from "@/components/UnitChatPanel";
+import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatInputNumber } from "@/lib/utils";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -18,6 +18,15 @@ export default function UnitDetailPage() {
   const propertyId = params.id as string;
   const unitId = params.unitId as string;
   const utils = trpc.useUtils();
+  const chatWidget = useChatWidget();
+  const searchParams = useSearchParams();
+
+  // Auto-open chat widget if tab === "chat"
+  useEffect(() => {
+    if (searchParams?.get("tab") === "chat") {
+      chatWidget.open(unitId);
+    }
+  }, [searchParams, unitId, chatWidget]);
 
   // Queries
   const { data: properties } = trpc.properties.list.useQuery();
@@ -95,9 +104,9 @@ export default function UnitDetailPage() {
 
   const handleOpenEditLease = () => {
     if (activeLease) {
-      setEditRentAmount(Number(activeLease.rentAmount) === 0 ? "" : activeLease.rentAmount.toString());
+      setEditRentAmount(Number(activeLease.rentAmount) === 0 ? "" : formatInputNumber(activeLease.rentAmount.toString()));
       setEditRentFrequency(activeLease.rentFrequency);
-      setEditDepositAmount(activeLease.depositAmount ? activeLease.depositAmount.toString() : "");
+      setEditDepositAmount(activeLease.depositAmount ? formatInputNumber(activeLease.depositAmount.toString()) : "");
       setEditStartDate(new Date(activeLease.startDate).toISOString().split("T")[0]);
       setEditEndDate(new Date(activeLease.endDate).toISOString().split("T")[0]);
       setEditLeaseError(null);
@@ -120,8 +129,8 @@ export default function UnitDetailPage() {
     e.preventDefault();
     setEditLeaseError(null);
 
-    const rent = editRentAmount ? parseFloat(editRentAmount) : 0;
-    const deposit = editDepositAmount ? parseFloat(editDepositAmount) : null;
+    const rent = editRentAmount ? parseFloat(editRentAmount.replace(/,/g, "")) : 0;
+    const deposit = editDepositAmount ? parseFloat(editDepositAmount.replace(/,/g, "")) : null;
 
     if (editRentAmount && (isNaN(rent) || rent < 0)) {
       setEditLeaseError("Rent amount must be a positive number.");
@@ -318,6 +327,25 @@ export default function UnitDetailPage() {
   const [selectedLandlordPayment, setSelectedLandlordPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isLandlordPaymentDetailOpen, setIsLandlordPaymentDetailOpen] = useState(false);
 
+  // Year filter for payment ledger
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  // Derived: unique years present in payment history (always includes current year)
+  // NOTE: must live here, before any early returns, to satisfy React Rules of Hooks.
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    if (!payments || payments.length === 0) return [currentYear];
+    const years = new Set(payments.map((p) => new Date(p.paymentDate).getFullYear()));
+    years.add(currentYear);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [payments]);
+
+  // Payments visible in the current year selection
+  const filteredPayments = useMemo(() => {
+    if (!payments) return [];
+    return payments.filter((p) => new Date(p.paymentDate).getFullYear() === selectedYear);
+  }, [payments, selectedYear]);
+
   // Human-readable status labels
   const paymentStatusLabel: Record<string, string> = {
     confirmed: "Confirmed",
@@ -393,9 +421,9 @@ export default function UnitDetailPage() {
     } else {
       setRenewEndDate("");
     }
-    setRenewRentAmount(Number(activeLease.rentAmount) === 0 ? "" : activeLease.rentAmount.toString());
+    setRenewRentAmount(Number(activeLease.rentAmount) === 0 ? "" : formatInputNumber(activeLease.rentAmount.toString()));
     setRenewRentFrequency(activeLease.rentFrequency);
-    setRenewDepositAmount(activeLease.depositAmount ? activeLease.depositAmount.toString() : "");
+    setRenewDepositAmount(activeLease.depositAmount ? formatInputNumber(activeLease.depositAmount.toString()) : "");
     setRenewError(null);
     setIsRenewLeaseOpen(true);
   };
@@ -415,8 +443,8 @@ export default function UnitDetailPage() {
     e.preventDefault();
     setRenewError(null);
 
-    const rent = renewRentAmount ? parseFloat(renewRentAmount) : 0;
-    const deposit = renewDepositAmount ? parseFloat(renewDepositAmount) : null;
+    const rent = renewRentAmount ? parseFloat(renewRentAmount.replace(/,/g, "")) : 0;
+    const deposit = renewDepositAmount ? parseFloat(renewDepositAmount.replace(/,/g, "")) : null;
 
     if (renewRentAmount && (isNaN(rent) || rent < 0)) {
       setRenewError("Rent amount must be a positive number.");
@@ -468,8 +496,8 @@ export default function UnitDetailPage() {
     e.preventDefault();
     setLeaseError(null);
 
-    const rent = rentAmount ? parseFloat(rentAmount) : undefined;
-    const deposit = depositAmount ? parseFloat(depositAmount) : undefined;
+    const rent = rentAmount ? parseFloat(rentAmount.replace(/,/g, "")) : undefined;
+    const deposit = depositAmount ? parseFloat(depositAmount.replace(/,/g, "")) : undefined;
 
     if (rentAmount && (isNaN(rent!) || rent! < 0)) {
       setLeaseError("Rent amount must be a positive number.");
@@ -501,7 +529,7 @@ export default function UnitDetailPage() {
     e.preventDefault();
     setPaymentError(null);
 
-    const amount = parseFloat(paymentAmount);
+    const amount = parseFloat(paymentAmount.replace(/,/g, ""));
     if (isNaN(amount) || amount <= 0) {
       setPaymentError("Amount must be a positive number.");
       return;
@@ -535,7 +563,7 @@ export default function UnitDetailPage() {
 
   const handleEditPaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = parseFloat(editAmount);
+    const amount = parseFloat(editAmount.replace(/,/g, ""));
     if (editAction === "edit" && (isNaN(amount) || amount <= 0)) {
       alert("Amount must be a positive number.");
       return;
@@ -650,7 +678,6 @@ export default function UnitDetailPage() {
 
   // Visual Timeline math
   let todayPercent = 0;
-  let renewalPercent = 0;
 
   if (timeline) {
     const startMs = new Date(timeline.startDate).getTime();
@@ -660,11 +687,9 @@ export default function UnitDetailPage() {
     const totalDuration = endMs - startMs;
     const elapsed = Math.max(0, Math.min(totalDuration, todayMs - startMs));
     todayPercent = totalDuration > 0 ? (elapsed / totalDuration) * 100 : 0;
-
-    const renewalStartDateMs = new Date(timeline.renewalStartDate).getTime();
-    const renewalDuration = endMs - renewalStartDateMs;
-    renewalPercent = totalDuration > 0 ? (renewalDuration / totalDuration) * 100 : 0;
   }
+
+  // availableYears and filteredPayments are declared above, before the early returns.
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -701,14 +726,7 @@ export default function UnitDetailPage() {
             >
               Delete Unit
             </Button>
-            {!activeLease && (
-              <Button
-                onClick={() => setIsAddLeaseOpen(true)}
-                className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm"
-              >
-                Invite Tenant
-              </Button>
-            )}
+
             {timeline && (timeline.status === "active" || timeline.status === "renewal_due") && (
               <Button
                 onClick={handleOpenRenewLease}
@@ -811,11 +829,6 @@ export default function UnitDetailPage() {
                 {/* Progress Visual Tracker */}
                 <div className="space-y-3 pt-4">
                   <div className="relative w-full h-3 rounded-full bg-neutral-800 overflow-visible">
-                    {/* Renewal window highlights */}
-                    <div
-                      className="absolute top-0 bottom-0 right-0 bg-yellow-950/60 border-l border-yellow-800 rounded-r-full"
-                      style={{ width: `${renewalPercent}%` }}
-                    />
                     {/* Elapsed progress tracker */}
                     <div
                       className="absolute top-0 bottom-0 left-0 bg-neutral-600 rounded-l-full"
@@ -831,12 +844,6 @@ export default function UnitDetailPage() {
 
                   <div className="flex justify-between text-xs text-neutral-500 font-medium pt-1">
                     <span>Start: {new Date(timeline.startDate).toLocaleDateString()}</span>
-                    <span
-                      style={{ marginRight: `${renewalPercent / 2}%` }}
-                      className="text-yellow-500 font-semibold"
-                    >
-                      Renewal Window
-                    </span>
                     <span>End: {new Date(timeline.endDate).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -869,7 +876,9 @@ export default function UnitDetailPage() {
                           Invite Code: {activeLease.inviteCodes[0].code} (Awaiting Tenant)
                         </span>
                       ) : (
-                        <span className="text-green-400">Claimed & Linked</span>
+                        <span className="text-green-400">
+                          Claimed by {activeLease.tenant.fullName}
+                        </span>
                       )}
                     </span>
                   </div>
@@ -978,18 +987,33 @@ export default function UnitDetailPage() {
                   <h3 className="font-bold text-white text-xl">Payment Ledger</h3>
                   <p className="text-neutral-400 text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
                 </div>
-                <Button
-                  onClick={() => {
-                    setIsLogPaymentOpen(true);
-                    setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
-                    setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
-                    setPaymentAmount(billingSummary?.amountOutstanding ? String(billingSummary.amountOutstanding) : "");
-                    setPaymentError(null);
-                  }}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold self-start sm:self-auto"
-                >
-                  Log Payment
-                </Button>
+                <div className="flex items-center gap-3 self-start sm:self-auto">
+                  {/* Year filter */}
+                  <select
+                    id="landlord-ledger-year-filter"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="h-9 rounded-lg border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-200 focus:outline-none focus:ring-1 focus:ring-white/20 cursor-pointer"
+                    aria-label="Filter payment history by year"
+                  >
+                    {availableYears.map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                  <Button
+                    onClick={() => {
+                      setIsLogPaymentOpen(true);
+                      setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
+                      setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
+                      setPaymentAmount(billingSummary?.amountOutstanding ? formatInputNumber(String(billingSummary.amountOutstanding)) : "");
+                      setPaymentError(null);
+                    }}
+                    disabled={billingSummary ? billingSummary.amountOutstanding <= 0 : false}
+                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Log Payment
+                  </Button>
+                </div>
               </div>
 
               {/* Billing Summary Banner */}
@@ -1037,14 +1061,14 @@ export default function UnitDetailPage() {
                           Loading ledger entries...
                         </td>
                       </tr>
-                    ) : !payments || payments.length === 0 ? (
+                    ) : filteredPayments.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
-                          No payments recorded yet.
+                          {!payments || payments.length === 0 ? "No payments recorded yet." : `No payments recorded for ${selectedYear}.`}
                         </td>
                       </tr>
                     ) : (
-                      payments.map((p) => {
+                      filteredPayments.map((p) => {
                         const hasTenantDispute = p.disputedByTenant && !p.disputedByResolvedAt;
                         return (
                           <tr
@@ -1138,7 +1162,7 @@ export default function UnitDetailPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setEditPaymentId(p.id);
-                                      setEditAmount(String(p.amount));
+                                      setEditAmount(formatInputNumber(String(p.amount)));
                                       setEditPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
                                       setEditMethod(p.method);
                                       setEditAction("edit");
@@ -1183,7 +1207,12 @@ export default function UnitDetailPage() {
                 <h3 className="font-bold text-white text-xl">Tenant Chat</h3>
                 <p className="text-neutral-400 text-sm mt-0.5">Send messages and chat with the tenant of this unit.</p>
               </div>
-              <UnitChatPanel unitId={unitId} />
+              <Button
+                onClick={() => chatWidget.open(unitId)}
+                className="bg-white text-neutral-950 hover:bg-neutral-200"
+              >
+                Chat with Tenant
+              </Button>
             </div>
 
           </div>
@@ -1197,7 +1226,7 @@ export default function UnitDetailPage() {
               onClick={() => setIsAddLeaseOpen(true)}
               className="bg-white text-neutral-950 hover:bg-neutral-200 mt-2"
             >
-              Add New Lease
+              Invite Tenants
             </Button>
           </div>
         )}
@@ -1391,12 +1420,12 @@ export default function UnitDetailPage() {
                   </label>
                   <input
                     id="renewRentAmount"
-                    type="number"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
                     value={renewRentAmount}
-                    onChange={(e) => setRenewRentAmount(e.target.value)}
+                    onChange={(e) => setRenewRentAmount(formatInputNumber(e.target.value))}
                     className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                    placeholder="e.g. 1500000"
+                    placeholder="e.g. 150,000"
                   />
                 </div>
                 <div>
@@ -1422,12 +1451,12 @@ export default function UnitDetailPage() {
                 </label>
                 <input
                   id="renewDepositAmount"
-                  type="number"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={renewDepositAmount}
-                  onChange={(e) => setRenewDepositAmount(e.target.value)}
+                  onChange={(e) => setRenewDepositAmount(formatInputNumber(e.target.value))}
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                  placeholder="e.g. 300000"
+                  placeholder="e.g. 300,000"
                 />
               </div>
 
@@ -1547,11 +1576,12 @@ export default function UnitDetailPage() {
                   </label>
                   <input
                     id="rentAmount"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={rentAmount}
-                    onChange={(e) => setRentAmount(e.target.value)}
+                    onChange={(e) => setRentAmount(formatInputNumber(e.target.value))}
                     className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="e.g. 150000 (can be left blank / TBD)"
+                    placeholder="e.g. 150,000 (can be left blank / TBD)"
                   />
                 </div>
               </div>
@@ -1639,11 +1669,12 @@ export default function UnitDetailPage() {
                     </label>
                     <input
                       id="editRentAmount"
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={editRentAmount}
-                      onChange={(e) => setEditRentAmount(e.target.value)}
+                      onChange={(e) => setEditRentAmount(formatInputNumber(e.target.value))}
                       className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                      placeholder="e.g. 150000"
+                      placeholder="e.g. 150,000"
                     />
                   </div>
                   <div>
@@ -1669,11 +1700,12 @@ export default function UnitDetailPage() {
                   </label>
                   <input
                     id="editDepositAmount"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={editDepositAmount}
-                    onChange={(e) => setEditDepositAmount(e.target.value)}
+                    onChange={(e) => setEditDepositAmount(formatInputNumber(e.target.value))}
                     className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="e.g. 50000"
+                    placeholder="e.g. 50,000"
                   />
                 </div>
               </div>
@@ -1730,12 +1762,13 @@ export default function UnitDetailPage() {
                 </label>
                 <input
                   id="paymentAmount"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   required
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  onChange={(e) => setPaymentAmount(formatInputNumber(e.target.value))}
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                  placeholder="e.g. 150000"
+                  placeholder="e.g. 150,000"
                 />
               </div>
 
@@ -2065,10 +2098,11 @@ export default function UnitDetailPage() {
                     </label>
                     <input
                       id="editAmount"
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       required
                       value={editAmount}
-                      onChange={(e) => setEditAmount(e.target.value)}
+                      onChange={(e) => setEditAmount(formatInputNumber(e.target.value))}
                       className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                     />
                   </div>

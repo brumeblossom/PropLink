@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 
 interface UnitChatPanelProps {
   unitId: string;
+  /** Override container classes — used by ChatWidget to control height and strip the border */
+  className?: string;
 }
 
-export function UnitChatPanel({ unitId }: UnitChatPanelProps) {
+export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -142,7 +144,13 @@ export function UnitChatPanel({ unitId }: UnitChatPanelProps) {
   const counterparty = currentUser?.role === "landlord" ? conversation.tenant : conversation.landlord;
 
   return (
-    <div ref={containerRef} className="rounded-xl border border-neutral-850 bg-neutral-900/15 overflow-hidden flex flex-col h-[500px] shadow-lg">
+    <div
+      ref={containerRef}
+      className={cn(
+        "flex flex-col overflow-hidden",
+        className ?? "rounded-xl border border-neutral-800 bg-neutral-900/15 h-[500px] shadow-lg"
+      )}
+    >
       {/* Header bar */}
       <div className="px-5 py-4 border-b border-neutral-850 bg-neutral-950/45 flex items-center justify-between">
         <div className="flex items-center space-x-3">

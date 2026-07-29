@@ -17,6 +17,7 @@ import {
   User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useChatWidget } from "@/components/ChatWidgetContext";
 
 interface MergedNotificationItem {
   id: string; // db row id
@@ -42,6 +43,7 @@ export function NotificationBell() {
   const [selectedNotice, setSelectedNotice] = useState<MergedNotificationItem | null>(null);
 
   const utils = trpc.useContext();
+  const chatWidget = useChatWidget();
 
   // Queries
   const { data: currentUser } = trpc.auth.me.useQuery();
@@ -171,16 +173,19 @@ export function NotificationBell() {
           }
         }
       } else if (item.relatedType === "conversation") {
+        // Open the floating chat widget instead of navigating to a full page.
+        // Tenant: widget self-resolves unitId from their active lease — just open it.
+        // Landlord: resolve unitId from the conversationId, then hand it to the widget.
         if (userRole === "tenant") {
-          router.push(`/tenant?tab=chat&conversationId=${item.relatedId}`);
+          chatWidget.open();
         } else {
           try {
             const redirectInfo = await utils.client.conversations.getRedirectInfo.query({ conversationId: item.relatedId });
             if (redirectInfo) {
-              router.push(`/landlord/properties/${redirectInfo.propertyId}/units/${redirectInfo.unitId}?tab=chat&conversationId=${item.relatedId}`);
+              chatWidget.open(redirectInfo.unitId);
             }
           } catch (e) {
-            console.error("Redirect query failed", e);
+            console.error("Chat redirect query failed", e);
           }
         }
       } else if (item.relatedType === "lease") {

@@ -58,14 +58,6 @@ export default function LandlordDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Navbar */}
-      <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-6 ml-10 md:ml-0">
-            <span className="text-xl font-bold tracking-tight">PropLink</span>
-          </div>
-        </div>
-      </header>
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

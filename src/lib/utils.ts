@@ -23,3 +23,21 @@ export function formatCurrency(value: number | string | null | undefined): strin
   if (isNaN(num)) return "₦0";
   return `₦${numberFormatter.format(num)}`;
 }
+
+export function formatInputNumber(value: string): string {
+  // Remove non-digit and non-decimal-point characters
+  const clean = value.replace(/[^0-9.]/g, "");
+  // Prevent multiple decimal points
+  const parts = clean.split(".");
+  if (parts.length > 2) {
+    parts.splice(2);
+  }
+  // Format the integer part with commas-per-thousand
+  const integerPart = parts[0];
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  
+  if (parts.length === 2) {
+    return `${formattedInteger}.${parts[1]}`;
+  }
+  return formattedInteger;
+}

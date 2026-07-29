@@ -3,8 +3,8 @@ import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod, PaymentStatus, Role } from "@prisma/client";
-import { createClient } from "@/utils/supabase/server";
 import { createNotification } from "../utils/notifications";
+import { formatCurrency } from "@/lib/utils";
 
 export const paymentsRouter = router({
   // List all payments for a specific lease
@@ -100,6 +100,32 @@ export const paymentsRouter = router({
         });
       }
 
+      // Calculate confirmed payments for the period
+      const confirmedPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: input.leaseId,
+          status: PaymentStatus.confirmed,
+          periodStart: start,
+          periodEnd: end,
+        },
+      });
+      const rentAmount = Number(lease.rentAmount);
+      const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      if (amountPaid >= rentAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The rent for this billing period has already been fully paid.",
+        });
+      }
+
+      if (amountPaid + input.amount > rentAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `The payment amount of ${formatCurrency(input.amount)} exceeds the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
+        });
+      }
+
       const status = isLandlord ? PaymentStatus.confirmed : PaymentStatus.pending;
       const confirmedBy = isLandlord ? ctx.user.id : null;
       const confirmedAt = isLandlord ? new Date() : null;
@@ -140,7 +166,7 @@ export const paymentsRouter = router({
             recipientId: lease.unit.property.landlordId,
             type: "payment_logged",
             title: "New Payment Logged",
-            body: `${ctx.user.fullName} logged a payment of $${input.amount} for unit ${lease.unit.unitNumber}.`,
+            body: `${ctx.user.fullName} logged a payment of ${formatCurrency(input.amount)} for unit ${lease.unit.unitNumber}.`,
             relatedType: "payment",
             relatedId: payment.id,
           });
@@ -150,6 +176,106 @@ export const paymentsRouter = router({
       }
 
       return payment;
+    }),
+
+  updatePending: authedProcedure
+    .input(
+      z.object({
+        paymentId: z.string().uuid(),
+        amount: z.number().positive(),
+        paymentDate: z.string(), // ISO String
+        periodStart: z.string(), // ISO String
+        periodEnd: z.string(), // ISO String
+        method: z.nativeEnum(PaymentMethod),
+        notes: z.string().optional(),
+        proofUrl: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const payment = await prisma.payment.findUnique({
+        where: { id: input.paymentId },
+        include: {
+          lease: {
+            include: {
+              unit: {
+                include: { property: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!payment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment not found.",
+        });
+      }
+
+      if (payment.status !== PaymentStatus.pending) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only pending payments can be edited.",
+        });
+      }
+
+      if (payment.recordedBy !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only edit payments that you logged.",
+        });
+      }
+
+      const start = new Date(input.periodStart);
+      const end = new Date(input.periodEnd);
+      const payDate = new Date(input.paymentDate);
+
+      if (start >= end) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Period start date must be before period end date.",
+        });
+      }
+
+      // Check if updating this payment exceeds the period's remaining balance
+      const confirmedPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: payment.leaseId,
+          status: PaymentStatus.confirmed,
+          periodStart: start,
+          periodEnd: end,
+          id: { not: payment.id },
+        },
+      });
+      const rentAmount = Number(payment.lease.rentAmount);
+      const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      if (amountPaid >= rentAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The rent for this billing period has already been fully paid.",
+        });
+      }
+
+      if (amountPaid + input.amount > rentAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `The updated payment amount of ${formatCurrency(input.amount)} exceeds the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
+        });
+      }
+
+      return await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          amount: input.amount,
+          paymentDate: payDate,
+          periodStart: start,
+          periodEnd: end,
+          method: input.method,
+          notes: input.notes || null,
+          proofUrl: input.proofUrl || null,
+        },
+      });
     }),
 
   // Confirm a tenant-logged pending payment (Landlord only)
@@ -197,6 +323,32 @@ export const paymentsRouter = router({
         });
       }
 
+      // Check if confirming this payment exceeds the period's remaining balance
+      const confirmedPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: payment.leaseId,
+          status: PaymentStatus.confirmed,
+          periodStart: payment.periodStart,
+          periodEnd: payment.periodEnd,
+        },
+      });
+      const rentAmount = Number(payment.lease.rentAmount);
+      const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      if (amountPaid >= rentAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The rent for this billing period has already been fully paid.",
+        });
+      }
+
+      if (amountPaid + Number(payment.amount) > rentAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Confirming this payment of ${formatCurrency(Number(payment.amount))} would exceed the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
+        });
+      }
+
       const updatedPayment = await prisma.payment.update({
         where: { id: input.paymentId },
         data: {
@@ -211,7 +363,7 @@ export const paymentsRouter = router({
           recipientId: payment.lease.tenantId,
           type: "payment_confirmed",
           title: "Payment Confirmed",
-          body: `Your payment of $${payment.amount} has been confirmed by the landlord.`,
+          body: `Your payment of ${formatCurrency(Number(payment.amount))} has been confirmed by the landlord.`,
           relatedType: "payment",
           relatedId: payment.id,
         });
@@ -285,7 +437,7 @@ export const paymentsRouter = router({
           recipientId: payment.lease.tenantId,
           type: "payment_rejected",
           title: "Payment Rejected",
-          body: `Your payment of $${payment.amount} has been rejected/disputed: ${input.reason}.`,
+          body: `Your payment of ${formatCurrency(Number(payment.amount))} has been rejected/disputed: ${input.reason}.`,
           relatedType: "payment",
           relatedId: payment.id,
         });
@@ -408,7 +560,7 @@ export const paymentsRouter = router({
           recipientId: payment.lease.unit.property.landlordId,
           type: "payment_flagged",
           title: "Payment Flagged by Tenant",
-          body: `${ctx.user.fullName} flagged a payment of $${payment.amount} as incorrect.`,
+          body: `${ctx.user.fullName} flagged a payment of ${formatCurrency(Number(payment.amount))} as incorrect.`,
           relatedType: "payment",
           relatedId: payment.id,
         });
@@ -490,6 +642,33 @@ export const paymentsRouter = router({
           });
         }
 
+        // Check if updating this payment exceeds the period's remaining balance
+        const confirmedPayments = await prisma.payment.findMany({
+          where: {
+            leaseId: payment.leaseId,
+            status: PaymentStatus.confirmed,
+            periodStart: payment.periodStart,
+            periodEnd: payment.periodEnd,
+            id: { not: payment.id },
+          },
+        });
+        const rentAmount = Number(payment.lease.rentAmount);
+        const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+        if (amountPaid >= rentAmount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "The rent for this billing period has already been fully paid.",
+          });
+        }
+
+        if (amountPaid + input.amount > rentAmount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `The resolved payment amount of ${formatCurrency(input.amount)} exceeds the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
+          });
+        }
+
         updatedPayment = await prisma.payment.update({
           where: { id: input.paymentId },
           data: {
@@ -508,7 +687,7 @@ export const paymentsRouter = router({
           recipientId: payment.lease.tenantId,
           type: "payment_resolved",
           title: "Disputed Payment Resolved",
-          body: `The landlord resolved the dispute for your payment of $${payment.amount}.`,
+          body: `The landlord resolved the dispute for your payment of ${formatCurrency(Number(payment.amount))}.`,
           relatedType: "payment",
           relatedId: payment.id,
         });
