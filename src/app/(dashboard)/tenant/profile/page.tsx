@@ -252,7 +252,7 @@ export default function TenantProfilePage() {
                     accept="image/jpeg, image/png, image/webp"
                     onChange={handleAvatarUpload}
                     disabled={uploadingAvatar}
-                    className="hidden"
+                    className="sr-only"
                   />
                 </label>
               </div>
