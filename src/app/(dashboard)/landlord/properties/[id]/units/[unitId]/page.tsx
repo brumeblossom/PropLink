@@ -736,7 +736,7 @@ export default function UnitDetailPage() {
               Delete Unit
             </Button>
 
-            {timeline && (timeline.status === "active" || timeline.status === "renewal_due") && (
+            {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && (
               <Button
                 onClick={handleOpenRenewLease}
                 className="bg-emerald-700 hover:bg-emerald-600 text-white h-9 px-4 text-sm font-semibold"

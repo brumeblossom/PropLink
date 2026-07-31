@@ -373,7 +373,7 @@ export default function LandlordProfilePage() {
                 <Button
                   type="submit"
                   disabled={updatingPassword}
-                  className="bg-neutral-900 hover:bg-neutral-855 text-white font-semibold border border-neutral-800 h-10 px-6 flex items-center space-x-2 text-sm"
+                  className="bg-neutral-900 hover:bg-neutral-800 text-white font-semibold border border-neutral-800 h-10 px-6 flex items-center space-x-2 text-sm"
                 >
                   <Key className="w-4 h-4" />
                   <span>{updatingPassword ? "Updating..." : "Update Password"}</span>

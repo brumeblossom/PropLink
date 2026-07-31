@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, ChevronDown, Plus } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { getUnitTypesByPropertyType, isResidentialUnitType } from "@/lib/unit-types";
+import { cn } from "@/lib/utils";
 
 export default function PropertyDetailPage() {
   const router = useRouter();
@@ -100,6 +101,21 @@ export default function PropertyDetailPage() {
   const [isEditPropertyOpen, setIsEditPropertyOpen] = useState(false);
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
   const [isBulkAddOpen, setIsBulkAddOpen] = useState(false);
+  const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsAddDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Property Form State
   const [propertyName, setPropertyName] = useState("");
@@ -417,7 +433,7 @@ export default function PropertyDetailPage() {
             <Button
               onClick={handleOpenEdit}
               variant="outline"
-              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 text-sm"
+              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 text-sm bg-transparent"
             >
               Edit Property
             </Button>
@@ -427,19 +443,6 @@ export default function PropertyDetailPage() {
               className="bg-red-950/30 text-red-400 border border-red-900/50 hover:bg-red-950/60 h-9 text-sm"
             >
               Delete Property
-            </Button>
-            <Button
-              onClick={() => setIsAddUnitOpen(true)}
-              variant="outline"
-              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 px-4 text-sm"
-            >
-              Add Unit
-            </Button>
-            <Button
-              onClick={() => setIsBulkAddOpen(true)}
-              className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm font-semibold"
-            >
-              Bulk Add Units
             </Button>
           </div>
         </div>
@@ -473,10 +476,53 @@ export default function PropertyDetailPage() {
 
         {/* Units Section */}
         <div className="mt-10">
-          <h2 className="text-xl font-bold tracking-tight">Units in this Building</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold tracking-tight">Units in this Building</h2>
+            
+            {/* Unified Add Unit dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <Button
+                onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
+                className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm font-semibold flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-400"
+                aria-expanded={isAddDropdownOpen}
+                aria-haspopup="menu"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Unit</span>
+                <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isAddDropdownOpen && "transform rotate-180")} />
+              </Button>
+              {isAddDropdownOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl z-50 animate-in fade-in duration-100"
+                  role="menu"
+                >
+                  <button
+                    onClick={() => {
+                      setIsAddDropdownOpen(false);
+                      setIsAddUnitOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors focus:outline-none focus:bg-neutral-900"
+                    role="menuitem"
+                  >
+                    Add Single Unit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAddDropdownOpen(false);
+                      setIsBulkAddOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors focus:outline-none focus:bg-neutral-900"
+                    role="menuitem"
+                  >
+                    Add Bulk Units
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
 
           {units && units.length > 0 ? (
-            <div className="mt-6 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm">
+            <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm">
               <table className="min-w-full divide-y divide-neutral-800">
                 <thead className="bg-neutral-900/50">
                   <tr>

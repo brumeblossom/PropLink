@@ -18,6 +18,8 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Multi-Lease Support & Invite Labels Fix — Render all tenant leases and fix landlord invite code status label on auto-linked accounts
 - [x] Multi-Lease Payments Fix (Prompt B companion) — Tenant payments page now shows a lease selector when tenant has >1 lease; single-lease flow unchanged
 - [x] Notification Deep-Links, Payment Modal Actions & Toast System — Clicking notifications routes to the correct page; landlord payment modal shows Confirm/Reject; toast appears on all key success actions
+- [x] Lease Renewal Restrictions & All Tenants View — Restrict lease renewal to `renewal_due` and `expired` statuses; add comprehensive landlord "All Tenants" view listing all current and past occupants.
+- [x] Functional Hardening & Specific UI Fixes (Epic I / Prompt 9) — Enabled strict app-wide dark mode styling, refactored outline button layout, consolidated property add unit buttons into an Add Unit dropdown, aligned Edit/Delete buttons, and made Sign Out text bolder.
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -48,6 +50,10 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - **Vercel Build Alignment**: Cleaned up ESLint build errors in `ChatWidget.tsx` by removing unused imports/destructures and escaping literal quote characters.
 - **Rent Reminder Cron Job & Notification Dispatching**: Implemented a daily cron job configuration (`vercel.json` with schedule `0 0 * * *` UTC) targeting the protected `/api/cron/rent-reminder` route handler. Email notifications are dispatched via **Resend REST API**. **WhatsApp notifications are currently stubbed as `pending`** because Meta template approval/credentials are pending. Idempotency is enforced using a `reminder-${threshold}-${dueDateStr}` format stored in `NotificationLog`. Reminders are bypassed if a `confirmed` payment covers the period, whereas a `pending` payment does not suppress the reminder.
 - **Notices Dispatch Wiring**: Integrated the manual notice creation (`notices.send`) to trigger live Resend email dispatch and WhatsApp logs, dynamically updating `NoticeRecipient` status columns.
+- **Lease Renewal Visibility Guard**: The "Renew Lease" button is conditionally rendered in `src/app/(dashboard)/landlord/properties/[id]/units/[unitId]/page.tsx` only if `timeline.status === "renewal_due" || timeline.status === "expired"`.
+- **All Tenants Landlord View**: Added a new navigation endpoint `/landlord/tenants` to list every tenant ever hosted under the landlord's properties. Leases are fetched from `leases.getLandlordTenants`, grouped by tenant email, and rendered in cards with tabs filtering by Active/Past status.
+- **Strict Theme Variable Constraints (Epic I / Hardening)**: Enabled strict `"dark"` mode on the root `<html>` element to align Tailwind variables (e.g. background and border tokens) with the application's dark design. Changed the outline button class in `src/components/ui/button.tsx` to default to `bg-transparent` rather than `bg-background` to guarantee secondary buttons have no background fill.
+- **Combined Dropdown Navigation (Property Detail Page)**: Merged separate add unit buttons on `src/app/(dashboard)/landlord/properties/[id]/page.tsx` into a single, clean state-based "Add Unit" dropdown positioned directly above the units table. Repositioned the page-level "Edit Property" and "Delete Property" buttons to the right-hand side of the page header.
 - **Library Versions**:
   - Next.js: `14.2.35`
   - React: `^18`

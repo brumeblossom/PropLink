@@ -210,7 +210,7 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
             onClick={handleLogout}
             variant="outline"
             disabled={logoutMutation.isPending}
-            className="w-full justify-start border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 hover:border-neutral-700 h-10 px-4 flex items-center space-x-2 text-sm"
+            className="w-full justify-start border-neutral-800 font-bold text-neutral-200 hover:text-white hover:bg-neutral-900 hover:border-neutral-700 h-10 px-4 flex items-center space-x-2 text-sm bg-transparent"
           >
             <LogOut className="w-4 h-4" />
             <span>{logoutMutation.isPending ? "Signing out..." : "Sign Out"}</span>
