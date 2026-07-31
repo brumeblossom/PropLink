@@ -2,7 +2,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
-import { NoticeType, NotificationChannel, Role, Lease } from "@prisma/client";
+import { NoticeType, NotificationChannel, Role, Lease, RelatedType, DeliveryStatus } from "@prisma/client";
+import { dispatchNotification } from "../services/notificationDispatcher";
 
 export const noticesRouter = router({
   // Send a notice (Landlord only)
@@ -116,6 +117,52 @@ export const noticesRouter = router({
         await prisma.noticeRecipient.createMany({
           data: recipientsData,
         });
+
+        // Dispatch email (via Resend) and WhatsApp (stubbed as pending) notifications
+        for (const tenantId of tenantIds) {
+          for (const channel of input.channels) {
+            if (channel === NotificationChannel.in_app) continue;
+
+            try {
+              const log = await dispatchNotification({
+                recipientId: tenantId,
+                channel,
+                relatedType: RelatedType.notice,
+                relatedId: notice.id,
+                title: input.title,
+                body: input.body,
+              });
+
+              // Map NotificationStatus to DeliveryStatus
+              const deliveryStatus =
+                log.status === "sent" || log.status === "delivered"
+                  ? "sent"
+                  : log.status === "pending"
+                  ? "pending"
+                  : "failed";
+
+              const updateData: {
+                emailStatus?: DeliveryStatus;
+                whatsappStatus?: DeliveryStatus;
+              } = {};
+              if (channel === NotificationChannel.email) {
+                updateData.emailStatus = deliveryStatus;
+              } else if (channel === NotificationChannel.whatsapp) {
+                updateData.whatsappStatus = deliveryStatus;
+              }
+
+              await prisma.noticeRecipient.updateMany({
+                where: {
+                  noticeId: notice.id,
+                  tenantId,
+                },
+                data: updateData,
+              });
+            } catch (err) {
+              console.error(`[notices.send] Failed to dispatch ${channel} notice for tenant ${tenantId}:`, err);
+            }
+          }
+        }
       }
 
       return {

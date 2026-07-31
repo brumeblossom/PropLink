@@ -8,6 +8,7 @@ import { paymentsRouter } from "./payments";
 import { noticesRouter } from "./notices";
 import { conversationsRouter } from "./conversations";
 import { notificationsRouter } from "./notifications";
+import { internalRouter } from "./internal";
 
 export const appRouter = router({
   auth: authRouter,
@@ -18,6 +19,7 @@ export const appRouter = router({
   notices: noticesRouter,
   conversations: conversationsRouter,
   notifications: notificationsRouter,
+  internal: internalRouter,
   hello: publicProcedure
     .input(
       z.object({

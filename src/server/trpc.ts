@@ -12,6 +12,7 @@ export interface Context {
     avatarUrl: string | null;
   } | null;
   supabase: ReturnType<typeof buildSupabaseFromRequest>;
+  req?: Request;
 }
 
 /**
@@ -72,7 +73,7 @@ export async function createContext(req: Request): Promise<Context> {
     const authUser = session?.user ?? null;
 
     if (!authUser) {
-      return { user: null, supabase };
+      return { user: null, supabase, req };
     }
 
     // Verify the user exists in our database (primary key lookup — fast with PK index).
@@ -81,7 +82,7 @@ export async function createContext(req: Request): Promise<Context> {
     });
 
     if (!dbUser) {
-      return { user: null, supabase };
+      return { user: null, supabase, req };
     }
 
     return {
@@ -93,10 +94,11 @@ export async function createContext(req: Request): Promise<Context> {
         avatarUrl: dbUser.avatarUrl,
       },
       supabase,
+      req,
     };
   } catch (error) {
     console.error("[createContext] Unexpected error:", error);
-    return { user: null, supabase };
+    return { user: null, supabase, req };
   }
 }
 
@@ -113,6 +115,39 @@ export const authedProcedure = t.procedure.use(async ({ ctx, next }) => {
     ctx: {
       user: ctx.user,
       supabase: ctx.supabase,
+      req: ctx.req,
+    },
+  });
+});
+
+/**
+ * Procedure for cron and background tasks.
+ * Validates request authorization header against CRON_SECRET for security.
+ */
+export const internalProcedure = t.procedure.use(async ({ ctx, next }) => {
+  const req = ctx.req;
+  const cronSecret = process.env.CRON_SECRET;
+  
+  if (cronSecret && req) {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      // In development mode, we bypass authentication to allow quick browser testing if no auth header was sent.
+      if (process.env.NODE_ENV === "development" && !authHeader) {
+        console.warn("[internalProcedure] Bypassing CRON_SECRET check in development mode.");
+      } else {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Unauthorized internal procedure invocation.",
+        });
+      }
+    }
+  }
+
+  return next({
+    ctx: {
+      user: ctx.user,
+      supabase: ctx.supabase,
+      req: ctx.req,
     },
   });
 });

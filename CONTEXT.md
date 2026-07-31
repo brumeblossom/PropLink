@@ -42,6 +42,8 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - **Persistent Floating Chat Widget**: Replaced the full-page and inline chat interfaces with a role-aware floating FAB and expandable chat panel at the bottom-right of the viewport. Integrated with `NotificationBell` deep-linking to open the conversation target in-place without page routing.
 - **Hook Placement Hardening**: Restructured hooks in `UnitDetailPage` (specifically `availableYears` and `filteredPayments` `useMemo`) to live strictly at the top of the component to resolve the Rules of Hooks violation that caused runtime crashes after conditional loading/not-found returns.
 - **Vercel Build Alignment**: Cleaned up ESLint build errors in `ChatWidget.tsx` by removing unused imports/destructures and escaping literal quote characters.
+- **Rent Reminder Cron Job & Notification Dispatching**: Implemented a daily cron job configuration (`vercel.json` with schedule `0 0 * * *` UTC) targeting the protected `/api/cron/rent-reminder` route handler. Email notifications are dispatched via **Resend REST API**. **WhatsApp notifications are currently stubbed as `pending`** because Meta template approval/credentials are pending. Idempotency is enforced using a `reminder-${threshold}-${dueDateStr}` format stored in `NotificationLog`. Reminders are bypassed if a `confirmed` payment covers the period, whereas a `pending` payment does not suppress the reminder.
+- **Notices Dispatch Wiring**: Integrated the manual notice creation (`notices.send`) to trigger live Resend email dispatch and WhatsApp logs, dynamically updating `NoticeRecipient` status columns.
 - **Library Versions**:
   - Next.js: `14.2.35`
   - React: `^18`
