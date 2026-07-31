@@ -871,13 +871,23 @@ export default function UnitDetailPage() {
                   <div>
                     <span className="block text-neutral-500 text-xs">Invite Status</span>
                     <span className="font-semibold text-white mt-0.5 block">
-                      {activeLease.inviteCodes[0] ? (
-                        <span className="text-yellow-500 font-mono">
-                          Invite Code: {activeLease.inviteCodes[0].code} (Awaiting Tenant)
-                        </span>
+                      {activeLease.inviteCodes.length > 0 ? (
+                        activeLease.inviteCodes[0].redeemedAt ? (
+                          <span className="text-green-400">
+                            Claimed by {activeLease.tenant.fullName}
+                          </span>
+                        ) : new Date() > new Date(activeLease.inviteCodes[0].expiresAt) ? (
+                          <span className="text-red-400 font-mono">
+                            Invite Code: {activeLease.inviteCodes[0].code} (Expired)
+                          </span>
+                        ) : (
+                          <span className="text-yellow-500 font-mono">
+                            Invite Code: {activeLease.inviteCodes[0].code} (Awaiting Tenant)
+                          </span>
+                        )
                       ) : (
-                        <span className="text-green-400">
-                          Claimed by {activeLease.tenant.fullName}
+                        <span className="text-neutral-400">
+                          Linked to existing tenant account
                         </span>
                       )}
                     </span>

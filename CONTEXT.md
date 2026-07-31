@@ -15,6 +15,8 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Prompt 8 — Automated Reminders & Cron Setup (Epic H)
 - [x] Prompt 9 — Polish & Deployment Hardening (Epic I)
 - [x] UI/Navigation Changes — Hiding ChatWidget, removing tenant-side Notices, renaming landlord notices to Send Announcements
+- [x] Multi-Lease Support & Invite Labels Fix — Render all tenant leases and fix landlord invite code status label on auto-linked accounts
+- [x] Multi-Lease Payments Fix (Prompt B companion) — Tenant payments page now shows a lease selector when tenant has >1 lease; single-lease flow unchanged
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -60,6 +62,14 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
   - **ChatWidget Visibility**: Commented out `<ChatWidget />` in both `TenantLayout` (`src/app/(dashboard)/tenant/layout.tsx`) and `LandlordLayout` (`src/app/(dashboard)/landlord/layout.tsx`) to prevent rendering or mounting. To re-enable the widget, simply uncomment these tags in both layouts.
   - **Tenant Notices Route**: Deleted the `src/app/(dashboard)/tenant/notices/page.tsx` file and removed the "Notices" link from `TenantLayoutContent` navigation items. Confirmed that there are no remaining tenant-side UI links pointing to `/tenant/notices`.
   - **Landlord notices renaming**: Renamed the landlord sidebar item and main page header on the notices board to "Send Announcements" to avoid collision/redundancy without modifying the underlying database/procedure schema.
+- **Same-Tenant Multi-Unit Leases Support (2026-07-31)**:
+  - **getForUnit**: Modified `getForUnit` inside `src/server/routers/leases.ts` to return all invite codes (by removing filters on `redeemedAt` and `expiresAt`), selecting `code`, `redeemedAt`, and `expiresAt` fields.
+  - **Invite Status Labels**: Updated `src/app/(dashboard)/landlord/properties/[id]/units/[unitId]/page.tsx` to display `"Linked to existing tenant account"` if no invite code is associated with the lease (as a result of auto-linking an existing tenant email), and handle expired/claimed codes dynamically.
+  - **Tenant dashboard multi-lease looping**: Refactored `src/app/(dashboard)/tenant/page.tsx` to render all tenant leases by looping over the returned array from `leases.getMine` and rendering a clean nested sub-component `TenantLeaseSection` per lease to query and display individual billing summaries without violating React Rules of Hooks.
+- **Tenant Payments Multi-Lease Selector (2026-07-31)** (companion to Same-Tenant Multi-Unit Leases Support):
+  - Refactored `src/app/(dashboard)/tenant/payments/page.tsx` into three parts: a `LeaseSelector` component (shown only when the tenant has >1 lease), a `LeasePaymentLedger` component (the existing single-lease payment UI, fully parameterized by `lease` prop), and a root `TenantPaymentsPage` orchestrator that auto-selects the only lease (no extra click) when the tenant has exactly one, or shows the selector first when there are multiple.
+  - All mutations (`payments.create`, `payments.updatePending`, `payments.acknowledge`, `payments.flag`) and all queries (`payments.list`, `payments.getBillingSummary`, `payments.getUploadUrl`) are now scoped to the `lease.id` of the **selected** lease, not defaulted to the first non-terminated lease in the array.
+  - A `← Back` chevron is injected into the ledger header when `showBackButton` is true (i.e. the tenant has multiple leases), allowing the tenant to return to the lease selector without a page reload.
 
 ## Known issues / TODO
 - **Overlap UI Guard**: The "Create Lease" button is intentionally hidden on the unit detail page when an active lease exists (the form is only shown when the unit is vacant). Attempting to create a second overlapping lease via a direct API call will be rejected by the tRPC `leases.create` procedure with a descriptive error. The UI guard and API guard together satisfy B1/AC2.

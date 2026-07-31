@@ -196,12 +196,10 @@ export const leasesRouter = router({
             select: { fullName: true, email: true, phone: true, avatarUrl: true },
           },
           inviteCodes: {
-            where: {
-              redeemedAt: null,
-              expiresAt: { gte: new Date() },
-            },
             select: {
               code: true,
+              redeemedAt: true,
+              expiresAt: true,
             },
           },
         },

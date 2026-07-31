@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { PaymentMethod } from "@prisma/client";
-import { X, CreditCard } from "lucide-react";
+import { X, CreditCard, ChevronLeft, Building2, Home } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@/server/routers/_app";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type LeaseItem = RouterOutputs["leases"]["getMine"][number];
 
 const paymentStatusLabel: Record<string, string> = {
   confirmed: "Confirmed",
@@ -13,70 +18,138 @@ const paymentStatusLabel: Record<string, string> = {
   disputed: "Rejected",
 };
 
-export default function TenantPaymentsPage() {
-  const utils = trpc.useUtils();
+// ─── Lease status computation (same logic as dashboard) ──────────────────────
+function getLeaseStatus(lease: LeaseItem): "active" | "renewal_due" | "expired" | "upcoming" | "terminated" {
+  if (lease.terminatedAt) return "terminated";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(lease.startDate);
+  const end = new Date(lease.endDate);
+  if (today < start) return "upcoming";
+  if (today > end) return "expired";
+  const renewalStart = new Date(end);
+  renewalStart.setDate(renewalStart.getDate() - lease.renewalWindowDays);
+  return today >= renewalStart ? "renewal_due" : "active";
+}
 
-  // Queries
+// ─── Lease Selector ────────────────────────────────────────────────────────────
+function LeaseSelector({ leases, onSelect }: { leases: LeaseItem[]; onSelect: (id: string) => void }) {
+  return (
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h1>
+        <p className="text-neutral-400 text-sm mt-1">
+          You have multiple leases. Select a lease to view its payment ledger.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {leases.map((lease) => {
+          const status = getLeaseStatus(lease);
+          return (
+            <button
+              key={lease.id}
+              onClick={() => onSelect(lease.id)}
+              className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/10 hover:bg-neutral-900/30 hover:border-neutral-700 transition-all p-5 group"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg border border-neutral-800 bg-neutral-900 flex items-center justify-center shrink-0 group-hover:border-neutral-700 transition-colors">
+                    <Building2 className="w-5 h-5 text-neutral-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white leading-tight">
+                      {lease.unit.property.name}
+                    </p>
+                    <p className="text-neutral-400 text-xs mt-0.5">
+                      Unit {lease.unit.unitNumber} · {lease.unit.property.address}, {lease.unit.property.city}
+                    </p>
+                    <p className="text-neutral-400 text-xs mt-1">
+                      {formatCurrency(lease.rentAmount)}/{lease.rentFrequency} ·{" "}
+                      {new Date(lease.startDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                      {" – "}
+                      {new Date(lease.endDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    status === "renewal_due"
+                      ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                      : status === "active"
+                      ? "bg-green-950/30 text-green-400 border-green-900/30"
+                      : "bg-neutral-900 text-neutral-400 border-neutral-800"
+                  }`}
+                >
+                  {status.replace("_", " ")}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </main>
+  );
+}
+
+// ─── Payment Ledger (scoped to a single lease) ────────────────────────────────
+function LeasePaymentLedger({
+  lease,
+  showBackButton,
+  onBack,
+}: {
+  lease: LeaseItem;
+  showBackButton: boolean;
+  onBack: () => void;
+}) {
+  const utils = trpc.useUtils();
   const { data: user } = trpc.auth.me.useQuery();
-  const { data: leases } = trpc.leases.getMine.useQuery();
-  const activeLease = leases?.find((l) => !l.terminatedAt);
 
   const { data: payments, isLoading: isLoadingPayments } = trpc.payments.list.useQuery(
-    { leaseId: activeLease?.id || "" },
-    { enabled: !!activeLease?.id, refetchInterval: 10000 }
+    { leaseId: lease.id },
+    { refetchInterval: 10000 }
   );
 
   const { data: billingSummary } = trpc.payments.getBillingSummary.useQuery(
-    { leaseId: activeLease?.id || "" },
-    { enabled: !!activeLease?.id }
+    { leaseId: lease.id }
   );
 
-  // Mutations
+  // Mutations – all scoped to this specific lease.id
   const createPayment = trpc.payments.create.useMutation({
     onSuccess: () => {
-      utils.payments.list.invalidate({ leaseId: activeLease?.id });
-      utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+      utils.payments.list.invalidate({ leaseId: lease.id });
+      utils.payments.getBillingSummary.invalidate({ leaseId: lease.id });
       setIsLogPaymentOpen(false);
       resetPaymentForm();
     },
-    onError: (err) => {
-      setPaymentError(err.message);
-    },
+    onError: (err) => setPaymentError(err.message),
   });
 
   const updatePendingPayment = trpc.payments.updatePending.useMutation({
     onSuccess: () => {
-      utils.payments.list.invalidate({ leaseId: activeLease?.id });
-      utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+      utils.payments.list.invalidate({ leaseId: lease.id });
+      utils.payments.getBillingSummary.invalidate({ leaseId: lease.id });
       setIsLogPaymentOpen(false);
       resetPaymentForm();
     },
-    onError: (err) => {
-      setPaymentError(err.message);
-    },
+    onError: (err) => setPaymentError(err.message),
   });
 
   const getUploadUrlMutation = trpc.payments.getUploadUrl.useMutation();
 
   const acknowledgePayment = trpc.payments.acknowledge.useMutation({
-    onSuccess: () => {
-      utils.payments.list.invalidate({ leaseId: activeLease?.id });
-    },
-    onError: (err) => {
-      alert(err.message);
-    },
+    onSuccess: () => utils.payments.list.invalidate({ leaseId: lease.id }),
+    onError: (err) => alert(err.message),
   });
 
   const flagPayment = trpc.payments.flag.useMutation({
     onSuccess: () => {
-      utils.payments.list.invalidate({ leaseId: activeLease?.id });
+      utils.payments.list.invalidate({ leaseId: lease.id });
       setIsFlagOpen(false);
       setFlagReason("");
       setFlagPaymentId("");
     },
-    onError: (err) => {
-      alert(err.message);
-    },
+    onError: (err) => alert(err.message),
   });
 
   // Form states
@@ -93,12 +166,12 @@ export default function TenantPaymentsPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
 
-  // Flag/Dispute State
+  // Flag/Dispute state
   const [isFlagOpen, setIsFlagOpen] = useState(false);
   const [flagPaymentId, setFlagPaymentId] = useState("");
   const [flagReason, setFlagReason] = useState("");
 
-  // Payment Details Modal
+  // Payment details modal
   const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
 
@@ -118,7 +191,6 @@ export default function TenantPaymentsPage() {
     setEditingPaymentId(null);
   };
 
-  // Derived: unique years from payment history (always includes current year)
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
     if (!payments || payments.length === 0) return [currentYear];
@@ -127,7 +199,6 @@ export default function TenantPaymentsPage() {
     return Array.from(years).sort((a, b) => b - a);
   }, [payments]);
 
-  // Filtered payments for the selected year
   const filteredPayments = useMemo(() => {
     if (!payments) return [];
     return payments.filter((p) => new Date(p.paymentDate).getFullYear() === selectedYear);
@@ -135,7 +206,7 @@ export default function TenantPaymentsPage() {
 
   const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !activeLease) return;
+    if (!file) return;
     setUploadError(null);
 
     if (file.size > 10 * 1024 * 1024) {
@@ -152,7 +223,7 @@ export default function TenantPaymentsPage() {
     setUploadingProof(true);
     try {
       const { signedUrl, path } = await getUploadUrlMutation.mutateAsync({
-        leaseId: activeLease.id,
+        leaseId: lease.id,
         fileName: file.name,
       });
 
@@ -163,7 +234,6 @@ export default function TenantPaymentsPage() {
       });
 
       if (!response.ok) throw new Error("Failed to upload file to storage.");
-
       setProofUrl(path);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to upload proof document.";
@@ -207,7 +277,7 @@ export default function TenantPaymentsPage() {
         });
       } else {
         await createPayment.mutateAsync({
-          leaseId: activeLease!.id,
+          leaseId: lease.id, // Always scoped to the selected lease
           amount,
           paymentDate: new Date(paymentDate).toISOString(),
           periodStart: new Date(paymentPeriodStart).toISOString(),
@@ -232,30 +302,42 @@ export default function TenantPaymentsPage() {
     }
   };
 
-  if (!activeLease) {
-    return (
-      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto">
-          <CreditCard className="w-8 h-8 text-neutral-600" />
-        </div>
-        <h1 className="text-xl font-bold text-white">No active lease</h1>
-        <p className="text-neutral-400 text-sm">
-          You need an active tenancy to view your payment ledger.
-        </p>
-      </main>
-    );
-  }
+  const leaseStatus = getLeaseStatus(lease);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h1>
-          <p className="text-neutral-400 text-sm mt-1">
-            Log new payments, track your billing period ledger, and counter-verify landlord records.
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          {showBackButton && (
+            <button
+              onClick={onBack}
+              className="mt-1 text-neutral-400 hover:text-white transition-colors shrink-0"
+              title="Back to lease selector"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h1>
+            <p className="text-neutral-400 text-sm mt-0.5 flex items-center gap-1.5">
+              <Home className="w-3.5 h-3.5 shrink-0" />
+              {lease.unit.property.name} · Unit {lease.unit.unitNumber}
+              <span
+                className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                  leaseStatus === "active"
+                    ? "bg-green-950/30 text-green-400 border-green-900/30"
+                    : leaseStatus === "renewal_due"
+                    ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                    : "bg-neutral-900 text-neutral-400 border-neutral-800"
+                }`}
+              >
+                {leaseStatus.replace("_", " ")}
+              </span>
+            </p>
+          </div>
         </div>
+
         <div className="flex items-center gap-3 self-start sm:self-auto">
           {/* Year filter */}
           <select
@@ -502,7 +584,7 @@ export default function TenantPaymentsPage() {
       </div>
 
       {/* ── Log / Edit Payment Modal ── */}
-      {isLogPaymentOpen && activeLease && (
+      {isLogPaymentOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl my-8">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-800">
@@ -843,5 +925,64 @@ export default function TenantPaymentsPage() {
         </div>
       )}
     </main>
+  );
+}
+
+// ─── Root page — orchestrates selector vs. ledger view ────────────────────────
+export default function TenantPaymentsPage() {
+  const { data: leases, isLoading } = trpc.leases.getMine.useQuery();
+
+  // Auto-select if there's only one lease; null = show selector
+  const [selectedLeaseId, setSelectedLeaseId] = useState<string | null>(null);
+
+  // Once leases load, auto-select when there's exactly one
+  useEffect(() => {
+    if (!leases) return;
+    if (leases.length === 1) {
+      setSelectedLeaseId(leases[0].id);
+    }
+    // If there are multiple leases AND we have a previously selected id that's
+    // no longer valid (edge case), reset to null
+    if (leases.length > 1 && selectedLeaseId && !leases.find((l) => l.id === selectedLeaseId)) {
+      setSelectedLeaseId(null);
+    }
+  }, [leases]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-neutral-500 text-sm animate-pulse">Loading lease details...</p>
+      </div>
+    );
+  }
+
+  if (!leases || leases.length === 0) {
+    return (
+      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto">
+          <CreditCard className="w-8 h-8 text-neutral-600" />
+        </div>
+        <h1 className="text-xl font-bold text-white">No active lease</h1>
+        <p className="text-neutral-400 text-sm">
+          You need an active tenancy to view your payment ledger.
+        </p>
+      </main>
+    );
+  }
+
+  // Multiple leases, none selected yet → show selector
+  if (leases.length > 1 && !selectedLeaseId) {
+    return <LeaseSelector leases={leases} onSelect={setSelectedLeaseId} />;
+  }
+
+  // Find the selected lease object
+  const selectedLease = leases.find((l) => l.id === selectedLeaseId) ?? leases[0];
+
+  return (
+    <LeasePaymentLedger
+      lease={selectedLease}
+      showBackButton={leases.length > 1}
+      onBack={() => setSelectedLeaseId(null)}
+    />
   );
 }
