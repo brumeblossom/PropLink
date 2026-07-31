@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { NoticeType, NotificationChannel } from "@prisma/client";
 import { 
   Megaphone, 
@@ -22,6 +23,7 @@ import {
 
 export default function LandlordNoticesPage() {
   const utils = trpc.useUtils();
+  const { toast } = useToast();
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [expandedNoticeId, setExpandedNoticeId] = useState<string | null>(null);
 
@@ -46,6 +48,7 @@ export default function LandlordNoticesPage() {
       utils.notices.listSent.invalidate();
       setIsComposeOpen(false);
       resetForm();
+      toast('Announcement sent successfully', 'success');
     },
     onError: (err) => {
       setError(err.message);

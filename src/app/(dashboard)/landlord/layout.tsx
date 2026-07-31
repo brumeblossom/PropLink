@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatWidgetProvider } from "@/components/ChatWidgetContext";
+import { ToastProvider } from "@/components/ui/toast";
 // import { ChatWidget } from "@/components/ChatWidget";
 
 export default function LandlordLayout({
@@ -172,6 +173,7 @@ export default function LandlordLayout({
   );
 
   return (
+    <ToastProvider>
     <ChatWidgetProvider>
       <div className="min-h-screen bg-neutral-950 text-white relative flex">
       {/* Desktop Left Sidebar (permanent) */}
@@ -217,5 +219,6 @@ export default function LandlordLayout({
     {/* ChatWidget is disabled/hidden per visibility request */}
     {/* <ChatWidget /> */}
     </ChatWidgetProvider>
+    </ToastProvider>
   );
 }

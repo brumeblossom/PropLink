@@ -11,6 +11,7 @@ import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function UnitDetailPage() {
   const utils = trpc.useUtils();
   const chatWidget = useChatWidget();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   // Auto-open chat widget if tab === "chat"
   useEffect(() => {
@@ -250,9 +252,12 @@ export default function UnitDetailPage() {
     onSuccess: () => {
       utils.payments.list.invalidate({ leaseId: activeLease?.id });
       utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
+      setIsLandlordPaymentDetailOpen(false);
+      setSelectedLandlordPayment(null);
+      toast('Payment confirmed', 'success');
     },
     onError: (err) => {
-      alert(err.message);
+      toast(err.message, 'error');
     },
   });
 
@@ -261,11 +266,14 @@ export default function UnitDetailPage() {
       utils.payments.list.invalidate({ leaseId: activeLease?.id });
       utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
       setIsRejectOpen(false);
-      setRejectReason("");
-      setRejectPaymentId("");
+      setRejectReason('');
+      setRejectPaymentId('');
+      setIsLandlordPaymentDetailOpen(false);
+      setSelectedLandlordPayment(null);
+      toast('Payment rejected', 'info');
     },
     onError: (err) => {
-      alert(err.message);
+      toast(err.message, 'error');
     },
   });
 
@@ -275,9 +283,10 @@ export default function UnitDetailPage() {
       utils.payments.getBillingSummary.invalidate({ leaseId: activeLease?.id });
       setIsEditOpen(false);
       resetEditForm();
+      toast('Dispute resolved', 'success');
     },
     onError: (err) => {
-      alert(err.message);
+      toast(err.message, 'error');
     },
   });
 
@@ -1132,12 +1141,6 @@ export default function UnitDetailPage() {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-sm text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedLandlordPayment(p); setIsLandlordPaymentDetailOpen(true); }}
-                                className="text-xs text-neutral-400 hover:text-white underline mr-2"
-                              >
-                                Details
-                              </button>
                               {p.status === "pending" && (
                                 <div className="flex items-center justify-end space-x-2">
                                   <Button
@@ -2057,7 +2060,32 @@ export default function UnitDetailPage() {
               )}
             </div>
 
-            <div className="pt-4 border-t border-neutral-800">
+            <div className="pt-4 border-t border-neutral-800 space-y-3">
+              {/* Inline Confirm/Reject — shown only for pending payments */}
+              {selectedLandlordPayment.status === 'pending' && (
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => confirmPayment.mutate({ paymentId: selectedLandlordPayment.id })}
+                    disabled={confirmPayment.isPending || rejectPayment.isPending}
+                    className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold h-[38px] text-sm"
+                  >
+                    {confirmPayment.isPending ? 'Confirming…' : 'Confirm Payment'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setRejectPaymentId(selectedLandlordPayment.id);
+                      setRejectReason('');
+                      setIsLandlordPaymentDetailOpen(false);
+                      setIsRejectOpen(true);
+                    }}
+                    disabled={confirmPayment.isPending || rejectPayment.isPending}
+                    variant="outline"
+                    className="flex-1 border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 font-semibold h-[38px] text-sm"
+                  >
+                    Reject
+                  </Button>
+                </div>
+              )}
               <Button
                 onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
                 className="w-full bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-[38px]"

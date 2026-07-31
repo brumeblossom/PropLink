@@ -17,6 +17,7 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] UI/Navigation Changes — Hiding ChatWidget, removing tenant-side Notices, renaming landlord notices to Send Announcements
 - [x] Multi-Lease Support & Invite Labels Fix — Render all tenant leases and fix landlord invite code status label on auto-linked accounts
 - [x] Multi-Lease Payments Fix (Prompt B companion) — Tenant payments page now shows a lease selector when tenant has >1 lease; single-lease flow unchanged
+- [x] Notification Deep-Links, Payment Modal Actions & Toast System — Clicking notifications routes to the correct page; landlord payment modal shows Confirm/Reject; toast appears on all key success actions
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -70,6 +71,18 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
   - Refactored `src/app/(dashboard)/tenant/payments/page.tsx` into three parts: a `LeaseSelector` component (shown only when the tenant has >1 lease), a `LeasePaymentLedger` component (the existing single-lease payment UI, fully parameterized by `lease` prop), and a root `TenantPaymentsPage` orchestrator that auto-selects the only lease (no extra click) when the tenant has exactly one, or shows the selector first when there are multiple.
   - All mutations (`payments.create`, `payments.updatePending`, `payments.acknowledge`, `payments.flag`) and all queries (`payments.list`, `payments.getBillingSummary`, `payments.getUploadUrl`) are now scoped to the `lease.id` of the **selected** lease, not defaulted to the first non-terminated lease in the array.
   - A `← Back` chevron is injected into the ledger header when `showBackButton` is true (i.e. the tenant has multiple leases), allowing the tenant to return to the lease selector without a page reload.
+- **Notification Deep-Links, Payment Modal Actions & Toast System (2026-07-31)**:
+  - **Toast System**: Built a lightweight custom `ToastProvider` + `useToast` hook at `src/components/ui/toast.tsx` (no external library). Supports `success`, `error`, `warning`, `info` variants. Auto-dismisses after 3.5s, renders as a bottom-right portal. Added to both `LandlordLayout` and `TenantLayout`.
+  - **Toast-wired success moments**: Confirm payment → "Payment confirmed" (success). Reject payment → "Payment rejected" (info). Resolve/void dispute → "Dispute resolved" (success). Send announcement → "Announcement sent successfully" (success). Errors from all mutations now show a toast (error variant) instead of `alert()`.
+  - **Notification deep-link routing** (NotificationBell already handled these, now documented):
+    - `relatedType: "payment"` → landlord: `/landlord/properties/:propertyId/units/:unitId?paymentId=…` via `payments.getRedirectInfo`. Tenant: `/tenant?paymentId=…`.
+    - `relatedType: "lease"` → landlord: `/landlord/properties/:propertyId/units/:unitId?leaseId=…` via `leases.getRedirectInfo`. Tenant: `/tenant?leaseId=…`.
+    - `relatedType: "conversation"` → opens floating ChatWidget (landlord resolves unitId via `conversations.getRedirectInfo`).
+    - `relatedType: "unit"` → landlord: `/landlord/properties/all/units/:unitId`.
+    - `relatedType: "notice"` → opens inline notice-body modal inside the bell dropdown (no navigation).
+    - **⚠️ No destination (flagged)**: `relatedType: "reminder"` — cron-generated rent reminders carry `relatedType: "reminder"` but do **not** store a `relatedId` pointing to the lease or unit. Clicking a reminder notification in the bell currently does nothing (falls through without navigation). To fix this properly, the `internal.ts` cron router would need to store the `leaseId` as `relatedId` when dispatching reminder notifications.
+  - **Landlord payment table**: Removed the redundant standalone "Details" text/underline link from each row (row click already opens the modal). Confirm/Reject action buttons are now available in **two places**: directly in the table row (for `pending` payments) AND inside the detail modal footer when a pending payment is opened.
+  - **Detail modal closes on action**: Confirming or rejecting a payment from inside the modal now automatically closes the modal and clears `selectedLandlordPayment` state before firing the toast.
 
 ## Known issues / TODO
 - **Overlap UI Guard**: The "Create Lease" button is intentionally hidden on the unit detail page when an active lease exists (the form is only shown when the unit is vacant). Attempting to create a second overlapping lease via a direct API call will be rejected by the tRPC `leases.create` procedure with a descriptive error. The UI guard and API guard together satisfy B1/AC2.

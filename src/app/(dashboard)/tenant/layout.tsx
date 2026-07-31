@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatWidgetProvider } from "@/components/ChatWidgetContext";
+import { ToastProvider } from "@/components/ui/toast";
 // import { useChatWidget } from "@/components/ChatWidgetContext";
 // import { ChatWidget } from "@/components/ChatWidget";
 
@@ -26,11 +27,13 @@ export default function TenantLayout({
   children: React.ReactNode;
 }) {
   return (
+    <ToastProvider>
     <ChatWidgetProvider>
       <TenantLayoutContent>{children}</TenantLayoutContent>
       {/* ChatWidget is disabled/hidden per visibility request */}
       {/* <ChatWidget /> */}
     </ChatWidgetProvider>
+    </ToastProvider>
   );
 }
 
