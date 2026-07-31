@@ -13,7 +13,8 @@ import {
   LogOut,
   User,
   Megaphone,
-  Bell
+  Bell,
+  Users
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatWidgetProvider } from "@/components/ChatWidgetContext";

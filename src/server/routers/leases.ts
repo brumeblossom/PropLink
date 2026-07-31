@@ -514,5 +514,36 @@ export const leasesRouter = router({
       });
       return lease ? { unitId: lease.unit.id, propertyId: lease.unit.propertyId } : null;
     }),
+
+  getLandlordTenants: authedProcedure
+    .query(async ({ ctx }) => {
+      return await prisma.lease.findMany({
+        where: {
+          unit: {
+            property: {
+              landlordId: ctx.user.id
+            }
+          }
+        },
+        include: {
+          tenant: {
+            select: {
+              fullName: true,
+              email: true,
+              phone: true,
+              avatarUrl: true
+            }
+          },
+          unit: {
+            include: {
+              property: true
+            }
+          }
+        },
+        orderBy: {
+          startDate: "desc"
+        }
+      });
+    }),
 });
 
