@@ -14,6 +14,7 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Prompt 7 — Notices & Realtime Chat Communication (Epic G)
 - [x] Prompt 8 — Automated Reminders & Cron Setup (Epic H)
 - [x] Prompt 9 — Polish & Deployment Hardening (Epic I)
+- [x] UI/Navigation Changes — Hiding ChatWidget, removing tenant-side Notices, renaming landlord notices to Send Announcements
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -55,6 +56,10 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
   - Prisma: `^6.19.3`
   - Supabase client: `^2.110.8`
   - Supabase SSR helper: `^0.4.0`
+- **UI & Chat Widget Visibility Updates (2026-07-31)**:
+  - **ChatWidget Visibility**: Commented out `<ChatWidget />` in both `TenantLayout` (`src/app/(dashboard)/tenant/layout.tsx`) and `LandlordLayout` (`src/app/(dashboard)/landlord/layout.tsx`) to prevent rendering or mounting. To re-enable the widget, simply uncomment these tags in both layouts.
+  - **Tenant Notices Route**: Deleted the `src/app/(dashboard)/tenant/notices/page.tsx` file and removed the "Notices" link from `TenantLayoutContent` navigation items. Confirmed that there are no remaining tenant-side UI links pointing to `/tenant/notices`.
+  - **Landlord notices renaming**: Renamed the landlord sidebar item and main page header on the notices board to "Send Announcements" to avoid collision/redundancy without modifying the underlying database/procedure schema.
 
 ## Known issues / TODO
 - **Overlap UI Guard**: The "Create Lease" button is intentionally hidden on the unit detail page when an active lease exists (the form is only shown when the unit is vacant). Attempting to create a second overlapping lease via a direct API call will be rejected by the tRPC `leases.create` procedure with a descriptive error. The UI guard and API guard together satisfy B1/AC2.

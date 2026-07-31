@@ -7,17 +7,18 @@ import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  MessageSquare,
+  // MessageSquare,
   CreditCard,
-  Megaphone,
+  // Megaphone,
   User,
   Menu,
   X,
   LogOut,
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
-import { ChatWidgetProvider, useChatWidget } from "@/components/ChatWidgetContext";
-import { ChatWidget } from "@/components/ChatWidget";
+import { ChatWidgetProvider } from "@/components/ChatWidgetContext";
+// import { useChatWidget } from "@/components/ChatWidgetContext";
+// import { ChatWidget } from "@/components/ChatWidget";
 
 export default function TenantLayout({
   children,
@@ -27,7 +28,8 @@ export default function TenantLayout({
   return (
     <ChatWidgetProvider>
       <TenantLayoutContent>{children}</TenantLayoutContent>
-      <ChatWidget />
+      {/* ChatWidget is disabled/hidden per visibility request */}
+      {/* <ChatWidget /> */}
     </ChatWidgetProvider>
   );
 }
@@ -37,23 +39,23 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const chatWidget = useChatWidget();
+  // const chatWidget = useChatWidget();
 
   const { data: user } = trpc.auth.me.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation();
 
   // Unread notices badge — same cache-sharing strategy as landlord unreadCount
-  const { data: noticeRecipients } = trpc.notices.listReceived.useQuery(undefined, {
-    staleTime: 30000,
-  });
-  const unreadNoticesCount = noticeRecipients?.filter((r) => !r.readAt).length ?? 0;
+  // const { data: noticeRecipients } = trpc.notices.listReceived.useQuery(undefined, {
+  //   staleTime: 30000,
+  // });
+  // const unreadNoticesCount = noticeRecipients?.filter((r) => !r.readAt).length ?? 0;
 
   // Unread chat messages badge for sidebar item — shares cache with bell (no extra request)
-  const { data: notifications } = trpc.notifications.listReceived.useQuery(undefined, {
-    staleTime: 10000,
-  });
-  const unreadChatCount =
-    notifications?.filter((n) => n.type === "message_received" && !n.readAt).length ?? 0;
+  // const { data: notifications } = trpc.notifications.listReceived.useQuery(undefined, {
+  //   staleTime: 10000,
+  // });
+  // const unreadChatCount =
+  //   notifications?.filter((n) => n.type === "message_received" && !n.readAt).length ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -80,13 +82,14 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
       active: pathname.startsWith("/tenant/payments"),
       badge: 0,
     },
-    {
-      name: "Notices",
-      href: "/tenant/notices",
-      icon: Megaphone,
-      active: pathname.startsWith("/tenant/notices"),
-      badge: unreadNoticesCount,
-    },
+    // Notices route is disabled/hidden per visibility request
+    // {
+    //   name: "Notices",
+    //   href: "/tenant/notices",
+    //   icon: Megaphone,
+    //   active: pathname.startsWith("/tenant/notices"),
+    //   badge: unreadNoticesCount,
+    // },
     {
       name: "Profile",
       href: "/tenant/profile",
@@ -148,7 +151,8 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
           );
         })}
 
-        {/* Chat button — opens floating widget instead of navigating to a separate page */}
+        {/* Chat button is disabled/hidden per visibility request */}
+        {/*
         <button
           onClick={() => {
             setIsSidebarOpen(false);
@@ -168,6 +172,7 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
             </span>
           )}
         </button>
+        */}
       </nav>
 
       {/* Sidebar Footer (User / Logout) */}

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ChatWidgetProvider } from "@/components/ChatWidgetContext";
-import { ChatWidget } from "@/components/ChatWidget";
+// import { ChatWidget } from "@/components/ChatWidget";
 
 export default function LandlordLayout({
   children,
@@ -65,7 +65,7 @@ export default function LandlordLayout({
       badge: 0,
     },
     {
-      name: "Notices",
+      name: "Send Announcements",
       href: "/landlord/notices",
       icon: Megaphone,
       active: pathname.startsWith("/landlord/notices"),
@@ -214,7 +214,8 @@ export default function LandlordLayout({
         {children}
       </div>
     </div>
-    <ChatWidget />
+    {/* ChatWidget is disabled/hidden per visibility request */}
+    {/* <ChatWidget /> */}
     </ChatWidgetProvider>
   );
 }

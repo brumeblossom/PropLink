@@ -1201,7 +1201,8 @@ export default function UnitDetailPage() {
               </div>
             </div>
 
-            {/* Tenant Chat Section */}
+            {/* Tenant Chat Section is disabled/hidden per visibility request */}
+            {/*
             <div className="pt-6 border-t border-neutral-800 space-y-6">
               <div>
                 <h3 className="font-bold text-white text-xl">Tenant Chat</h3>
@@ -1214,6 +1215,7 @@ export default function UnitDetailPage() {
                 Chat with Tenant
               </Button>
             </div>
+            */}
 
           </div>
         ) : (
