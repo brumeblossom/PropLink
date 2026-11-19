@@ -7,13 +7,14 @@ import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { Select } from "@/components/ui/select";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X, Trash2, Plus } from "lucide-react";
+import { X, Trash2, Plus, Pencil } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
-import { formatCurrency, formatInputNumber } from "@/lib/utils";
+import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -361,6 +362,8 @@ export default function UnitDetailPage() {
   const [editAction, setEditAction] = useState<"edit" | "void">("edit");
   const [tenantName, setTenantName] = useState("");
   const [tenantEmail, setTenantEmail] = useState("");
+  const [tenantNameError, setTenantNameError] = useState<string | null>(null);
+  const [tenantEmailError, setTenantEmailError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [rentAmount, setRentAmount] = useState("");
@@ -436,6 +439,8 @@ export default function UnitDetailPage() {
   const resetLeaseForm = () => {
     setTenantName("");
     setTenantEmail("");
+    setTenantNameError(null);
+    setTenantEmailError(null);
     setStartDate("");
     setEndDate("");
     setRentAmount("");
@@ -549,26 +554,43 @@ export default function UnitDetailPage() {
   const handleCreateLease = async (e: React.FormEvent) => {
     e.preventDefault();
     setLeaseError(null);
+    setTenantNameError(null);
+    setTenantEmailError(null);
+
+    let hasError = false;
+    if (!tenantName.trim()) {
+      setTenantNameError("Tenant full name is required.");
+      hasError = true;
+    }
+    if (!tenantEmail.trim()) {
+      setTenantEmailError("Tenant email is required.");
+      hasError = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tenantEmail.trim())) {
+      setTenantEmailError("Please enter a valid email address.");
+      hasError = true;
+    }
 
     const rent = rentAmount ? parseFloat(rentAmount.replace(/,/g, "")) : undefined;
     const deposit = depositAmount ? parseFloat(depositAmount.replace(/,/g, "")) : undefined;
 
     if (rentAmount && (isNaN(rent!) || rent! < 0)) {
       setLeaseError("Rent amount must be a positive number.");
-      return;
+      hasError = true;
     }
     if (depositAmount && (isNaN(deposit!) || deposit! <= 0)) {
       setLeaseError("Deposit amount must be a positive number.");
-      return;
+      hasError = true;
     }
+
+    if (hasError) return;
 
     try {
       await createLease.mutateAsync({
         unitId,
-        tenantName,
-        tenantEmail,
-        startDate,
-        endDate,
+        tenantName: tenantName.trim(),
+        tenantEmail: tenantEmail.trim(),
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
         rentAmount: rent,
         rentFrequency,
         depositAmount: deposit,
@@ -763,8 +785,14 @@ export default function UnitDetailPage() {
         <PageHeader title={unit ? `Unit ${unit.unitNumber}` : "Unit"} />
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-          <BackButton href={`/landlord/properties/${propertyId}`} label="Back to Property" />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12 space-y-6">
+          <div className="flex items-center justify-between">
+            <BackButton href={`/landlord/properties/${propertyId}`} label="Back to Property" />
+            <div className="hidden sm:flex space-x-2">
+              <Skeleton className="h-9 w-20 rounded-md" />
+              <Skeleton className="h-9 w-20 rounded-md" />
+            </div>
+          </div>
 
           {/* Unit Header Card */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-6">
@@ -865,38 +893,30 @@ export default function UnitDetailPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <PageHeader
-        title={`Unit ${unit.unitNumber}`}
-        actions={
-          <div className="flex items-center space-x-3">
-            <Button
-              onClick={handleOpenEditUnit}
-              className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm font-semibold"
-            >
-              Edit Unit
-            </Button>
-            <Button
-              onClick={handleDeleteUnit}
-              className="bg-red-600 hover:bg-red-500 text-white font-medium h-9 px-4 text-sm"
-            >
-              Delete Unit
-            </Button>
-
-            {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && (
-              <Button
-                onClick={handleOpenRenewLease}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 px-4 text-sm font-semibold"
-              >
-                Renew Lease
-              </Button>
-            )}
-          </div>
-        }
-      />
+      {/* Sticky header shows only unit title and notification bell */}
+      <PageHeader title={`Unit ${unit.unitNumber}`} />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        <BackButton href={`/landlord/properties/${propertyId}`} label="Back to Property" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12 space-y-6">
+        <DetailActionRow
+          backHref={`/landlord/properties/${propertyId}`}
+          backLabel="Back to Property"
+          actions={[
+            {
+              label: "Edit Unit",
+              onClick: handleOpenEditUnit,
+              icon: <Pencil className="w-4 h-4" />,
+              variant: "outline",
+            },
+            {
+              label: "Delete Unit",
+              onClick: handleDeleteUnit,
+              icon: <Trash2 className="w-4 h-4" />,
+              variant: "danger",
+            },
+          ]}
+        />
+
         {deleteError && (
           <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-4 text-sm text-red-400">
             {deleteError}
@@ -956,6 +976,14 @@ export default function UnitDetailPage() {
                     >
                       Edit Details
                     </button>
+                    {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && (
+                      <Button
+                        onClick={handleOpenRenewLease}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 px-2.5 text-xs font-semibold"
+                      >
+                        Renew Lease
+                      </Button>
+                    )}
                   </div>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
@@ -1736,43 +1764,64 @@ export default function UnitDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="tenantName" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Tenant Full Name
+                      Tenant Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="tenantName"
                       type="text"
                       required
                       value={tenantName}
-                      onChange={(e) => setTenantName(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                      onChange={(e) => {
+                        setTenantName(e.target.value);
+                        if (tenantNameError) setTenantNameError(null);
+                      }}
+                      className={cn(
+                        "mt-1 block w-full rounded-lg border bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:ring-1 text-sm",
+                        tenantNameError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : "border-neutral-800 focus:border-neutral-700 focus:ring-neutral-700"
+                      )}
                       placeholder="e.g. Sandra Okon"
                     />
+                    {tenantNameError && (
+                      <p className="mt-1 text-xs text-red-500">{tenantNameError}</p>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="tenantEmail" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Tenant Email
+                      Tenant Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="tenantEmail"
                       type="email"
                       required
                       value={tenantEmail}
-                      onChange={(e) => setTenantEmail(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                      onChange={(e) => {
+                        setTenantEmail(e.target.value);
+                        if (tenantEmailError) setTenantEmailError(null);
+                      }}
+                      className={cn(
+                        "mt-1 block w-full rounded-lg border bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:ring-1 text-sm",
+                        tenantEmailError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : "border-neutral-800 focus:border-neutral-700 focus:ring-neutral-700"
+                      )}
                       placeholder="sandra@example.com"
                     />
+                    {tenantEmailError && (
+                      <p className="mt-1 text-xs text-red-500">{tenantEmailError}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="startDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Start Date
+                      Start Date <span className="text-neutral-500 font-normal lowercase">(optional)</span>
                     </label>
                     <input
                       id="startDate"
                       type="date"
-                      required
                       value={startDate}
                       onChange={(e) => handleStartDateChange(e.target.value)}
                       className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
@@ -1780,12 +1829,11 @@ export default function UnitDetailPage() {
                   </div>
                   <div>
                     <label htmlFor="endDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      End Date
+                      End Date <span className="text-neutral-500 font-normal lowercase">(optional)</span>
                     </label>
                     <input
                       id="endDate"
                       type="date"
-                      required
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
@@ -1795,7 +1843,7 @@ export default function UnitDetailPage() {
 
                 <div>
                   <label htmlFor="rentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Rent Amount (₦) - Optional
+                    Rent Amount (₦) <span className="text-neutral-500 font-normal lowercase">(optional)</span>
                   </label>
                   <input
                     id="rentAmount"
@@ -2470,7 +2518,7 @@ export default function UnitDetailPage() {
             // handled
           }
         }}
-        title={`Delete Unit ${unit?.unitNumber || ""}?"`}
+        title={`Delete Unit ${unit?.unitNumber || ""}?`}
         description="Are you sure you want to delete this unit? This action is permanent."
         confirmText="Delete"
         cancelText="Cancel"

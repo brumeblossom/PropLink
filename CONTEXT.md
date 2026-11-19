@@ -24,6 +24,7 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Performance & Skeleton Optimization — Colocate Vercel server functions in dub1 next to Supabase, 30s query staleTime, 30s polling intervals, and instant skeleton layout loaders.
 - [x] RLS Policy Recursion & Leases Storage Fix — Break mutual recursion using SECURITY DEFINER helpers, rewrite table and storage policies for bucket 'leases', fix file input state reset on error.
 - [x] Settings Refactor & Password Security Flow — Consolidated account settings into a single Account card with Edit name modal (40-char limit with live counter) and Change password modal (with current password verification and live rule checklist), shared PasswordChecklist component across settings, signup, and reset-password, shared PageContainer layout component aligning settings and notifications, and sanitized user-friendly signup duplicate messages.
+- [x] Landlord Navigation & Detail Page Polish — Clickable property cards with hover states, top-right tag alignment and ⋯ menus with ConfirmDialog delete; shared DetailActionRow with responsive ⋯ collapse for property and unit detail pages; All Units count pill, updated column order, unit action icons, responsive card view on mobile, and client-side search/filter toolbar; required tenant name/email validation on invite form.
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).

@@ -10,10 +10,10 @@ export const leasesRouter = router({
     .input(
       z.object({
         unitId: z.string().uuid(),
-        tenantEmail: z.string().email(),
-        tenantName: z.string().min(2),
-        startDate: z.string(), // ISO String
-        endDate: z.string(), // ISO String
+        tenantEmail: z.string().trim().email("A valid email address is required"),
+        tenantName: z.string().trim().min(1, "Tenant full name is required"),
+        startDate: z.string().optional().nullable(),
+        endDate: z.string().optional().nullable(),
         rentAmount: z.number().nonnegative().optional().nullable(),
         rentFrequency: z.nativeEnum(RentFrequency).optional().default(RentFrequency.annually),
         depositAmount: z.number().positive().optional().nullable(),
@@ -33,8 +33,10 @@ export const leasesRouter = router({
         });
       }
 
-      const start = new Date(input.startDate);
-      const end = new Date(input.endDate);
+      const start = input.startDate ? new Date(input.startDate) : new Date();
+      const end = input.endDate
+        ? new Date(input.endDate)
+        : new Date(new Date(start).setFullYear(start.getFullYear() + 1));
 
       if (start >= end) {
         throw new TRPCError({
