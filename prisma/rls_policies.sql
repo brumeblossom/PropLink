@@ -187,6 +187,51 @@ GRANT EXECUTE ON FUNCTION public.is_lease_landlord(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_lease_landlord(uuid) TO service_role;
 
 
+CREATE OR REPLACE FUNCTION public.lease_id_from_path(p_name text)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_parts text[];
+  v_target text;
+BEGIN
+  v_parts := storage.foldername(p_name);
+  IF v_parts IS NULL OR array_length(v_parts, 1) IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF v_parts[1] = 'payments' THEN
+    IF array_length(v_parts, 1) >= 2 THEN
+      v_target := v_parts[2];
+    ELSE
+      RETURN NULL;
+    END IF;
+  ELSE
+    v_target := v_parts[1];
+  END IF;
+
+  IF v_target IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  IF v_target ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    RETURN v_target::uuid;
+  ELSE
+    RETURN NULL;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NULL;
+END;
+$$;
+
+ALTER FUNCTION public.lease_id_from_path(text) OWNER TO postgres;
+GRANT EXECUTE ON FUNCTION public.lease_id_from_path(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.lease_id_from_path(text) TO service_role;
+
+
 -- ==========================================
 -- 1. Enable RLS on All Tables
 -- ==========================================
@@ -489,7 +534,7 @@ CREATE POLICY "leases_select_policy" ON storage.objects
   TO authenticated
   USING (
     bucket_id = 'leases'
-    AND can_access_lease((storage.foldername(name))[1]::uuid)
+    AND can_access_lease(lease_id_from_path(name))
   );
 
 -- INSERT: bucket_id = 'leases' and can_access_lease(...)
@@ -498,7 +543,7 @@ CREATE POLICY "leases_insert_policy" ON storage.objects
   TO authenticated
   WITH CHECK (
     bucket_id = 'leases'
-    AND can_access_lease((storage.foldername(name))[1]::uuid)
+    AND can_access_lease(lease_id_from_path(name))
   );
 
 -- UPDATE: bucket_id = 'leases' and the landlord of that lease only
@@ -507,11 +552,11 @@ CREATE POLICY "leases_update_policy" ON storage.objects
   TO authenticated
   USING (
     bucket_id = 'leases'
-    AND is_lease_landlord((storage.foldername(name))[1]::uuid)
+    AND is_lease_landlord(lease_id_from_path(name))
   )
   WITH CHECK (
     bucket_id = 'leases'
-    AND is_lease_landlord((storage.foldername(name))[1]::uuid)
+    AND is_lease_landlord(lease_id_from_path(name))
   );
 
 -- DELETE: bucket_id = 'leases' and the landlord of that lease only
@@ -520,6 +565,6 @@ CREATE POLICY "leases_delete_policy" ON storage.objects
   TO authenticated
   USING (
     bucket_id = 'leases'
-    AND is_lease_landlord((storage.foldername(name))[1]::uuid)
+    AND is_lease_landlord(lease_id_from_path(name))
   );
 
