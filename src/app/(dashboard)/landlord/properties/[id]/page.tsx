@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { X, Trash2, ChevronDown, Plus } from "lucide-react";
@@ -395,8 +396,87 @@ export default function PropertyDetailPage() {
 
   if (isLoadingProperty || isLoadingUnits) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
-        <p className="text-lg">Loading details...</p>
+      <div className="min-h-screen bg-neutral-950 text-white">
+        {/* Top Navbar */}
+        <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-4 ml-10 md:ml-0">
+              <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
+                PropLink
+              </Link>
+              <span className="text-neutral-500">/</span>
+              <Link href="/landlord/properties" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">
+                Properties
+              </Link>
+              <span className="text-neutral-500">/</span>
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </div>
+        </header>
+
+        {/* Main Container */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <BackButton href="/landlord/properties" label="Back to Properties" />
+
+          {/* Property Overview Card */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-5 w-24 rounded-md" />
+                </div>
+                <Skeleton className="h-4 w-64" />
+              </div>
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-9 w-28 rounded-md" />
+                <Skeleton className="h-9 w-28 rounded-md" />
+              </div>
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-neutral-800">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-1">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-12 mt-1" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Units Section */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-4 w-48 mt-1" />
+              </div>
+              <Skeleton className="h-9 w-28 rounded-md" />
+            </div>
+
+            {/* Units Table Placeholder */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 overflow-hidden">
+              <div className="p-4 border-b border-neutral-800 flex gap-4">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16 ml-auto" />
+              </div>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

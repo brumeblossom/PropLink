@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 
@@ -66,8 +67,54 @@ export default function PropertiesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
-        <p className="text-lg">Loading properties...</p>
+      <div className="min-h-screen bg-neutral-950 text-white">
+        {/* Top Navbar */}
+        <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-4 ml-10 md:ml-0">
+              <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
+                PropLink
+              </Link>
+              <span className="text-neutral-500">/</span>
+              <span className="text-sm font-medium text-neutral-300">Properties</span>
+            </div>
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </div>
+        </header>
+
+        {/* Main Container */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight">Properties</h1>
+              <p className="text-neutral-400 mt-1 text-sm">
+                Manage your portfolio of residential, commercial, and mixed-use properties.
+              </p>
+            </div>
+          </div>
+
+          {/* Properties Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <Skeleton className="h-6 w-36" />
+                    <Skeleton className="h-4 w-48 mt-1" />
+                  </div>
+                  <Skeleton className="h-5 w-20 rounded-md" />
+                </div>
+                <div className="pt-4 border-t border-neutral-800/60 flex items-center justify-between">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-8 w-24 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }

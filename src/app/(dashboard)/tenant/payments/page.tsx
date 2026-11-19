@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentMethod } from "@prisma/client";
 import { X, CreditCard, ChevronLeft, Building2, Home } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
@@ -107,7 +108,7 @@ function LeasePaymentLedger({
 
   const { data: payments, isLoading: isLoadingPayments } = trpc.payments.list.useQuery(
     { leaseId: lease.id },
-    { refetchInterval: 10000 }
+    { refetchInterval: 30_000 }
   );
 
   const { data: billingSummary } = trpc.payments.getBillingSummary.useQuery(
@@ -463,11 +464,16 @@ function LeasePaymentLedger({
           </thead>
           <tbody className="divide-y divide-neutral-800/60">
             {isLoadingPayments ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 animate-pulse">
-                  Loading ledger entries...
-                </td>
-              </tr>
+              [...Array(3)].map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                  <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                  <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
+                  <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                  <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                  <td className="px-6 py-4 text-right"><Skeleton className="h-7 w-16 rounded ml-auto" /></td>
+                </tr>
+              ))
             ) : filteredPayments.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
@@ -950,9 +956,56 @@ export default function TenantPaymentsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-neutral-500 text-sm animate-pulse">Loading lease details...</p>
-      </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-md" />
+        </div>
+
+        {/* 3 Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-2"
+            >
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-3 w-40 mt-1" />
+            </div>
+          ))}
+        </div>
+
+        {/* Ledger Table Card */}
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm overflow-hidden">
+          <div className="p-6 border-b border-neutral-800/80 flex justify-between items-center">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-8 w-28 rounded-lg" />
+          </div>
+          <div className="p-4 border-b border-neutral-800 flex gap-4">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16 ml-auto" />
+          </div>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
+              <div className="flex items-center space-x-6">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </main>
     );
   }
 

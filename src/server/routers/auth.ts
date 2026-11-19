@@ -59,10 +59,26 @@ export const authRouter = router({
       } catch (dbError) {
         // Rollback Supabase user if public profile insertion fails
         await supabase.auth.admin.deleteUser(data.user.id);
-        const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+        
+        let userMessage = "An unexpected error occurred while creating your profile. Please try again.";
+        if (dbError && typeof dbError === "object") {
+          const err = dbError as { code?: string; message?: string; meta?: { target?: string[] } };
+          const isPhoneUnique = 
+            err.code === "P2002" && 
+            (err.meta?.target?.includes("phone") || (typeof err.message === "string" && err.message.includes("phone")));
+          const isPhoneUniqueFallback = 
+            typeof err.message === "string" && 
+            err.message.includes("Unique constraint failed") && 
+            err.message.includes("phone");
+            
+          if (isPhoneUnique || isPhoneUniqueFallback) {
+            userMessage = "This phone number is already registered. Please use a different number or leave it blank.";
+          }
+        }
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create public user profile: " + errorMessage,
+          message: userMessage,
         });
       }
     }),
@@ -200,10 +216,25 @@ export const authRouter = router({
 
         return { success: true };
       } catch (dbError) {
-        const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+        let userMessage = "An unexpected error occurred while linking your account. Please try again.";
+        if (dbError && typeof dbError === "object") {
+          const err = dbError as { code?: string; message?: string; meta?: { target?: string[] } };
+          const isPhoneUnique = 
+            err.code === "P2002" && 
+            (err.meta?.target?.includes("phone") || (typeof err.message === "string" && err.message.includes("phone")));
+          const isPhoneUniqueFallback = 
+            typeof err.message === "string" && 
+            err.message.includes("Unique constraint failed") && 
+            err.message.includes("phone");
+            
+          if (isPhoneUnique || isPhoneUniqueFallback) {
+            userMessage = "This phone number is already registered. Please use a different number or leave it blank.";
+          }
+        }
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to link tenant account: " + errorMessage,
+          message: userMessage,
         });
       }
     }),

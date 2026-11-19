@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
 import { X, User } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
@@ -668,8 +669,98 @@ export default function UnitDetailPage() {
 
   if (isLoadingStatus || isLoadingLeases) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
-        <p className="text-lg">Loading unit details...</p>
+      <div className="min-h-screen bg-neutral-950 text-white">
+        {/* Top Navbar */}
+        <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-4 ml-10 md:ml-0">
+              <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
+                PropLink
+              </Link>
+              <span className="text-neutral-500">/</span>
+              <Link
+                href={`/landlord/properties/${propertyId}`}
+                className="text-sm font-medium text-neutral-400 hover:text-white transition-colors"
+              >
+                Property
+              </Link>
+              <span className="text-neutral-500">/</span>
+              <Skeleton className="h-4 w-20" />
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <BackButton href={`/landlord/properties/${propertyId}`} label="Back to Property" />
+
+          {/* Unit Header Card */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-8 w-36" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-52" />
+              </div>
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-9 w-24 rounded-md" />
+                <Skeleton className="h-9 w-24 rounded-md" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-neutral-800">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-1">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-20 mt-1" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lease / Timeline Card */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="space-y-1">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-32 mt-1" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-3 w-full rounded-full mt-4" />
+          </div>
+
+          {/* Payments Ledger Section */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 overflow-hidden">
+            <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-8 w-28 rounded-md" />
+            </div>
+            <div className="p-4 border-b border-neutral-800 flex gap-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-20 ml-auto" />
+            </div>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -1075,11 +1166,16 @@ export default function UnitDetailPage() {
                   </thead>
                   <tbody className="divide-y divide-neutral-800/60">
                     {isLoadingPayments ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 animate-pulse">
-                          Loading ledger entries...
-                        </td>
-                      </tr>
+                      [...Array(3)].map((_, i) => (
+                        <tr key={i} className="animate-pulse">
+                          <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                          <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                          <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
+                          <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                          <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                          <td className="px-6 py-4 text-right"><Skeleton className="h-7 w-16 rounded ml-auto" /></td>
+                        </tr>
+                      ))
                     ) : filteredPayments.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">

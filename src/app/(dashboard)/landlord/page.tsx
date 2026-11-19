@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PropertyType } from "@prisma/client";
 
 export default function LandlordDashboard() {
@@ -16,8 +17,64 @@ export default function LandlordDashboard() {
 
   if (isLoadingUser || isLoadingProperties) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
-        <p className="text-lg">Loading dashboard...</p>
+      <div className="min-h-screen bg-neutral-950 text-white">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <Skeleton className="h-9 w-64" />
+              <Skeleton className="h-4 w-72 mt-2" />
+            </div>
+            <div className="mt-4 md:mt-0 flex space-x-3">
+              <Skeleton className="h-10 w-36 rounded-md" />
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-8 w-16 mt-3" />
+              </div>
+            ))}
+          </div>
+
+          {/* Filters Section */}
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-b border-neutral-800 pb-6">
+            <Skeleton className="h-6 w-36" />
+            <div className="flex flex-wrap gap-3">
+              <Skeleton className="h-8 w-32 rounded-lg" />
+              <Skeleton className="h-8 w-32 rounded-lg" />
+            </div>
+          </div>
+
+          {/* Segmented Dashboard Grid */}
+          <div className="mt-8 space-y-10">
+            {[...Array(2)].map((_, i) => (
+              <section key={i} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-neutral-800/40 pb-2">
+                  <div className="flex items-center space-x-3">
+                    <Skeleton className="h-6 w-44" />
+                    <Skeleton className="h-5 w-20 rounded-md" />
+                  </div>
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {[...Array(4)].map((_, j) => (
+                    <div key={j} className="h-32 rounded-xl border border-neutral-800 bg-neutral-900/30 p-4">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-5 w-20" />
+                        <Skeleton className="h-4 w-14 rounded-full" />
+                      </div>
+                      <Skeleton className="h-3 w-24 mt-3" />
+                      <Skeleton className="h-4 w-28 mt-4" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }

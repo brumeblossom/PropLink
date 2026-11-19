@@ -33,11 +33,11 @@ export default function LandlordLayout({
   const { data: user } = trpc.auth.me.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation();
 
-  // Unread count: piggyback on the NotificationBell's existing 10s subscription.
+  // Unread count: piggyback on the NotificationBell's existing 30s subscription.
   // Calling useQuery here with the same key joins the same cache entry — no extra HTTP
-  // request — but we intentionally omit refetchInterval so the Bell's 10s interval wins.
+  // request — but we intentionally omit refetchInterval so the Bell's 30s interval wins.
   const { data: notifications } = trpc.notifications.listReceived.useQuery(undefined, {
-    staleTime: 10000, // treat data as fresh for 10s to avoid redundant background fetches
+    staleTime: 30_000, // treat data as fresh for 30s to avoid redundant background fetches
   });
   const unreadCount = notifications?.filter((n) => !n.readAt).length ?? 0;
 

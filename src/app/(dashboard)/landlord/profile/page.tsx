@@ -4,6 +4,7 @@ import { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/client";
 import { User, Camera, Shield, Save, Key, Eye, EyeOff } from "lucide-react";
 
@@ -11,7 +12,7 @@ export default function LandlordProfilePage() {
   const utils = trpc.useUtils();
 
   // Queries & Mutations
-  const { data: user } = trpc.auth.me.useQuery();
+  const { data: user, isLoading } = trpc.auth.me.useQuery();
   
   const updateProfile = trpc.auth.updateProfile.useMutation({
     onSuccess: () => {
@@ -164,6 +165,74 @@ export default function LandlordProfilePage() {
       setUpdatingPassword(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <BackButton href="/landlord" label="Back to Dashboard" />
+
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Account Settings</h1>
+          <p className="text-neutral-400 mt-1 text-sm">
+            Manage your personal details, profile picture, and security preferences.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Left Column: Avatar Management Skeleton */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex flex-col items-center justify-center text-center space-y-4">
+            <Skeleton className="w-32 h-32 rounded-full" />
+            <div className="space-y-2 flex flex-col items-center">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+            <Skeleton className="h-3 w-48" />
+          </div>
+
+          {/* Right Column: Profile & Security Forms Skeleton */}
+          <div className="md:col-span-2 space-y-8">
+            {/* Personal Details Card */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-6">
+              <div className="flex items-center space-x-3">
+                <Skeleton className="w-5 h-5 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <Skeleton className="h-10 w-32 rounded-md" />
+              </div>
+            </div>
+
+            {/* Password Card */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-6">
+              <div className="flex items-center space-x-3">
+                <Skeleton className="w-5 h-5 rounded" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+                <Skeleton className="h-10 w-36 rounded-md" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">

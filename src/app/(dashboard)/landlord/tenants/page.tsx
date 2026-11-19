@@ -14,6 +14,7 @@ import {
   User
 } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface LeaseItem {
   id: string;
@@ -113,9 +114,53 @@ export default function LandlordTenantsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-neutral-500 text-sm animate-pulse">Loading tenants...</p>
-      </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-6">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">All Tenants</h1>
+            <p className="text-neutral-400 mt-1 text-sm">
+              View every tenant you have ever hosted across your properties.
+            </p>
+          </div>
+          <div className="flex items-center space-x-2 text-neutral-400 text-sm bg-neutral-900/50 border border-neutral-800 rounded-xl px-4 py-2">
+            <Users className="w-4 h-4 text-neutral-500" />
+            <Skeleton className="h-4 w-8" />
+            <span>total tenants</span>
+          </div>
+        </div>
+
+        {/* Filter and Search controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-neutral-900/30 p-4 rounded-xl border border-neutral-800/80 backdrop-blur-sm">
+          <Skeleton className="h-10 w-full sm:w-80 rounded-xl" />
+          <Skeleton className="h-10 w-48 rounded-xl" />
+        </div>
+
+        {/* Tenants Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-4"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="w-10 h-10 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                </div>
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <div className="pt-3 border-t border-neutral-800/60 space-y-2">
+                <Skeleton className="h-3 w-36" />
+                <Skeleton className="h-7 w-full rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
     );
   }
 

@@ -49,11 +49,11 @@ export function NotificationBell() {
   const { data: currentUser } = trpc.auth.me.useQuery();
   const systemNotificationsQuery = trpc.notifications.listReceived.useQuery(undefined, {
     enabled: !!currentUser,
-    refetchInterval: 10000, // Poll every 10s to capture live notifications
+    refetchInterval: 30_000, // Poll every 30s to capture live notifications
   });
   const receivedNoticesQuery = trpc.notices.listReceived.useQuery(undefined, {
     enabled: !!currentUser && currentUser.role === "tenant",
-    refetchInterval: 10000, // Poll notices every 10s for tenants
+    refetchInterval: 30_000, // Poll notices every 30s for tenants
   });
 
   // Mutations

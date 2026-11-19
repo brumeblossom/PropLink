@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { NoticeType, NotificationChannel } from "@prisma/client";
 import { 
@@ -153,8 +154,28 @@ export default function LandlordNoticesPage() {
         <h2 className="text-lg font-bold text-neutral-200">Sent History</h2>
 
         {isLoadingNotices ? (
-          <div className="py-20 text-center text-neutral-500 animate-pulse">
-            Loading sent notices...
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 flex items-center justify-between"
+              >
+                <div className="flex items-start space-x-4 min-w-0">
+                  <Skeleton className="w-9 h-9 rounded-lg" />
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-16 rounded-full" />
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <Skeleton className="h-3 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                </div>
+                <Skeleton className="h-5 w-5 rounded" />
+              </div>
+            ))}
           </div>
         ) : !notices || notices.length === 0 ? (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center text-neutral-500 max-w-2xl mx-auto">

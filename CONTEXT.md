@@ -20,6 +20,8 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Notification Deep-Links, Payment Modal Actions & Toast System — Clicking notifications routes to the correct page; landlord payment modal shows Confirm/Reject; toast appears on all key success actions
 - [x] Lease Renewal Restrictions & All Tenants View — Restrict lease renewal to `renewal_due` and `expired` statuses; add comprehensive landlord "All Tenants" view listing all current and past occupants.
 - [x] Functional Hardening & Specific UI Fixes (Epic I / Prompt 9) — Enabled strict app-wide dark mode styling, refactored outline button layout, consolidated property add unit buttons into an Add Unit dropdown, aligned Edit/Delete buttons, and made Sign Out text bolder.
+- [x] Signup Error Sanitization — Catch Prisma unique constraint on phone number and return user-friendly message, preventing database traces exposure during registration.
+- [x] Performance & Skeleton Optimization — Colocate Vercel server functions in dub1 next to Supabase, 30s query staleTime, 30s polling intervals, and instant skeleton layout loaders.
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -54,6 +56,7 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - **All Tenants Landlord View**: Added a new navigation endpoint `/landlord/tenants` to list every tenant ever hosted under the landlord's properties. Leases are fetched from `leases.getLandlordTenants`, grouped by tenant email, and rendered in cards with tabs filtering by Active/Past status.
 - **Strict Theme Variable Constraints (Epic I / Hardening)**: Enabled strict `"dark"` mode on the root `<html>` element to align Tailwind variables (e.g. background and border tokens) with the application's dark design. Changed the outline button class in `src/components/ui/button.tsx` to default to `bg-transparent` rather than `bg-background` to guarantee secondary buttons have no background fill.
 - **Combined Dropdown Navigation (Property Detail Page)**: Merged separate add unit buttons on `src/app/(dashboard)/landlord/properties/[id]/page.tsx` into a single, clean state-based "Add Unit" dropdown positioned directly above the units table. Repositioned the page-level "Edit Property" and "Delete Property" buttons to the right-hand side of the page header.
+- **Signup Error Sanitization**: Caught Prisma unique constraint validation errors (`P2002`) on the user profile creation / update `phone` field in `src/server/routers/auth.ts`. Strips raw DB traces, throwing instead a friendly validation string: `"This phone number is already registered. Please use a different number or leave it blank."`
 - **Library Versions**:
   - Next.js: `14.2.35`
   - React: `^18`
@@ -116,4 +119,13 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
 - **Issue**: Next.js `cookies()` returns an empty cookie store inside App Router Route Handler POST requests (like tRPC mutations). As a result, calling `createClient()` inside tRPC mutations created an anonymous/unauthenticated client instance. When requesting a signed upload URL via `createSignedUploadUrl`, the request was treated as anonymous, causing Supabase Storage RLS policies (which check `auth.uid()`) to fail with "new row violates row-level security policy".
 - **Fix**: Exposed the request-header-authenticated Supabase client (`ctx.supabase` built via `buildSupabaseFromRequest`) in the tRPC Context, and updated all storage operations in `leases.ts`, `payments.ts`, and `auth.ts` to use `ctx.supabase`.
 - **Avatars Bucket RLS**: Discovered that no RLS policies existed for the `avatars` bucket. Added policies to allow authenticated inserts/updates/deletes for user-owned paths, and public selects.
+
+## Performance & UX Optimization (2026-11-19)
+
+- **Vercel Server Region (`dub1`)**: Configured `"regions": ["dub1"]` in `vercel.json` to colocated Vercel Serverless Functions in Dublin (Ireland) alongside Supabase (`eu-west-1`), eliminating multi-leg transatlantic database round-trip latencies on every tRPC invocation.
+- **Client Query Caching (`staleTime: 30_000`)**: Set `defaultOptions.queries.staleTime: 30_000` on the TanStack `QueryClient` in `src/app/providers.tsx` while maintaining `refetchOnWindowFocus: false`. In-app navigation reuses cached query responses within 30 seconds instead of refetching on every tab/page switch, while mutation invalidations guarantee fresh data immediately after mutations.
+- **Polling Harmonization (30s)**: Harmonized background polling intervals to 30s across `NotificationBell` (both system notifications and tenant notices), `landlord/notifications` (15s → 30s), and `tenant/payments` (10s → 30s), reducing idle request pressure.
+- **Skeleton Loaders**: Implemented standard shadcn `<Skeleton />` primitive in `src/components/ui/skeleton.tsx` and replaced full-page loading spinners across all primary landlord and tenant screens (landlord: dashboard, properties list, property detail, unit detail, tenants, notices, notifications, profile; tenant: dashboard, payments, profile), instantly rendering page frames and layout placeholders.
+- **Next.js Link Prefetching**: Confirmed sidebar navigation items in landlord and tenant layouts use `next/link` `<Link>` components for automatic prefetching on viewport entry / hover.
+
 

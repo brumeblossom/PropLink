@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   payment_logged: {
@@ -65,7 +66,7 @@ export default function LandlordNotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const { data: notifications, isLoading } = trpc.notifications.listReceived.useQuery(undefined, {
-    refetchInterval: 15000,
+    refetchInterval: 30_000,
   });
 
   const markRead = trpc.notifications.markRead.useMutation({
@@ -175,8 +176,25 @@ export default function LandlordNotificationsPage() {
 
       {/* List */}
       {isLoading ? (
-        <div className="py-20 text-center text-neutral-500 animate-pulse text-sm">
-          Loading notifications...
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="flex items-start space-x-4 p-4 rounded-2xl border border-neutral-900 bg-neutral-900/20"
+            >
+              <Skeleton className="w-9 h-9 rounded-xl flex-shrink-0" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-16" />
+                </div>
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : displayed.length === 0 ? (
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900/10 p-16 text-center text-neutral-500 space-y-3">
