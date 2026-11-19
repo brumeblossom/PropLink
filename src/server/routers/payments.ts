@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PaymentMethod, PaymentStatus, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
 import { formatCurrency } from "@/lib/utils";
+import { getRentPeriodForDate, getLeaseBalance, formatLagosYMD } from "@/lib/billing";
 
 export const paymentsRouter = router({
   // List all payments for a specific lease
@@ -55,8 +56,8 @@ export const paymentsRouter = router({
         leaseId: z.string().uuid(),
         amount: z.number().positive(),
         paymentDate: z.string(), // ISO String
-        periodStart: z.string(), // ISO String
-        periodEnd: z.string(), // ISO String
+        periodStart: z.string().optional(), // Optional for backwards-compatibility
+        periodEnd: z.string().optional(),
         method: z.nativeEnum(PaymentMethod),
         notes: z.string().optional(),
         proofUrl: z.string().optional(),
@@ -89,42 +90,18 @@ export const paymentsRouter = router({
         });
       }
 
-      const start = new Date(input.periodStart);
-      const end = new Date(input.periodEnd);
       const payDate = new Date(input.paymentDate);
+      const payDateStr = formatLagosYMD(payDate);
+      const todayStr = formatLagosYMD(new Date());
 
-      if (start >= end) {
+      if (payDateStr > todayStr) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Period start date must be before period end date.",
+          message: "Payment date cannot be in the future.",
         });
       }
 
-      // Calculate confirmed payments for the period
-      const confirmedPayments = await prisma.payment.findMany({
-        where: {
-          leaseId: input.leaseId,
-          status: PaymentStatus.confirmed,
-          periodStart: start,
-          periodEnd: end,
-        },
-      });
-      const rentAmount = Number(lease.rentAmount);
-      const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-
-      if (amountPaid >= rentAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "The rent for this billing period has already been fully paid.",
-        });
-      }
-
-      if (amountPaid + input.amount > rentAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `The payment amount of ${formatCurrency(input.amount)} exceeds the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
-        });
-      }
+      const { periodStart: computedStart, periodEnd: computedEnd } = getRentPeriodForDate(lease, payDate);
 
       const status = isLandlord ? PaymentStatus.confirmed : PaymentStatus.pending;
       const confirmedBy = isLandlord ? ctx.user.id : null;
@@ -135,8 +112,8 @@ export const paymentsRouter = router({
           leaseId: input.leaseId,
           amount: input.amount,
           paymentDate: payDate,
-          periodStart: start,
-          periodEnd: end,
+          periodStart: computedStart,
+          periodEnd: computedEnd,
           method: input.method,
           notes: input.notes || null,
           proofUrl: input.proofUrl || null,
@@ -184,8 +161,8 @@ export const paymentsRouter = router({
         paymentId: z.string().uuid(),
         amount: z.number().positive(),
         paymentDate: z.string(), // ISO String
-        periodStart: z.string(), // ISO String
-        periodEnd: z.string(), // ISO String
+        periodStart: z.string().optional(),
+        periodEnd: z.string().optional(),
         method: z.nativeEnum(PaymentMethod),
         notes: z.string().optional(),
         proofUrl: z.string().optional(),
@@ -226,51 +203,26 @@ export const paymentsRouter = router({
         });
       }
 
-      const start = new Date(input.periodStart);
-      const end = new Date(input.periodEnd);
       const payDate = new Date(input.paymentDate);
+      const payDateStr = formatLagosYMD(payDate);
+      const todayStr = formatLagosYMD(new Date());
 
-      if (start >= end) {
+      if (payDateStr > todayStr) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Period start date must be before period end date.",
+          message: "Payment date cannot be in the future.",
         });
       }
 
-      // Check if updating this payment exceeds the period's remaining balance
-      const confirmedPayments = await prisma.payment.findMany({
-        where: {
-          leaseId: payment.leaseId,
-          status: PaymentStatus.confirmed,
-          periodStart: start,
-          periodEnd: end,
-          id: { not: payment.id },
-        },
-      });
-      const rentAmount = Number(payment.lease.rentAmount);
-      const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-
-      if (amountPaid >= rentAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "The rent for this billing period has already been fully paid.",
-        });
-      }
-
-      if (amountPaid + input.amount > rentAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `The updated payment amount of ${formatCurrency(input.amount)} exceeds the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
-        });
-      }
+      const { periodStart: computedStart, periodEnd: computedEnd } = getRentPeriodForDate(payment.lease, payDate);
 
       return await prisma.payment.update({
         where: { id: payment.id },
         data: {
           amount: input.amount,
           paymentDate: payDate,
-          periodStart: start,
-          periodEnd: end,
+          periodStart: computedStart,
+          periodEnd: computedEnd,
           method: input.method,
           notes: input.notes || null,
           proofUrl: input.proofUrl || null,
@@ -320,32 +272,6 @@ export const paymentsRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Only pending payments can be confirmed.",
-        });
-      }
-
-      // Check if confirming this payment exceeds the period's remaining balance
-      const confirmedPayments = await prisma.payment.findMany({
-        where: {
-          leaseId: payment.leaseId,
-          status: PaymentStatus.confirmed,
-          periodStart: payment.periodStart,
-          periodEnd: payment.periodEnd,
-        },
-      });
-      const rentAmount = Number(payment.lease.rentAmount);
-      const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-
-      if (amountPaid >= rentAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "The rent for this billing period has already been fully paid.",
-        });
-      }
-
-      if (amountPaid + Number(payment.amount) > rentAmount) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Confirming this payment of ${formatCurrency(Number(payment.amount))} would exceed the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
         });
       }
 
@@ -642,38 +568,26 @@ export const paymentsRouter = router({
           });
         }
 
-        // Check if updating this payment exceeds the period's remaining balance
-        const confirmedPayments = await prisma.payment.findMany({
-          where: {
-            leaseId: payment.leaseId,
-            status: PaymentStatus.confirmed,
-            periodStart: payment.periodStart,
-            periodEnd: payment.periodEnd,
-            id: { not: payment.id },
-          },
-        });
-        const rentAmount = Number(payment.lease.rentAmount);
-        const amountPaid = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        const payDate = new Date(input.paymentDate);
+        const payDateStr = formatLagosYMD(payDate);
+        const todayStr = formatLagosYMD(new Date());
 
-        if (amountPaid >= rentAmount) {
+        if (payDateStr > todayStr) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "The rent for this billing period has already been fully paid.",
+            message: "Payment date cannot be in the future.",
           });
         }
 
-        if (amountPaid + input.amount > rentAmount) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `The resolved payment amount of ${formatCurrency(input.amount)} exceeds the remaining outstanding rent balance of ${formatCurrency(rentAmount - amountPaid)} for this period.`,
-          });
-        }
+        const { periodStart: computedStart, periodEnd: computedEnd } = getRentPeriodForDate(payment.lease, payDate);
 
         updatedPayment = await prisma.payment.update({
           where: { id: input.paymentId },
           data: {
             amount: input.amount,
-            paymentDate: new Date(input.paymentDate),
+            paymentDate: payDate,
+            periodStart: computedStart,
+            periodEnd: computedEnd,
             method: input.method,
             disputedByTenant: false,
             disputedByReason: null,
@@ -963,64 +877,26 @@ export const paymentsRouter = router({
         });
       }
 
-      const today = new Date();
-      const periodStart = new Date(lease.startDate);
-      const periodEnd = new Date(lease.endDate);
-
-      let refDate = new Date(today);
-      if (refDate < periodStart) refDate = periodStart;
-      if (refDate > periodEnd) refDate = periodEnd;
-
-      let currentStart = new Date(periodStart);
-      let currentEnd = new Date(periodEnd);
-
-      while (currentStart < periodEnd) {
-        let nextEnd = new Date(currentStart);
-        if (lease.rentFrequency === "monthly") {
-          nextEnd.setMonth(nextEnd.getMonth() + 1);
-        } else if (lease.rentFrequency === "quarterly") {
-          nextEnd.setMonth(nextEnd.getMonth() + 3);
-        } else if (lease.rentFrequency === "annually") {
-          nextEnd.setFullYear(nextEnd.getFullYear() + 1);
-        } else {
-          nextEnd = new Date(periodEnd);
-        }
-
-        if (nextEnd > periodEnd) {
-          nextEnd = new Date(periodEnd);
-        }
-
-        const isLast = nextEnd.getTime() === periodEnd.getTime();
-        if (refDate >= currentStart && (refDate < nextEnd || (isLast && refDate <= nextEnd))) {
-          currentEnd = nextEnd;
-          break;
-        }
-
-        if (nextEnd.getTime() <= currentStart.getTime()) {
-          break;
-        }
-        currentStart = nextEnd;
-      }
-
-      const payments = await prisma.payment.findMany({
+      const confirmedPayments = await prisma.payment.findMany({
         where: {
           leaseId: input.leaseId,
           status: PaymentStatus.confirmed,
-          periodStart: currentStart,
-          periodEnd: currentEnd,
         },
       });
 
-      const rentAmount = Number(lease.rentAmount);
-      const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const amountOutstanding = Math.max(0, rentAmount - amountPaid);
+      const pendingPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: input.leaseId,
+          status: PaymentStatus.pending,
+        },
+      });
+      const pendingAmount = pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+      const balance = getLeaseBalance(lease, confirmedPayments, new Date());
 
       return {
-        periodStart: currentStart,
-        periodEnd: currentEnd,
-        rentAmount,
-        amountPaid,
-        amountOutstanding,
+        ...balance,
+        pendingAmount,
       };
     }),
 

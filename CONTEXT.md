@@ -145,16 +145,38 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
 - **Legacy Path Support**: Added `public.lease_id_from_path(p_name text)` `SECURITY DEFINER` helper function to handle both modern (`<leaseId>/<file>`) and legacy (`payments/<leaseId>/<file>`) storage paths. Validates target folder segment with UUID regex before casting, returning `NULL` without throwing errors on malformed or non-UUID paths.
 - **Rewritten Storage Policies**: Updated `leases_select_policy`, `leases_insert_policy`, `leases_update_policy`, and `leases_delete_policy` to use `lease_id_from_path(name)`.
 
-## Uploaded Files Deletion Workflow (2026-11-19)
+## Running Balance Per Lease & Dynamic Billing (2026-11-19)
 
-- **Lease Documents**: Only the landlord of the lease can delete lease documents via `leases.deleteDocument({ leaseId })`. Tenants are restricted to read-only access.
-- **Payment Proofs**: The uploader (tenant or landlord) can delete the proof while the payment is `pending` via `payments.deleteProof({ paymentId })`. The reviewing landlord can also remove a proof from a pending payment. Once confirmed or rejected, the proof is immutable and locked.
-- **Transactional Consistency**: Storage deletion via `ctx.supabase.storage.from("leases").remove(...)` is verified before clearing database references (`documentUrl: null` / `proofUrl: null`); if storage removal fails, the database row is kept intact and a descriptive error is returned.
-- **Storage DELETE RLS Policy**: Replaced `leases_delete_policy` on `storage.objects` with `is_lease_landlord(lease_id_from_path(name)) OR can_delete_own_proof(name)`, where `can_delete_own_proof(name)` is a `SECURITY DEFINER` helper verifying `recorded_by = auth.uid()` and `status = 'pending'`.
-- **Reusable ConfirmDialog**: Created `src/components/ui/confirm-dialog.tsx` matching the app's modal styling, with red confirmation buttons and loading states.
-- **UI Integration**:
-  - Landlord unit page: added a red bin icon beside View on the document card with `ConfirmDialog` and success toast "Document deleted". Hides document card and restores the upload input on deletion.
-  - Payment detail modal (landlord & tenant): added "Remove proof" red text button with `ConfirmDialog` and toast for pending payments; shows `"Proof is locked because this payment is confirmed."` when locked. Restores the upload control when no proof exists on a pending payment.
+- **Running Balance Model (`src/lib/billing.ts`)**:
+  - Replaced rigid, single-period matching (where payments were ignored if their dates did not match calculated period boundaries) with an approved running balance per lease model in `Africa/Lagos` time (UTC+1).
+  - **Period Starts & Clamping**: Computes period start dates from `lease.startDate + n months` (step 1 for monthly, 3 for quarterly, 12 for annually), clamping to the last day of the month when the calendar day does not exist (e.g. 31 Jan → 28/29 Feb → 31 Mar), preserving the original day where possible.
+  - **Calculations**:
+    - `rentDueToDate`: `rentAmount × periodsDue` (period starts on or before today and on or before `endDate`).
+    - `paidToDate`: Sum of `confirmed` payments on the lease (pending and rejected payments never count; disputed ignored as today).
+    - `outstanding`: `rentDueToDate − paidToDate`. Shown as `Credit ₦X` when negative (paid in advance).
+    - `nextDueDate`: Walk periods from start, subtracting `rentAmount` from `paidToDate`. The start of the first period not fully covered is `nextDueDate`. If every period up to lease end is fully covered, `nextDueDate` is `null` ("Paid to end of lease").
+    - If `rentAmount` is 0 (or not set), indicates "Rent not set" instead of numbers.
+- **Unit Testing with Vitest**:
+  - Added `vitest` (`^5.1.1`) and `vite` as dev dependencies, added `"test": "vitest run"` script to `package.json`, and configured `vitest.config.mjs` scoped to `src/**/*.test.ts`.
+  - Comprehensive unit test suite in `src/lib/billing.test.ts` covering:
+    - Flat3 example: starts 29/07/2026, ₦800k monthly, ₦600k paid, checked on 19/11/2026 (4 periods due, ₦2,600,000 outstanding).
+    - Annual lease fully paid: ₦1.5m/yr, ₦1.5m paid (₦0 outstanding, no next due date).
+    - Partial payment: ₦800k monthly, ₦400k paid in month 1 (₦400k outstanding, next due date is current period).
+    - Payment in advance: ₦100k rent, ₦300k paid on month 1 (₦0 outstanding, credit ₦200k, next due date month 4).
+    - 31st-of-month start date clamping (Jan 31 → Feb 28 → Mar 31 → Apr 30).
+    - Rent not set (rentAmount 0): `isRentSet: false`, numbers are 0.
+    - `getRentPeriodForDate` containing period resolution.
+- **Server Routers Refactoring**:
+  - `payments.getBillingSummary`: Uses `getLeaseBalance`, returning full balance details plus backwards-compatible aliases (`periodStart`, `periodEnd`, `rentAmount`, `amountPaid`, `amountOutstanding`) and `pendingAmount`.
+  - `internal.ts` (Rent Reminder Cron): Replaced exact period date matching with `getLeaseBalance(lease, confirmedPayments, now).nextDueDate`. Preserves existing reminder thresholds (7 days / 1 day), idempotency key `reminder-${threshold}-${dueDateStr}`, and the rule that pending payments never suppress reminders.
+  - `payments.create`, `payments.updatePending`, `payments.confirm`, `payments.resolve`: Removed single-period capping checks (which previously rejected payments exceeding a single period's rent).
+  - Automatically populates `period_start` and `period_end` columns using `getRentPeriodForDate(lease, paymentDate)` for historical reporting.
+  - Server and client validation enforce `paymentDate <= today` in `Africa/Lagos` (no future dates).
+- **UI Harmonization**:
+  - **Payment Forms**: Removed "Period Start" and "Period End" date pickers from landlord and tenant payment logging/editing modals. Added `max = today` attribute to payment date input.
+  - **Summary Box**: Upgraded to 3 tiles: "Rent due so far" ("N periods since DD/MM/YYYY"), "Paid (confirmed)", "Outstanding" (red if > 0, green `Credit ₦X` if negative, green `₦0` if zero). Underneath: 1 line "Next rent due DD/MM/YYYY" (or "Paid to end of lease"), appending pending payment alert when applicable (`" • ₦X pending your confirmation"` for landlord / `" • ₦X waiting for landlord confirmation"` for tenant).
+  - **Payment Tables**: Removed the obsolete "Period covered" column from payment tables on both the landlord unit page and tenant payments page.
+
 
 
 

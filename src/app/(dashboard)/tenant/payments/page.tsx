@@ -196,8 +196,6 @@ function LeasePaymentLedger({
   const [isLogPaymentOpen, setIsLogPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [paymentPeriodStart, setPaymentPeriodStart] = useState("");
-  const [paymentPeriodEnd, setPaymentPeriodEnd] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.cash);
   const [paymentNotes, setPaymentNotes] = useState("");
   const [proofUrl, setProofUrl] = useState<string | null>(null);
@@ -221,8 +219,6 @@ function LeasePaymentLedger({
   const resetPaymentForm = () => {
     setPaymentAmount("");
     setPaymentDate(new Date().toISOString().split("T")[0]);
-    setPaymentPeriodStart("");
-    setPaymentPeriodEnd("");
     setPaymentMethod(PaymentMethod.cash);
     setPaymentNotes("");
     setProofUrl(null);
@@ -293,24 +289,12 @@ function LeasePaymentLedger({
       return;
     }
 
-    if (!paymentPeriodStart || !paymentPeriodEnd) {
-      setPaymentError("Period start and end dates are required.");
-      return;
-    }
-
-    if (new Date(paymentPeriodStart) >= new Date(paymentPeriodEnd)) {
-      setPaymentError("Period start date must be before period end date.");
-      return;
-    }
-
     try {
       if (editingPaymentId) {
         await updatePendingPayment.mutateAsync({
           paymentId: editingPaymentId,
           amount,
           paymentDate: new Date(paymentDate).toISOString(),
-          periodStart: new Date(paymentPeriodStart).toISOString(),
-          periodEnd: new Date(paymentPeriodEnd).toISOString(),
           method: paymentMethod,
           notes: paymentNotes || undefined,
           proofUrl: proofUrl || undefined,
@@ -320,8 +304,6 @@ function LeasePaymentLedger({
           leaseId: lease.id, // Always scoped to the selected lease
           amount,
           paymentDate: new Date(paymentDate).toISOString(),
-          periodStart: new Date(paymentPeriodStart).toISOString(),
-          periodEnd: new Date(paymentPeriodEnd).toISOString(),
           method: paymentMethod,
           notes: paymentNotes || undefined,
           proofUrl: proofUrl || undefined,
@@ -441,25 +423,14 @@ function LeasePaymentLedger({
           <Button
             onClick={() => {
               setIsLogPaymentOpen(true);
-              setPaymentPeriodStart(
-                billingSummary?.periodStart
-                  ? new Date(billingSummary.periodStart).toISOString().split("T")[0]
-                  : ""
-              );
-              setPaymentPeriodEnd(
-                billingSummary?.periodEnd
-                  ? new Date(billingSummary.periodEnd).toISOString().split("T")[0]
-                  : ""
-              );
               setPaymentAmount(
-                billingSummary?.amountOutstanding
-                  ? formatInputNumber(String(billingSummary.amountOutstanding))
+                billingSummary?.outstanding
+                  ? formatInputNumber(String(billingSummary.outstanding))
                   : ""
               );
               setPaymentError(null);
             }}
-            disabled={billingSummary ? billingSummary.amountOutstanding <= 0 : false}
-            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
           >
             Log My Payment
           </Button>
@@ -467,61 +438,62 @@ function LeasePaymentLedger({
       </div>
 
       {/* Billing Summary Banner */}
-      {billingSummary && (() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dueDate = new Date(billingSummary.periodEnd);
-        const isNearDue =
-          dueDate.getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000 &&
-          dueDate.getTime() - today.getTime() >= 0;
-        const isOverdue = today > dueDate && billingSummary.amountOutstanding > 0;
-
-        return (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/10 p-5">
+      {billingSummary && (
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1">
               <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Next Rent Due Date
-              </span>
-              <span
-                className={`text-sm font-semibold block ${
-                  isOverdue
-                    ? "text-red-400"
-                    : isNearDue
-                    ? "text-yellow-400 animate-pulse"
-                    : "text-neutral-300"
-                }`}
-              >
-                {dueDate.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
-                {isOverdue && " (Overdue)"}
-                {isNearDue && " (Due soon)"}
-              </span>
-            </div>
-            <div className="space-y-1">
-              <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Rent / Total Confirmed Paid
+                Rent due so far
               </span>
               <span className="text-lg font-bold text-white block">
-                {formatCurrency(billingSummary.rentAmount)}{" "}
-                <span className="text-neutral-500 font-normal text-sm">
-                  / {formatCurrency(billingSummary.amountPaid)} paid
+                {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
+              </span>
+              {billingSummary.isRentSet && (
+                <span className="block text-xs text-neutral-400">
+                  {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} since {new Date(lease.startDate).toLocaleDateString("en-GB")}
                 </span>
+              )}
+            </div>
+            <div className="space-y-1">
+              <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                Paid (confirmed)
+              </span>
+              <span className="text-lg font-bold text-white block">
+                {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.paidToDate)}
               </span>
             </div>
             <div className="space-y-1">
               <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                Outstanding Balance
+                Outstanding
               </span>
-              <span
-                className={`text-lg font-bold block ${
-                  billingSummary.amountOutstanding > 0 ? "text-red-400" : "text-green-400"
-                }`}
-              >
-                {formatCurrency(billingSummary.amountOutstanding)}
-              </span>
+              {!billingSummary.isRentSet ? (
+                <span className="text-lg font-bold text-neutral-400 block">Rent not set</span>
+              ) : billingSummary.credit > 0 ? (
+                <span className="text-lg font-bold text-green-400 block">Credit {formatCurrency(billingSummary.credit)}</span>
+              ) : billingSummary.outstanding > 0 ? (
+                <span className="text-lg font-bold text-red-400 block">{formatCurrency(billingSummary.outstanding)}</span>
+              ) : (
+                <span className="text-lg font-bold text-green-400 block">₦0</span>
+              )}
             </div>
           </div>
-        );
-      })()}
+          {billingSummary.isRentSet && (
+            <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
+              <span>
+                {billingSummary.nextDueDate
+                  ? `Next rent due ${new Date(billingSummary.nextDueDate).toLocaleDateString("en-GB")}`
+                  : "Paid to end of lease"}
+              </span>
+              {billingSummary.pendingAmount > 0 && (
+                <span className="text-amber-400 font-medium">
+                  {" • "}
+                  {formatCurrency(billingSummary.pendingAmount)} waiting for landlord confirmation
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Payment Ledger Table */}
       <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
@@ -533,9 +505,6 @@ function LeasePaymentLedger({
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Amount
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Period Covered
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Method
@@ -554,7 +523,6 @@ function LeasePaymentLedger({
                 <tr key={i} className="animate-pulse">
                   <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
                   <td className="px-6 py-4 text-right"><Skeleton className="h-7 w-16 rounded ml-auto" /></td>
@@ -562,7 +530,7 @@ function LeasePaymentLedger({
               ))
             ) : filteredPayments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
                   {!payments || payments.length === 0
                     ? "No payments logged yet."
                     : `No payments recorded for ${selectedYear}.`}
@@ -583,10 +551,6 @@ function LeasePaymentLedger({
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-white">
                       {formatCurrency(p.amount)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral-400">
-                      {new Date(p.periodStart).toLocaleDateString(undefined, { month: "short", day: "numeric" })} –{" "}
-                      {new Date(p.periodEnd).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                     </td>
                     <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
                       {p.method.replace("_", " ")}
@@ -642,8 +606,6 @@ function LeasePaymentLedger({
                                 setEditingPaymentId(p.id);
                                 setPaymentAmount(formatInputNumber(String(p.amount)));
                                 setPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
-                                setPaymentPeriodStart(new Date(p.periodStart).toISOString().split("T")[0]);
-                                setPaymentPeriodEnd(new Date(p.periodEnd).toISOString().split("T")[0]);
                                 setPaymentMethod(p.method);
                                 setPaymentNotes(p.notes || "");
                                 setProofUrl(p.proofUrl || null);
@@ -722,39 +684,11 @@ function LeasePaymentLedger({
                   id="paymentDate"
                   type="date"
                   required
+                  max={new Date().toISOString().split("T")[0]}
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="paymentPeriodStart" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Period Start
-                  </label>
-                  <input
-                    id="paymentPeriodStart"
-                    type="date"
-                    required
-                    value={paymentPeriodStart}
-                    onChange={(e) => setPaymentPeriodStart(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="paymentPeriodEnd" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Period End
-                  </label>
-                  <input
-                    id="paymentPeriodEnd"
-                    type="date"
-                    required
-                    value={paymentPeriodEnd}
-                    onChange={(e) => setPaymentPeriodEnd(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                  />
-                </div>
               </div>
 
               <div>

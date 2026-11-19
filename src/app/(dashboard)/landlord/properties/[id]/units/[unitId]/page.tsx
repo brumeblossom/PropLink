@@ -343,8 +343,6 @@ export default function UnitDetailPage() {
   const [isLogPaymentOpen, setIsLogPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [paymentPeriodStart, setPaymentPeriodStart] = useState("");
-  const [paymentPeriodEnd, setPaymentPeriodEnd] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.cash);
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -535,8 +533,6 @@ export default function UnitDetailPage() {
   const resetPaymentForm = () => {
     setPaymentAmount("");
     setPaymentDate(new Date().toISOString().split("T")[0]);
-    setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
-    setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
     setPaymentMethod(PaymentMethod.cash);
     setPaymentNotes("");
     setPaymentError(null);
@@ -593,23 +589,11 @@ export default function UnitDetailPage() {
       return;
     }
 
-    if (!paymentPeriodStart || !paymentPeriodEnd) {
-      setPaymentError("Period start and end dates are required.");
-      return;
-    }
-
-    if (new Date(paymentPeriodStart) >= new Date(paymentPeriodEnd)) {
-      setPaymentError("Period start date must be before period end date.");
-      return;
-    }
-
     try {
       await createPayment.mutateAsync({
         leaseId: activeLease!.id,
         amount,
         paymentDate: new Date(paymentDate).toISOString(),
-        periodStart: new Date(paymentPeriodStart).toISOString(),
-        periodEnd: new Date(paymentPeriodEnd).toISOString(),
         method: paymentMethod,
         notes: paymentNotes || undefined,
       });
@@ -1229,13 +1213,10 @@ export default function UnitDetailPage() {
                   <Button
                     onClick={() => {
                       setIsLogPaymentOpen(true);
-                      setPaymentPeriodStart(billingSummary?.periodStart ? new Date(billingSummary.periodStart).toISOString().split("T")[0] : "");
-                      setPaymentPeriodEnd(billingSummary?.periodEnd ? new Date(billingSummary.periodEnd).toISOString().split("T")[0] : "");
-                      setPaymentAmount(billingSummary?.amountOutstanding ? formatInputNumber(String(billingSummary.amountOutstanding)) : "");
+                      setPaymentAmount(billingSummary?.outstanding ? formatInputNumber(String(billingSummary.outstanding)) : "");
                       setPaymentError(null);
                     }}
-                    disabled={billingSummary ? billingSummary.amountOutstanding <= 0 : false}
-                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
                   >
                     Log Payment
                   </Button>
@@ -1244,26 +1225,53 @@ export default function UnitDetailPage() {
 
               {/* Billing Summary Banner */}
               {billingSummary && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/10 p-5">
-                  <div className="space-y-1">
-                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Current Period</span>
-                    <span className="text-sm font-semibold text-neutral-300 block">
-                      {new Date(billingSummary.periodStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – {new Date(billingSummary.periodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Rent due so far</span>
+                      <span className="text-lg font-bold text-white block">
+                        {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
+                      </span>
+                      {billingSummary.isRentSet && (
+                        <span className="block text-xs text-neutral-400">
+                          {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} since {new Date(activeLease.startDate).toLocaleDateString("en-GB")}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Paid (confirmed)</span>
+                      <span className="text-lg font-bold text-white block">
+                        {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.paidToDate)}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Outstanding</span>
+                      {!billingSummary.isRentSet ? (
+                        <span className="text-lg font-bold text-neutral-400 block">Rent not set</span>
+                      ) : billingSummary.credit > 0 ? (
+                        <span className="text-lg font-bold text-green-400 block">Credit {formatCurrency(billingSummary.credit)}</span>
+                      ) : billingSummary.outstanding > 0 ? (
+                        <span className="text-lg font-bold text-red-400 block">{formatCurrency(billingSummary.outstanding)}</span>
+                      ) : (
+                        <span className="text-lg font-bold text-green-400 block">₦0</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Rent Due / Paid</span>
-                    <span className="text-lg font-bold text-white block">
-                      {billingSummary.rentAmount === 0 ? "TBD" : formatCurrency(billingSummary.rentAmount)}{" "}
-                      <span className="text-neutral-500 font-normal text-sm">/ {formatCurrency(billingSummary.amountPaid)} paid</span>
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Outstanding Balance</span>
-                    <span className={`text-lg font-bold block ${billingSummary.amountOutstanding > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {formatCurrency(billingSummary.amountOutstanding)}
-                    </span>
-                  </div>
+                  {billingSummary.isRentSet && (
+                    <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
+                      <span>
+                        {billingSummary.nextDueDate
+                          ? `Next rent due ${new Date(billingSummary.nextDueDate).toLocaleDateString("en-GB")}`
+                          : "Paid to end of lease"}
+                      </span>
+                      {billingSummary.pendingAmount > 0 && (
+                        <span className="text-amber-400 font-medium">
+                          {" • "}
+                          {formatCurrency(billingSummary.pendingAmount)} pending your confirmation
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1274,7 +1282,6 @@ export default function UnitDetailPage() {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Logged</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Period Covered</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Method</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status / Verification</th>
                       <th className="px-6 py-3 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
@@ -1286,7 +1293,6 @@ export default function UnitDetailPage() {
                         <tr key={i} className="animate-pulse">
                           <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                           <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
-                          <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>
                           <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                           <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
                           <td className="px-6 py-4 text-right"><Skeleton className="h-7 w-16 rounded ml-auto" /></td>
@@ -1294,7 +1300,7 @@ export default function UnitDetailPage() {
                       ))
                     ) : filteredPayments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
+                        <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
                           {!payments || payments.length === 0 ? "No payments recorded yet." : `No payments recorded for ${selectedYear}.`}
                         </td>
                       </tr>
@@ -1320,9 +1326,6 @@ export default function UnitDetailPage() {
                             </td>
                             <td className="px-6 py-4 text-sm font-semibold text-white">
                               {formatCurrency(p.amount)}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-neutral-400">
-                              {new Date(p.periodStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – {new Date(p.periodEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </td>
                             <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
                               {p.method.replace('_', ' ')}
@@ -2007,39 +2010,11 @@ export default function UnitDetailPage() {
                   id="paymentDate"
                   type="date"
                   required
+                  max={new Date().toISOString().split("T")[0]}
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="paymentPeriodStart" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Period Start
-                  </label>
-                  <input
-                    id="paymentPeriodStart"
-                    type="date"
-                    required
-                    value={paymentPeriodStart}
-                    onChange={(e) => setPaymentPeriodStart(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="paymentPeriodEnd" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Period End
-                  </label>
-                  <input
-                    id="paymentPeriodEnd"
-                    type="date"
-                    required
-                    value={paymentPeriodEnd}
-                    onChange={(e) => setPaymentPeriodEnd(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
-                  />
-                </div>
               </div>
 
               <div>

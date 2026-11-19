@@ -291,18 +291,10 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
 
       {/* Mini Billing Summary */}
       {billingSummary && (() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dueDate = new Date(billingSummary.periodEnd);
-        const isNearDue =
-          dueDate.getTime() - today.getTime() <= 7 * 24 * 60 * 60 * 1000 &&
-          dueDate.getTime() - today.getTime() >= 0;
-        const isOverdue = today > dueDate && billingSummary.amountOutstanding > 0;
-
         return (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold tracking-tight">Current Period</h2>
+              <h2 className="text-lg font-bold tracking-tight">Billing Summary</h2>
               <a
                 href="/tenant/payments"
                 className="text-xs text-neutral-400 hover:text-white transition-colors font-medium"
@@ -313,48 +305,50 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/10 p-5">
               <div className="space-y-1">
                 <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Next Rent Due Date
+                  Next Rent Due
                 </span>
-                <span
-                  className={`text-sm font-semibold block ${
-                    isOverdue
-                      ? "text-red-400"
-                      : isNearDue
-                      ? "text-yellow-400 animate-pulse"
-                      : "text-neutral-300"
-                  }`}
-                >
-                  {dueDate.toLocaleDateString(undefined, {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                  {isOverdue && " (Overdue)"}
-                  {isNearDue && " (Due soon)"}
+                <span className="text-sm font-semibold text-neutral-300 block">
+                  {!billingSummary.isRentSet
+                    ? "Rent not set"
+                    : billingSummary.nextDueDate
+                    ? new Date(billingSummary.nextDueDate).toLocaleDateString("en-GB")
+                    : "Paid to end of lease"}
                 </span>
               </div>
               <div className="space-y-1">
                 <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Rent / Confirmed Paid
+                  Rent Due / Confirmed Paid
                 </span>
                 <span className="text-lg font-bold text-white block">
-                  {formatCurrency(billingSummary.rentAmount)}{" "}
-                  <span className="text-neutral-500 font-normal text-sm">
-                    / {formatCurrency(billingSummary.amountPaid)} paid
-                  </span>
+                  {!billingSummary.isRentSet ? (
+                    "Rent not set"
+                  ) : (
+                    <>
+                      {formatCurrency(billingSummary.rentDueToDate)}{" "}
+                      <span className="text-neutral-500 font-normal text-sm">
+                        / {formatCurrency(billingSummary.paidToDate)} paid
+                      </span>
+                    </>
+                  )}
                 </span>
               </div>
               <div className="space-y-1">
                 <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                   Outstanding Balance
                 </span>
-                <span
-                  className={`text-lg font-bold block ${
-                    billingSummary.amountOutstanding > 0 ? "text-red-400" : "text-green-400"
-                  }`}
-                >
-                  {formatCurrency(billingSummary.amountOutstanding)}
-                </span>
+                {!billingSummary.isRentSet ? (
+                  <span className="text-lg font-bold text-neutral-400 block">Rent not set</span>
+                ) : billingSummary.credit > 0 ? (
+                  <span className="text-lg font-bold text-green-400 block">
+                    Credit {formatCurrency(billingSummary.credit)}
+                  </span>
+                ) : billingSummary.outstanding > 0 ? (
+                  <span className="text-lg font-bold text-red-400 block">
+                    {formatCurrency(billingSummary.outstanding)}
+                  </span>
+                ) : (
+                  <span className="text-lg font-bold text-green-400 block">₦0</span>
+                )}
               </div>
             </div>
           </div>

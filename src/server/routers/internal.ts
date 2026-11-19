@@ -4,40 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { RelatedType, NotificationChannel } from "@prisma/client";
 import { dispatchNotification } from "../services/notificationDispatcher";
 import { formatCurrency } from "@/lib/utils";
-
-function getLeasePeriods(startDate: Date, endDate: Date, rentFrequency: string) {
-  const periods: { start: Date; end: Date }[] = [];
-  let currentStart = new Date(startDate);
-  const leaseEnd = new Date(endDate);
-
-  while (currentStart < leaseEnd) {
-    let nextEnd = new Date(currentStart);
-    if (rentFrequency === "monthly") {
-      nextEnd.setMonth(nextEnd.getMonth() + 1);
-    } else if (rentFrequency === "quarterly") {
-      nextEnd.setMonth(nextEnd.getMonth() + 3);
-    } else if (rentFrequency === "annually") {
-      nextEnd.setFullYear(nextEnd.getFullYear() + 1);
-    } else {
-      nextEnd = new Date(leaseEnd);
-    }
-
-    if (nextEnd > leaseEnd) {
-      nextEnd = new Date(leaseEnd);
-    }
-
-    periods.push({
-      start: new Date(currentStart),
-      end: new Date(nextEnd),
-    });
-
-    if (nextEnd.getTime() <= currentStart.getTime()) {
-      break;
-    }
-    currentStart = nextEnd;
-  }
-  return periods;
-}
+import { getLeaseBalance } from "@/lib/billing";
 
 function getDaysDifference(d1: Date, d2: Date) {
   // Compare normalized UTC midnight dates
@@ -76,24 +43,9 @@ export const internalRouter = router({
           },
         });
 
-        // Generate lease periods and calculate the next unpaid due date
-        const periods = getLeasePeriods(lease.startDate, lease.endDate, lease.rentFrequency);
-        const rentAmount = Number(lease.rentAmount);
-        let nextDueDate: Date | null = null;
-
-        for (const period of periods) {
-          const periodPayments = confirmedPayments.filter(
-            (p) =>
-              new Date(p.periodStart).getTime() === period.start.getTime() &&
-              new Date(p.periodEnd).getTime() === period.end.getTime()
-          );
-          const amountPaid = periodPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-
-          if (amountPaid < rentAmount) {
-            nextDueDate = period.start;
-            break;
-          }
-        }
+        // Calculate lease balance and the next unpaid due date using running balance
+        const balance = getLeaseBalance(lease, confirmedPayments, now);
+        const nextDueDate = balance.nextDueDate;
 
         if (!nextDueDate) {
           // Fully paid for all periods
@@ -127,6 +79,7 @@ export const internalRouter = router({
             continue;
           }
 
+          const rentAmount = balance.rentAmount;
           const formattedRent = formatCurrency(rentAmount);
           const title = `Rent Due Reminder (${threshold} Day${threshold > 1 ? "s" : ""})`;
           const body = `Hello ${lease.tenant.fullName},\n\nThis is a friendly reminder that your rent of ${formattedRent} for the period starting ${dueDateStr} is due in ${threshold} day${threshold > 1 ? "s" : ""}.\n\nThank you,\n${lease.unit.property.name} Management`;
