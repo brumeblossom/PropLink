@@ -4,15 +4,61 @@ import {
   getPeriodStarts,
   getRentPeriodForDate,
   getLeaseBalance,
+  getDueDateStatus,
   formatLagosYMD,
   PaymentLike,
 } from "./billing";
 
 describe("Billing & Running Balance", () => {
+  it("annual 1-year lease = 1 period (20/07/2026–20/07/2027)", () => {
+    const lease = {
+      startDate: new Date("2026-07-20T00:00:00.000Z"),
+      endDate: new Date("2027-07-20T00:00:00.000Z"),
+      rentFrequency: "annually",
+    };
+    const starts = getPeriodStarts(lease);
+    expect(starts.length).toBe(1);
+    expect(formatLagosYMD(starts[0])).toBe("2026-07-20");
+  });
+
+  it("monthly 29/07/2026–29/07/2027 = 12 periods", () => {
+    const lease = {
+      startDate: new Date("2026-07-29T00:00:00.000Z"),
+      endDate: new Date("2027-07-29T00:00:00.000Z"),
+      rentFrequency: "monthly",
+    };
+    const starts = getPeriodStarts(lease);
+    expect(starts.length).toBe(12);
+    expect(formatLagosYMD(starts[0])).toBe("2026-07-29");
+    expect(formatLagosYMD(starts[11])).toBe("2027-06-29");
+  });
+
+  it("Flat2 example: 20/07/2026–20/07/2027, ₦1.5m annually, ₦1.5m paid → nextDueDate null", () => {
+    const lease = {
+      startDate: new Date("2026-07-20T00:00:00.000Z"),
+      endDate: new Date("2027-07-20T00:00:00.000Z"),
+      rentAmount: 1500000,
+      rentFrequency: "annually",
+    };
+    const confirmedPayments = [{ amount: 1500000, status: "confirmed" }];
+    const today = new Date("2026-11-19T12:00:00.000Z");
+
+    const result = getLeaseBalance(lease, confirmedPayments, today);
+    expect(result.totalPeriods).toBe(1);
+    expect(result.totalLeaseRent).toBe(1500000);
+    expect(result.remainingLeaseRent).toBe(0);
+    expect(result.outstanding).toBe(0);
+    expect(result.nextDueDate).toBeNull();
+
+    const status = getDueDateStatus(result.nextDueDate, lease.endDate, today);
+    expect(status.status).toBe("paid_in_full");
+    expect(status.text).toBe("Paid to end of lease (20/07/2027)");
+  });
+
   it("Flat3 example: starts 29/07/2026, ₦800k monthly, ₦600k paid, checked on 19/11/2026", () => {
     const lease = {
       startDate: new Date("2026-07-29T00:00:00.000Z"),
-      endDate: new Date("2027-07-28T00:00:00.000Z"),
+      endDate: new Date("2027-07-29T00:00:00.000Z"),
       rentAmount: 800000,
       rentFrequency: "monthly",
     };
@@ -21,6 +67,9 @@ describe("Billing & Running Balance", () => {
 
     const result = getLeaseBalance(lease, confirmedPayments, today);
 
+    expect(result.totalPeriods).toBe(12);
+    expect(result.totalLeaseRent).toBe(9600000); // 12 * 800,000
+    expect(result.remainingLeaseRent).toBe(9000000); // 9,600,000 - 600,000
     expect(result.periodsDue).toBe(4); // July 29, Aug 29, Sep 29, Oct 29
     expect(result.rentDueToDate).toBe(3200000); // 4 * 800,000
     expect(result.paidToDate).toBe(600000);
@@ -28,32 +77,62 @@ describe("Billing & Running Balance", () => {
     expect(result.credit).toBe(0);
     expect(result.nextDueDate).not.toBeNull();
     expect(formatLagosYMD(result.nextDueDate!)).toBe("2026-07-29");
+    expect(result.unpaidPeriods).toBe(4);
+
+    const status = getDueDateStatus(result.nextDueDate, lease.endDate, today, result.unpaidPeriods);
+    expect(status.status).toBe("overdue");
+    expect(status.text).toBe("Overdue since 29/07/2026 · 4 unpaid periods");
   });
 
-  it("Annual lease fully paid: ₦1.5m/yr, ₦1.5m paid → 0 outstanding, no next due date", () => {
+  it("Due date line wording states: overdue, today, upcoming, paid to end of lease", () => {
+    const endDate = "2027-07-20";
+    const today = new Date("2026-11-19T12:00:00.000Z");
+
+    // Overdue
+    const overdueStatus = getDueDateStatus(new Date("2026-10-20T00:00:00.000Z"), endDate, today, 2);
+    expect(overdueStatus.status).toBe("overdue");
+    expect(overdueStatus.text).toBe("Overdue since 20/10/2026 · 2 unpaid periods");
+
+    // Due today
+    const todayStatus = getDueDateStatus(new Date("2026-11-19T00:00:00.000Z"), endDate, today);
+    expect(todayStatus.status).toBe("today");
+    expect(todayStatus.text).toBe("Rent due today");
+
+    // Upcoming
+    const upcomingStatus = getDueDateStatus(new Date("2026-12-20T00:00:00.000Z"), endDate, today);
+    expect(upcomingStatus.status).toBe("upcoming");
+    expect(upcomingStatus.text).toBe("Next rent due 20/12/2026");
+
+    // Paid in full
+    const paidStatus = getDueDateStatus(null, endDate, today);
+    expect(paidStatus.status).toBe("paid_in_full");
+    expect(paidStatus.text).toBe("Paid to end of lease (20/07/2027)");
+  });
+
+  it("Payment limit and remainingLeaseRent with pending payments", () => {
     const lease = {
       startDate: new Date("2026-01-01T00:00:00.000Z"),
-      endDate: new Date("2026-12-31T00:00:00.000Z"),
-      rentAmount: 1500000,
-      rentFrequency: "annually",
+      endDate: new Date("2026-07-01T00:00:00.000Z"), // 6 months
+      rentAmount: 100000,
+      rentFrequency: "monthly",
     };
-    const confirmedPayments = [{ amount: 1500000, status: "confirmed" }];
-    const today = new Date("2026-06-01T12:00:00.000Z");
+    const confirmedPayments = [{ amount: 200000, status: "confirmed" }];
+    const pendingPayments = [{ amount: 100000, status: "pending" }];
+    const today = new Date("2026-03-15T12:00:00.000Z");
 
-    const result = getLeaseBalance(lease, confirmedPayments, today);
+    const result = getLeaseBalance(lease, confirmedPayments, today, pendingPayments);
 
-    expect(result.periodsDue).toBe(1);
-    expect(result.rentDueToDate).toBe(1500000);
-    expect(result.paidToDate).toBe(1500000);
-    expect(result.outstanding).toBe(0);
-    expect(result.credit).toBe(0);
-    expect(result.nextDueDate).toBeNull(); // Paid to end of lease
+    expect(result.totalPeriods).toBe(6);
+    expect(result.totalLeaseRent).toBe(600000);
+    // remaining = 600,000 - 200,000 (confirmed) - 100,000 (pending) = 300,000
+    expect(result.remainingLeaseRent).toBe(300000);
+    expect(result.pendingAmount).toBe(100000);
   });
 
   it("Partial payment: ₦800k monthly, ₦400k paid in month 1 → ₦400k outstanding, next due date is current period", () => {
     const lease = {
       startDate: new Date("2026-01-01T00:00:00.000Z"),
-      endDate: new Date("2026-12-31T00:00:00.000Z"),
+      endDate: new Date("2027-01-01T00:00:00.000Z"),
       rentAmount: 800000,
       rentFrequency: "monthly",
     };
@@ -74,7 +153,7 @@ describe("Billing & Running Balance", () => {
   it("Payment in advance: ₦100k rent, ₦300k paid on month 1 → ₦0 outstanding, credit ₦200k, next due date month 4", () => {
     const lease = {
       startDate: new Date("2026-01-01T00:00:00.000Z"),
-      endDate: new Date("2026-12-31T00:00:00.000Z"),
+      endDate: new Date("2027-01-01T00:00:00.000Z"),
       rentAmount: 100000,
       rentFrequency: "monthly",
     };
@@ -96,7 +175,7 @@ describe("Billing & Running Balance", () => {
   it("31st-of-month start date: Jan 31 → Feb 28 → Mar 31 → Apr 30", () => {
     const lease = {
       startDate: new Date("2026-01-31T00:00:00.000Z"),
-      endDate: new Date("2026-04-30T00:00:00.000Z"),
+      endDate: new Date("2026-05-31T00:00:00.000Z"),
       rentFrequency: "monthly",
     };
 
@@ -128,6 +207,8 @@ describe("Billing & Running Balance", () => {
     expect(result.paidToDate).toBe(0);
     expect(result.outstanding).toBe(0);
     expect(result.credit).toBe(0);
+    expect(result.totalLeaseRent).toBe(0);
+    expect(result.remainingLeaseRent).toBe(0);
     expect(result.nextDueDate).toBeNull();
   });
 

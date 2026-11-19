@@ -150,32 +150,51 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
 - **Running Balance Model (`src/lib/billing.ts`)**:
   - Replaced rigid, single-period matching (where payments were ignored if their dates did not match calculated period boundaries) with an approved running balance per lease model in `Africa/Lagos` time (UTC+1).
   - **Period Starts & Clamping**: Computes period start dates from `lease.startDate + n months` (step 1 for monthly, 3 for quarterly, 12 for annually), clamping to the last day of the month when the calendar day does not exist (e.g. 31 Jan → 28/29 Feb → 31 Mar), preserving the original day where possible.
+  - **Period Bounds Fix**: A period starting on or after `lease.endDate` is not a rent period (`pStr >= endStr` breaks the loop). A 1-year annual lease (e.g. 20/07/2026–20/07/2027) generates exactly 1 period, and a 1-year monthly lease generates 12 periods.
   - **Calculations**:
-    - `rentDueToDate`: `rentAmount × periodsDue` (period starts on or before today and on or before `endDate`).
+    - `totalPeriods`: Total number of rent period starts within the lease duration.
+    - `totalLeaseRent`: `rentAmount × totalPeriods`.
+    - `remainingLeaseRent`: `Math.max(0, totalLeaseRent - paidToDate - pendingAmount)`.
+    - `rentDueToDate`: `rentAmount × periodsDue` (period starts on or before today and before `endDate`).
     - `paidToDate`: Sum of `confirmed` payments on the lease (pending and rejected payments never count; disputed ignored as today).
     - `outstanding`: `rentDueToDate − paidToDate`. Shown as `Credit ₦X` when negative (paid in advance).
     - `nextDueDate`: Walk periods from start, subtracting `rentAmount` from `paidToDate`. The start of the first period not fully covered is `nextDueDate`. If every period up to lease end is fully covered, `nextDueDate` is `null` ("Paid to end of lease").
+    - `unpaidPeriods`: Count of period starts on or before today that are not fully covered by `paidToDate`.
     - If `rentAmount` is 0 (or not set), indicates "Rent not set" instead of numbers.
 - **Unit Testing with Vitest**:
   - Added `vitest` (`^5.1.1`) and `vite` as dev dependencies, added `"test": "vitest run"` script to `package.json`, and configured `vitest.config.mjs` scoped to `src/**/*.test.ts`.
-  - Comprehensive unit test suite in `src/lib/billing.test.ts` covering:
-    - Flat3 example: starts 29/07/2026, ₦800k monthly, ₦600k paid, checked on 19/11/2026 (4 periods due, ₦2,600,000 outstanding).
-    - Annual lease fully paid: ₦1.5m/yr, ₦1.5m paid (₦0 outstanding, no next due date).
+  - Comprehensive unit test suite in `src/lib/billing.test.ts` (11 tests passing) covering:
+    - Annual 1-year lease = 1 period (20/07/2026–20/07/2027).
+    - Monthly 1-year lease = 12 periods (29/07/2026–29/07/2027).
+    - Flat2 example: 20/07/2026–20/07/2027, ₦1.5m annually, ₦1.5m paid → `nextDueDate: null`, "Paid to end of lease (20/07/2027)".
+    - Flat3 example: starts 29/07/2026, ₦800k monthly, ₦600k paid, checked on 19/11/2026 (4 periods due, ₦2,600,000 outstanding, 3 unpaid periods).
+    - Due date line wording states: overdue (`Overdue since DD/MM/YYYY · N unpaid periods`), today (`Rent due today`), upcoming (`Next rent due DD/MM/YYYY`), paid to end of lease (`Paid to end of lease (DD/MM/YYYY)`).
+    - Payment limit and remaining lease rent with pending payments.
     - Partial payment: ₦800k monthly, ₦400k paid in month 1 (₦400k outstanding, next due date is current period).
     - Payment in advance: ₦100k rent, ₦300k paid on month 1 (₦0 outstanding, credit ₦200k, next due date month 4).
     - 31st-of-month start date clamping (Jan 31 → Feb 28 → Mar 31 → Apr 30).
     - Rent not set (rentAmount 0): `isRentSet: false`, numbers are 0.
     - `getRentPeriodForDate` containing period resolution.
-- **Server Routers Refactoring**:
-  - `payments.getBillingSummary`: Uses `getLeaseBalance`, returning full balance details plus backwards-compatible aliases (`periodStart`, `periodEnd`, `rentAmount`, `amountPaid`, `amountOutstanding`) and `pendingAmount`.
-  - `internal.ts` (Rent Reminder Cron): Replaced exact period date matching with `getLeaseBalance(lease, confirmedPayments, now).nextDueDate`. Preserves existing reminder thresholds (7 days / 1 day), idempotency key `reminder-${threshold}-${dueDateStr}`, and the rule that pending payments never suppress reminders.
-  - `payments.create`, `payments.updatePending`, `payments.confirm`, `payments.resolve`: Removed single-period capping checks (which previously rejected payments exceeding a single period's rent).
+- **Server Routers & Payment Cap Enforcement**:
+  - `payments.getBillingSummary`: Returns full lease balance including `totalLeaseRent`, `remainingLeaseRent`, `pendingAmount`, and `unpaidPeriods`.
+  - `payments.create`: Rejects payment amounts exceeding `balance.remainingLeaseRent` with `"This is more than the ₦X left on this lease."`.
+  - `payments.updatePending`: Rejects payment amounts exceeding `balance.remainingLeaseRent` (excluding the current payment's pending amount) with `"This is more than the ₦X left on this lease."`.
+  - `payments.confirm`: Rejects confirmation if `confirmedAmount + Number(payment.amount) > totalLeaseRent` with `"Confirming this payment would exceed the total lease rent of ₦X."`. Partial payments remain allowed.
+  - `internal.ts` (Rent Reminder Cron): Uses `getLeaseBalance(lease, confirmedPayments, now).nextDueDate`. Preserves reminder thresholds (7 days / 1 day), idempotency key `reminder-${threshold}-${dueDateStr}`, and the rule that pending payments never suppress reminders.
   - Automatically populates `period_start` and `period_end` columns using `getRentPeriodForDate(lease, paymentDate)` for historical reporting.
-  - Server and client validation enforce `paymentDate <= today` in `Africa/Lagos` (no future dates).
-- **UI Harmonization**:
-  - **Payment Forms**: Removed "Period Start" and "Period End" date pickers from landlord and tenant payment logging/editing modals. Added `max = today` attribute to payment date input.
-  - **Summary Box**: Upgraded to 3 tiles: "Rent due so far" ("N periods since DD/MM/YYYY"), "Paid (confirmed)", "Outstanding" (red if > 0, green `Credit ₦X` if negative, green `₦0` if zero). Underneath: 1 line "Next rent due DD/MM/YYYY" (or "Paid to end of lease"), appending pending payment alert when applicable (`" • ₦X pending your confirmation"` for landlord / `" • ₦X waiting for landlord confirmation"` for tenant).
-  - **Payment Tables**: Removed the obsolete "Period covered" column from payment tables on both the landlord unit page and tenant payments page.
+  - Enforces `paymentDate <= today` in `Africa/Lagos` (no future dates).
+- **UI Harmonization & Wording Under Summary Tiles**:
+  - **Summary Box & Tiles**: Standardized across Landlord Unit Detail, Tenant Payments, and Tenant Dashboard:
+    - 3 Tiles: "Rent due so far", "Paid (confirmed)", "Outstanding" (red if > 0, green `Credit ₦X` if negative, green `₦0` if zero).
+    - Underneath: 1 line using `getDueDateStatus`:
+      - Overdue before today → red `"Overdue since DD/MM/YYYY · N unpaid periods"`
+      - Due today → amber `"Rent due today"`
+      - Upcoming after today → `"Next rent due DD/MM/YYYY"`
+      - Null next due date → green `"Paid to end of lease (DD/MM/YYYY)"`
+      - Pending alert appended: `" • ₦X pending your confirmation"` (landlord) / `" • ₦X waiting for landlord confirmation"` (tenant).
+  - **Payment Cap Controls**:
+    - "Add Payment" / "Log Payment" / "Log My Payment" buttons are disabled when `remainingLeaseRent <= 0`, displaying the hint `"Paid in full to end of lease"`.
+    - Payment modals display `"₦X left on this lease"` directly under the Amount input and reject amounts above it on client submit.
 
 
 

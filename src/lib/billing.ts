@@ -23,6 +23,11 @@ export interface LeaseBalanceResult {
   currentPeriodEnd: Date;
   rentAmount: number;
   isRentSet: boolean;
+  totalPeriods: number;
+  totalLeaseRent: number;
+  remainingLeaseRent: number;
+  pendingAmount: number;
+  unpaidPeriods: number;
   // Backwards compatibility aliases
   periodStart: Date;
   periodEnd: Date;
@@ -72,6 +77,14 @@ export function getLagosYMD(dateInput: Date | string): { year: number; month: nu
 export function formatLagosYMD(dateInput: Date | string): string {
   const { year, month, day } = getLagosYMD(dateInput);
   return `${year.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Formats a date as DD/MM/YYYY in Africa/Lagos time.
+ */
+export function formatDateGB(dateInput: Date | string): string {
+  const { year, month, day } = getLagosYMD(dateInput);
+  return `${day.toString().padStart(2, "0")}/${month.toString().padStart(2, "0")}/${year.toString().padStart(4, "0")}`;
 }
 
 /**
@@ -125,7 +138,8 @@ export function computePeriodStartDate(
 }
 
 /**
- * Generates all period start dates for a lease on or before lease.endDate.
+ * Generates all period start dates for a lease strictly before lease.endDate.
+ * A period that starts on or after endDate is not a rent period.
  */
 export function getPeriodStarts(lease: Pick<LeaseLike, "startDate" | "endDate" | "rentFrequency">): Date[] {
   const start = getLagosYMD(lease.startDate);
@@ -136,7 +150,7 @@ export function getPeriodStarts(lease: Pick<LeaseLike, "startDate" | "endDate" |
   for (let n = 0; n < 1200; n++) {
     const p = computePeriodStartDate(start.year, start.month, start.day, n, stepMonths);
     const pStr = formatLagosYMD(p.date);
-    if (pStr > endStr) {
+    if (pStr >= endStr) {
       break;
     }
     starts.push(p.date);
@@ -194,21 +208,75 @@ export function getRentPeriodForDate(
 }
 
 /**
- * Computes the running balance for a lease given its confirmed payments and current date.
+ * Evaluates the status and display text for the due date line under summary tiles.
+ */
+export function getDueDateStatus(
+  nextDueDate: Date | string | null,
+  endDate: Date | string,
+  todayInput: Date | string = new Date(),
+  unpaidPeriods: number = 0
+): {
+  status: "overdue" | "today" | "upcoming" | "paid_in_full";
+  text: string;
+} {
+  if (!nextDueDate) {
+    const endStr = formatDateGB(endDate);
+    return {
+      status: "paid_in_full",
+      text: `Paid to end of lease (${endStr})`,
+    };
+  }
+
+  const dueStr = formatLagosYMD(nextDueDate);
+  const todayStr = formatLagosYMD(todayInput);
+  const dueFormatted = formatDateGB(nextDueDate);
+
+  if (dueStr < todayStr) {
+    const periodsText = unpaidPeriods === 1 ? "1 unpaid period" : `${unpaidPeriods} unpaid periods`;
+    return {
+      status: "overdue",
+      text: `Overdue since ${dueFormatted} · ${periodsText}`,
+    };
+  } else if (dueStr === todayStr) {
+    return {
+      status: "today",
+      text: "Rent due today",
+    };
+  } else {
+    return {
+      status: "upcoming",
+      text: `Next rent due ${dueFormatted}`,
+    };
+  }
+}
+
+/**
+ * Computes the running balance for a lease given its confirmed payments, pending payments, and current date.
  */
 export function getLeaseBalance(
   lease: LeaseLike,
   confirmedPayments: PaymentLike[],
-  todayInput: Date | string = new Date()
+  todayInput: Date | string = new Date(),
+  pendingPayments: PaymentLike[] = []
 ): LeaseBalanceResult {
   const rentAmount = Number(lease.rentAmount || 0);
   const isRentSet = rentAmount > 0;
   const currentPeriod = getRentPeriodForDate(lease, todayInput);
 
-  // Sum confirmed payments only
-  const paidToDate = confirmedPayments
-    .filter((p) => !p.status || p.status === "confirmed")
-    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  // Sum confirmed payments
+  const confirmed = confirmedPayments.filter((p) => !p.status || p.status === "confirmed");
+  const paidToDate = confirmed.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+  // Sum pending payments
+  const pending = pendingPayments.length > 0
+    ? pendingPayments
+    : confirmedPayments.filter((p) => p.status === "pending");
+  const pendingAmount = pending.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+  const periodStarts = getPeriodStarts(lease);
+  const totalPeriods = periodStarts.length;
+  const totalLeaseRent = isRentSet ? rentAmount * totalPeriods : 0;
+  const remainingLeaseRent = isRentSet ? Math.max(0, totalLeaseRent - paidToDate - pendingAmount) : 0;
 
   if (!isRentSet) {
     return {
@@ -222,6 +290,11 @@ export function getLeaseBalance(
       currentPeriodEnd: currentPeriod.periodEnd,
       rentAmount: 0,
       isRentSet: false,
+      totalPeriods,
+      totalLeaseRent: 0,
+      remainingLeaseRent: 0,
+      pendingAmount,
+      unpaidPeriods: 0,
       periodStart: currentPeriod.periodStart,
       periodEnd: currentPeriod.periodEnd,
       amountPaid: paidToDate,
@@ -229,10 +302,9 @@ export function getLeaseBalance(
     };
   }
 
-  const periodStarts = getPeriodStarts(lease);
   const todayStr = formatLagosYMD(todayInput);
 
-  // Periods due: period starts on or before today (and on or before endDate, which getPeriodStarts already guarantees)
+  // Periods due: period starts on or before today
   const periodsDue = periodStarts.filter((p) => formatLagosYMD(p) <= todayStr).length;
   const rentDueToDate = rentAmount * periodsDue;
 
@@ -253,6 +325,14 @@ export function getLeaseBalance(
     }
   }
 
+  // Count unpaid periods among periods that have started so far
+  let unpaidPeriods = 0;
+  if (nextDueDate && formatLagosYMD(nextDueDate) < todayStr) {
+    unpaidPeriods = periodStarts.filter(
+      (p) => formatLagosYMD(p) >= formatLagosYMD(nextDueDate!) && formatLagosYMD(p) <= todayStr
+    ).length;
+  }
+
   return {
     rentDueToDate,
     paidToDate,
@@ -264,6 +344,11 @@ export function getLeaseBalance(
     currentPeriodEnd: currentPeriod.periodEnd,
     rentAmount,
     isRentSet: true,
+    totalPeriods,
+    totalLeaseRent,
+    remainingLeaseRent,
+    pendingAmount,
+    unpaidPeriods,
     periodStart: currentPeriod.periodStart,
     periodEnd: currentPeriod.periodEnd,
     amountPaid: paidToDate,

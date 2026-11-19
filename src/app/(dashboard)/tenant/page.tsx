@@ -4,6 +4,7 @@ import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
+import { getDueDateStatus } from "@/lib/billing";
 import { Home } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers/_app";
@@ -302,54 +303,71 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
                 View full ledger →
               </a>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/10 p-5">
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Next Rent Due
-                </span>
-                <span className="text-sm font-semibold text-neutral-300 block">
-                  {!billingSummary.isRentSet
-                    ? "Rent not set"
-                    : billingSummary.nextDueDate
-                    ? new Date(billingSummary.nextDueDate).toLocaleDateString("en-GB")
-                    : "Paid to end of lease"}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Rent Due / Confirmed Paid
-                </span>
-                <span className="text-lg font-bold text-white block">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    Rent due so far
+                  </span>
+                  <span className="text-lg font-bold text-white block">
+                    {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    Paid (confirmed)
+                  </span>
+                  <span className="text-lg font-bold text-white block">
+                    {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.paidToDate)}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+                    Outstanding Balance
+                  </span>
                   {!billingSummary.isRentSet ? (
-                    "Rent not set"
+                    <span className="text-lg font-bold text-neutral-400 block">Rent not set</span>
+                  ) : billingSummary.credit > 0 ? (
+                    <span className="text-lg font-bold text-green-400 block">
+                      Credit {formatCurrency(billingSummary.credit)}
+                    </span>
+                  ) : billingSummary.outstanding > 0 ? (
+                    <span className="text-lg font-bold text-red-400 block">
+                      {formatCurrency(billingSummary.outstanding)}
+                    </span>
                   ) : (
-                    <>
-                      {formatCurrency(billingSummary.rentDueToDate)}{" "}
-                      <span className="text-neutral-500 font-normal text-sm">
-                        / {formatCurrency(billingSummary.paidToDate)} paid
-                      </span>
-                    </>
+                    <span className="text-lg font-bold text-green-400 block">₦0</span>
                   )}
-                </span>
+                </div>
               </div>
-              <div className="space-y-1">
-                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                  Outstanding Balance
-                </span>
-                {!billingSummary.isRentSet ? (
-                  <span className="text-lg font-bold text-neutral-400 block">Rent not set</span>
-                ) : billingSummary.credit > 0 ? (
-                  <span className="text-lg font-bold text-green-400 block">
-                    Credit {formatCurrency(billingSummary.credit)}
-                  </span>
-                ) : billingSummary.outstanding > 0 ? (
-                  <span className="text-lg font-bold text-red-400 block">
-                    {formatCurrency(billingSummary.outstanding)}
-                  </span>
-                ) : (
-                  <span className="text-lg font-bold text-green-400 block">₦0</span>
-                )}
-              </div>
+              {billingSummary.isRentSet && (() => {
+                const status = getDueDateStatus(
+                  billingSummary.nextDueDate,
+                  lease.endDate,
+                  new Date(),
+                  billingSummary.unpaidPeriods
+                );
+                const statusColor =
+                  status.status === "overdue"
+                    ? "text-red-400 font-medium"
+                    : status.status === "today"
+                    ? "text-amber-400 font-medium"
+                    : status.status === "paid_in_full"
+                    ? "text-green-400 font-medium"
+                    : "text-neutral-300";
+
+                return (
+                  <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
+                    <span className={statusColor}>{status.text}</span>
+                    {billingSummary.pendingAmount > 0 && (
+                      <span className="text-amber-400 font-medium">
+                        {" • "}
+                        {formatCurrency(billingSummary.pendingAmount)} waiting for landlord confirmation
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         );

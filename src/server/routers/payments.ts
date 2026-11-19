@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PaymentMethod, PaymentStatus, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
 import { formatCurrency } from "@/lib/utils";
-import { getRentPeriodForDate, getLeaseBalance, formatLagosYMD } from "@/lib/billing";
+import { getRentPeriodForDate, getLeaseBalance, getPeriodStarts, formatLagosYMD } from "@/lib/billing";
 
 export const paymentsRouter = router({
   // List all payments for a specific lease
@@ -98,6 +98,28 @@ export const paymentsRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Payment date cannot be in the future.",
+        });
+      }
+
+      // Check remaining lease rent limit
+      const confirmedPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: input.leaseId,
+          status: PaymentStatus.confirmed,
+        },
+      });
+      const pendingPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: input.leaseId,
+          status: PaymentStatus.pending,
+        },
+      });
+      const balance = getLeaseBalance(lease, confirmedPayments, new Date(), pendingPayments);
+
+      if (balance.isRentSet && input.amount > balance.remainingLeaseRent) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `This is more than the ${formatCurrency(balance.remainingLeaseRent)} left on this lease.`,
         });
       }
 
@@ -214,6 +236,29 @@ export const paymentsRouter = router({
         });
       }
 
+      // Check remaining lease rent limit (excluding current payment's pending amount)
+      const confirmedPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: payment.leaseId,
+          status: PaymentStatus.confirmed,
+        },
+      });
+      const otherPendingPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: payment.leaseId,
+          status: PaymentStatus.pending,
+          id: { not: payment.id },
+        },
+      });
+      const balance = getLeaseBalance(payment.lease, confirmedPayments, new Date(), otherPendingPayments);
+
+      if (balance.isRentSet && input.amount > balance.remainingLeaseRent) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `This is more than the ${formatCurrency(balance.remainingLeaseRent)} left on this lease.`,
+        });
+      }
+
       const { periodStart: computedStart, periodEnd: computedEnd } = getRentPeriodForDate(payment.lease, payDate);
 
       return await prisma.payment.update({
@@ -272,6 +317,23 @@ export const paymentsRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Only pending payments can be confirmed.",
+        });
+      }
+
+      const confirmedPayments = await prisma.payment.findMany({
+        where: {
+          leaseId: payment.leaseId,
+          status: PaymentStatus.confirmed,
+        },
+      });
+      const confirmedAmount = confirmedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const periodStarts = getPeriodStarts(payment.lease);
+      const totalLeaseRent = Number(payment.lease.rentAmount || 0) * periodStarts.length;
+
+      if (payment.lease.rentAmount && confirmedAmount + Number(payment.amount) > totalLeaseRent) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Confirming this payment would exceed the total lease rent of ${formatCurrency(totalLeaseRent)}.`,
         });
       }
 
@@ -890,13 +952,11 @@ export const paymentsRouter = router({
           status: PaymentStatus.pending,
         },
       });
-      const pendingAmount = pendingPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
-      const balance = getLeaseBalance(lease, confirmedPayments, new Date());
+      const balance = getLeaseBalance(lease, confirmedPayments, new Date(), pendingPayments);
 
       return {
         ...balance,
-        pendingAmount,
       };
     }),
 

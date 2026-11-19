@@ -12,6 +12,7 @@ import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
+import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -586,6 +587,11 @@ export default function UnitDetailPage() {
     const amount = parseFloat(paymentAmount.replace(/,/g, ""));
     if (isNaN(amount) || amount <= 0) {
       setPaymentError("Amount must be a positive number.");
+      return;
+    }
+
+    if (billingSummary && billingSummary.isRentSet && amount > billingSummary.remainingLeaseRent) {
+      setPaymentError(`This is more than the ${formatCurrency(billingSummary.remainingLeaseRent)} left on this lease.`);
       return;
     }
 
@@ -1210,16 +1216,26 @@ export default function UnitDetailPage() {
                       <option key={yr} value={yr}>{yr}</option>
                     ))}
                   </select>
-                  <Button
-                    onClick={() => {
-                      setIsLogPaymentOpen(true);
-                      setPaymentAmount(billingSummary?.outstanding ? formatInputNumber(String(billingSummary.outstanding)) : "");
-                      setPaymentError(null);
-                    }}
-                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
-                  >
-                    Log Payment
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={() => {
+                        setIsLogPaymentOpen(true);
+                        setPaymentAmount(
+                          billingSummary?.outstanding
+                            ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                            : ""
+                        );
+                        setPaymentError(null);
+                      }}
+                      disabled={billingSummary ? billingSummary.remainingLeaseRent <= 0 : false}
+                      className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Log Payment
+                    </Button>
+                    {billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0 && (
+                      <span className="text-xs text-neutral-400">Paid in full to end of lease</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1257,21 +1273,34 @@ export default function UnitDetailPage() {
                       )}
                     </div>
                   </div>
-                  {billingSummary.isRentSet && (
-                    <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
-                      <span>
-                        {billingSummary.nextDueDate
-                          ? `Next rent due ${new Date(billingSummary.nextDueDate).toLocaleDateString("en-GB")}`
-                          : "Paid to end of lease"}
-                      </span>
-                      {billingSummary.pendingAmount > 0 && (
-                        <span className="text-amber-400 font-medium">
-                          {" • "}
-                          {formatCurrency(billingSummary.pendingAmount)} pending your confirmation
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {billingSummary.isRentSet && (() => {
+                    const status = getDueDateStatus(
+                      billingSummary.nextDueDate,
+                      activeLease.endDate,
+                      new Date(),
+                      billingSummary.unpaidPeriods
+                    );
+                    const statusColor =
+                      status.status === "overdue"
+                        ? "text-red-400 font-medium"
+                        : status.status === "today"
+                        ? "text-amber-400 font-medium"
+                        : status.status === "paid_in_full"
+                        ? "text-green-400 font-medium"
+                        : "text-neutral-300";
+
+                    return (
+                      <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
+                        <span className={statusColor}>{status.text}</span>
+                        {billingSummary.pendingAmount > 0 && (
+                          <span className="text-amber-400 font-medium">
+                            {" • "}
+                            {formatCurrency(billingSummary.pendingAmount)} pending your confirmation
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -2000,6 +2029,11 @@ export default function UnitDetailPage() {
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                   placeholder="e.g. 150,000"
                 />
+                {billingSummary && billingSummary.isRentSet && (
+                  <span className="text-xs text-neutral-400 block mt-1">
+                    {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
+                  </span>
+                )}
               </div>
 
               <div>

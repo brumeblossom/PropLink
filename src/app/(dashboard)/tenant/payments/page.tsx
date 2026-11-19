@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentMethod } from "@prisma/client";
 import { X, CreditCard, ChevronLeft, Building2, Home } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
+import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -289,6 +290,20 @@ function LeasePaymentLedger({
       return;
     }
 
+    if (billingSummary && billingSummary.isRentSet) {
+      let maxAllowed = billingSummary.remainingLeaseRent;
+      if (editingPaymentId && payments) {
+        const cur = payments.find((p) => p.id === editingPaymentId);
+        if (cur) {
+          maxAllowed += Number(cur.amount);
+        }
+      }
+      if (amount > maxAllowed) {
+        setPaymentError(`This is more than the ${formatCurrency(maxAllowed)} left on this lease.`);
+        return;
+      }
+    }
+
     try {
       if (editingPaymentId) {
         await updatePendingPayment.mutateAsync({
@@ -420,20 +435,26 @@ function LeasePaymentLedger({
               <option key={yr} value={yr}>{yr}</option>
             ))}
           </select>
-          <Button
-            onClick={() => {
-              setIsLogPaymentOpen(true);
-              setPaymentAmount(
-                billingSummary?.outstanding
-                  ? formatInputNumber(String(billingSummary.outstanding))
-                  : ""
-              );
-              setPaymentError(null);
-            }}
-            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
-          >
-            Log My Payment
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                setIsLogPaymentOpen(true);
+                setPaymentAmount(
+                  billingSummary?.outstanding
+                    ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                    : ""
+                );
+                setPaymentError(null);
+              }}
+              disabled={billingSummary ? billingSummary.remainingLeaseRent <= 0 : false}
+              className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Log My Payment
+            </Button>
+            {billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0 && (
+              <span className="text-xs text-neutral-400">Paid in full to end of lease</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -477,21 +498,34 @@ function LeasePaymentLedger({
               )}
             </div>
           </div>
-          {billingSummary.isRentSet && (
-            <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
-              <span>
-                {billingSummary.nextDueDate
-                  ? `Next rent due ${new Date(billingSummary.nextDueDate).toLocaleDateString("en-GB")}`
-                  : "Paid to end of lease"}
-              </span>
-              {billingSummary.pendingAmount > 0 && (
-                <span className="text-amber-400 font-medium">
-                  {" • "}
-                  {formatCurrency(billingSummary.pendingAmount)} waiting for landlord confirmation
-                </span>
-              )}
-            </div>
-          )}
+          {billingSummary.isRentSet && (() => {
+            const status = getDueDateStatus(
+              billingSummary.nextDueDate,
+              lease.endDate,
+              new Date(),
+              billingSummary.unpaidPeriods
+            );
+            const statusColor =
+              status.status === "overdue"
+                ? "text-red-400 font-medium"
+                : status.status === "today"
+                ? "text-amber-400 font-medium"
+                : status.status === "paid_in_full"
+                ? "text-green-400 font-medium"
+                : "text-neutral-300";
+
+            return (
+              <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
+                <span className={statusColor}>{status.text}</span>
+                {billingSummary.pendingAmount > 0 && (
+                  <span className="text-amber-400 font-medium">
+                    {" • "}
+                    {formatCurrency(billingSummary.pendingAmount)} waiting for landlord confirmation
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -674,6 +708,15 @@ function LeasePaymentLedger({
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                   placeholder="e.g. 150,000"
                 />
+                {billingSummary && billingSummary.isRentSet && (
+                  <span className="text-xs text-neutral-400 block mt-1">
+                    {formatCurrency(
+                      editingPaymentId && payments
+                        ? billingSummary.remainingLeaseRent + Number(payments.find((p) => p.id === editingPaymentId)?.amount || 0)
+                        : billingSummary.remainingLeaseRent
+                    )} left on this lease
+                  </span>
+                )}
               </div>
 
               <div>
