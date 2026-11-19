@@ -435,26 +435,36 @@ function LeasePaymentLedger({
               <option key={yr} value={yr}>{yr}</option>
             ))}
           </select>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => {
-                setIsLogPaymentOpen(true);
-                setPaymentAmount(
-                  billingSummary?.outstanding
-                    ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
-                    : ""
-                );
-                setPaymentError(null);
-              }}
-              disabled={billingSummary ? billingSummary.remainingLeaseRent <= 0 : false}
-              className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Log My Payment
-            </Button>
-            {billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0 && (
-              <span className="text-xs text-neutral-400">Paid in full to end of lease</span>
-            )}
-          </div>
+          {(() => {
+            const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
+            return (
+              <div className={`relative inline-block ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
+                <Button
+                  onClick={() => {
+                    setIsLogPaymentOpen(true);
+                    setPaymentAmount(
+                      billingSummary?.outstanding
+                        ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                        : ""
+                    );
+                    setPaymentError(null);
+                  }}
+                  disabled={isPaidInFull}
+                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  Log My Payment
+                </Button>
+                {isPaidInFull && (
+                  <div
+                    role="tooltip"
+                    className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                  >
+                    This lease is fully paid.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 

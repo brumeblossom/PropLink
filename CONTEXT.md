@@ -193,8 +193,10 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
       - Null next due date → green `"Paid to end of lease (DD/MM/YYYY)"`
       - Pending alert appended: `" • ₦X pending your confirmation"` (landlord) / `" • ₦X waiting for landlord confirmation"` (tenant).
   - **Payment Cap Controls**:
-    - "Add Payment" / "Log Payment" / "Log My Payment" buttons are disabled when `remainingLeaseRent <= 0`, displaying the hint `"Paid in full to end of lease"`.
+    - "Add Payment" / "Log Payment" / "Log My Payment" buttons are disabled when `remainingLeaseRent <= 0` (reduced opacity, no hover) with a hover tooltip: `"This lease is fully paid."` Redundant beside-button text removed per UI Standard.
     - Payment modals display `"₦X left on this lease"` directly under the Amount input and reject amounts above it on client submit.
+- **UI Standard (CLAUDE.md Section 16)**:
+  - Added strict UI standards covering Linear/Stripe/Vercel level polish, no redundant text, hover tooltips for disabled actions, standard 8px/12px radius, and responsive checks.
 
 
 

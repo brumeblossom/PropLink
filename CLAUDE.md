@@ -257,3 +257,16 @@ A prompt isn't complete until:
 - **Flagged payment** — a landlord-logged payment the tenant has disputed; requires landlord resolution but doesn't auto-change status.
 - **Notice** — a landlord broadcast (reminder, maintenance, general, increment) to one unit, one property, or all properties.
 - **Renewal window** — the configurable period (default 60 days) before a lease's end date during which its status shows as `renewal_due`.
+
+---
+
+## 16. UI Standard
+
+- Follow established product UI conventions (Linear, Stripe Dashboard, Vercel, Notion level of polish). If a choice would look out of place in those products, don't make it.
+- Never repeat information already visible on the screen. No helper text beside buttons explaining a state the page already shows.
+- Disabled buttons look disabled and explain themselves only through a tooltip on hover.
+- One spacing scale (4/8/12/16/24/32px), one radius (8px inputs and buttons, 12px cards and modals), one icon set (lucide) at 16px in buttons and 20px in headers.
+- Labels, inputs, table cells and section headers share the same left edge; action groups align right.
+- Every interactive element has hover, focus-visible and active states. Every list or table has a designed empty state and a skeleton loading state.
+- Check every screen at 1440px and 390px wide before pushing. Nothing overlaps, wraps awkwardly or overflows.
+- If an instruction would produce a cluttered or awkward result, say so before building it.
