@@ -140,5 +140,21 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
   - `DELETE`: `bucket_id = 'leases' AND is_lease_landlord((storage.foldername(name))[1]::uuid)`
 - **File Input UX Hardening**: Fixed the UI issue on the landlord unit detail page where failed file uploads left the file name and error message persistent. Both the file input value and error state are now cleared when the user selects a new file.
 
+## Legacy Payments Storage Paths & Safe Extraction (2026-11-19)
+
+- **Legacy Path Support**: Added `public.lease_id_from_path(p_name text)` `SECURITY DEFINER` helper function to handle both modern (`<leaseId>/<file>`) and legacy (`payments/<leaseId>/<file>`) storage paths. Validates target folder segment with UUID regex before casting, returning `NULL` without throwing errors on malformed or non-UUID paths.
+- **Rewritten Storage Policies**: Updated `leases_select_policy`, `leases_insert_policy`, `leases_update_policy`, and `leases_delete_policy` to use `lease_id_from_path(name)`.
+
+## Uploaded Files Deletion Workflow (2026-11-19)
+
+- **Lease Documents**: Only the landlord of the lease can delete lease documents via `leases.deleteDocument({ leaseId })`. Tenants are restricted to read-only access.
+- **Payment Proofs**: The uploader (tenant or landlord) can delete the proof while the payment is `pending` via `payments.deleteProof({ paymentId })`. The reviewing landlord can also remove a proof from a pending payment. Once confirmed or rejected, the proof is immutable and locked.
+- **Transactional Consistency**: Storage deletion via `ctx.supabase.storage.from("leases").remove(...)` is verified before clearing database references (`documentUrl: null` / `proofUrl: null`); if storage removal fails, the database row is kept intact and a descriptive error is returned.
+- **Storage DELETE RLS Policy**: Replaced `leases_delete_policy` on `storage.objects` with `is_lease_landlord(lease_id_from_path(name)) OR can_delete_own_proof(name)`, where `can_delete_own_proof(name)` is a `SECURITY DEFINER` helper verifying `recorded_by = auth.uid()` and `status = 'pending'`.
+- **Reusable ConfirmDialog**: Created `src/components/ui/confirm-dialog.tsx` matching the app's modal styling, with red confirmation buttons and loading states.
+- **UI Integration**:
+  - Landlord unit page: added a red bin icon beside View on the document card with `ConfirmDialog` and success toast "Document deleted". Hides document card and restores the upload input on deletion.
+  - Payment detail modal (landlord & tenant): added "Remove proof" red text button with `ConfirmDialog` and toast for pending payments; shows `"Proof is locked because this payment is confirmed."` when locked. Restores the upload control when no proof exists on a pending payment.
+
 
 

@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentMethod } from "@prisma/client";
 import { X, CreditCard, ChevronLeft, Building2, Home } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers/_app";
 
@@ -151,6 +153,43 @@ function LeasePaymentLedger({
       setFlagPaymentId("");
     },
     onError: (err) => alert(err.message),
+  });
+
+  const { toast } = useToast();
+  const [isDeleteProofConfirmOpen, setIsDeleteProofConfirmOpen] = useState(false);
+  const [uploadingDetailProof, setUploadingDetailProof] = useState(false);
+
+  const deleteProofMutation = trpc.payments.deleteProof.useMutation({
+    onSuccess: () => {
+      toast("Payment proof removed", "success");
+      utils.payments.list.invalidate({ leaseId: lease.id });
+      if (selectedPayment) {
+        setSelectedPayment({
+          ...selectedPayment,
+          proofUrl: null,
+        });
+      }
+      setIsDeleteProofConfirmOpen(false);
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const attachProofMutation = trpc.payments.attachProof.useMutation({
+    onSuccess: (_, vars) => {
+      toast("Proof uploaded successfully", "success");
+      utils.payments.list.invalidate({ leaseId: lease.id });
+      if (selectedPayment) {
+        setSelectedPayment({
+          ...selectedPayment,
+          proofUrl: vars.proofUrl,
+        });
+      }
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
   });
 
   // Form states
@@ -300,6 +339,53 @@ function LeasePaymentLedger({
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch proof file URL.";
       alert(message);
+    }
+  };
+
+  const handleDetailProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedPayment) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast("File size exceeds 10MB limit.", "error");
+      e.target.value = "";
+      return;
+    }
+
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast("Only PDF and image files are allowed.", "error");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setUploadingDetailProof(true);
+      const { signedUrl, path } = await utils.client.payments.getUploadUrl.mutate({
+        leaseId: lease.id,
+        fileName: file.name,
+      });
+
+      const response = await fetch(signedUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload proof to storage.");
+      }
+
+      await attachProofMutation.mutateAsync({
+        paymentId: selectedPayment.id,
+        proofUrl: path,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload proof.";
+      toast(message, "error");
+    } finally {
+      setUploadingDetailProof(false);
+      e.target.value = "";
     }
   };
 
@@ -906,17 +992,50 @@ function LeasePaymentLedger({
                 </div>
               )}
 
-              {selectedPayment.proofUrl && (
+              {selectedPayment.proofUrl ? (
                 <div>
                   <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Proof Document</span>
-                  <button
-                    onClick={() => handleViewPaymentProof(selectedPayment.proofUrl!)}
-                    className="mt-2 inline-flex items-center text-xs text-white hover:underline bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-neutral-800"
-                  >
-                    View / Download Proof
-                  </button>
+                  <div className="mt-2 flex flex-col items-start gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleViewPaymentProof(selectedPayment.proofUrl!)}
+                      className="inline-flex items-center text-xs text-white hover:underline bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-neutral-800"
+                    >
+                      View / Download Proof
+                    </button>
+                    {selectedPayment.status === "pending" && selectedPayment.recordedBy === user?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsDeleteProofConfirmOpen(true)}
+                        className="text-xs text-red-500 hover:text-red-400 hover:underline transition-colors mt-0.5"
+                      >
+                        Remove proof
+                      </button>
+                    ) : (
+                      <p className="text-xs text-neutral-500 italic mt-0.5">
+                        Proof is locked because this payment is confirmed.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
+              ) : selectedPayment.status === "pending" && selectedPayment.recordedBy === user?.id ? (
+                <div>
+                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Proof Document</span>
+                  <div className="mt-2">
+                    <label className="block">
+                      <span className="sr-only">Upload proof document</span>
+                      <input
+                        type="file"
+                        accept=".pdf, image/*"
+                        onChange={handleDetailProofUpload}
+                        disabled={uploadingDetailProof}
+                        className="block w-full text-xs text-neutral-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white file:text-neutral-950 hover:file:bg-neutral-200 file:cursor-pointer disabled:opacity-50"
+                      />
+                    </label>
+                    {uploadingDetailProof && <p className="text-xs text-neutral-400 mt-1 animate-pulse">Uploading file...</p>}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="pt-4 border-t border-neutral-800">
@@ -930,6 +1049,22 @@ function LeasePaymentLedger({
           </div>
         </div>
       )}
+
+      {/* Remove Payment Proof Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteProofConfirmOpen}
+        onClose={() => setIsDeleteProofConfirmOpen(false)}
+        onConfirm={async () => {
+          if (selectedPayment) {
+            await deleteProofMutation.mutateAsync({ paymentId: selectedPayment.id });
+          }
+        }}
+        title="Remove payment proof?"
+        description="Are you sure you want to remove this proof document?"
+        confirmText="Remove"
+        variant="danger"
+        isLoading={deleteProofMutation.isPending}
+      />
     </main>
   );
 }

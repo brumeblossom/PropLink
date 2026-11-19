@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
-import { RentFrequency } from "@prisma/client";
+import { RentFrequency, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
 
 export const leasesRouter = router({
@@ -382,6 +382,60 @@ export const leasesRouter = router({
 
       return {
         signedUrl: data.signedUrl,
+      };
+    }),
+
+  deleteDocument: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: {
+            include: { property: true },
+          },
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lease not found.",
+        });
+      }
+
+      if (ctx.user.role !== Role.landlord || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the landlord of this lease can delete lease documents.",
+        });
+      }
+
+      if (!lease.documentUrl) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No document has been uploaded for this lease.",
+        });
+      }
+
+      const { error } = await ctx.supabase.storage
+        .from("leases")
+        .remove([lease.documentUrl]);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to delete lease document from storage: ${error.message}`,
+        });
+      }
+
+      await prisma.lease.update({
+        where: { id: input.leaseId },
+        data: { documentUrl: null },
+      });
+
+      return {
+        success: true,
       };
     }),
 

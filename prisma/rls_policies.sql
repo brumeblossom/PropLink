@@ -232,6 +232,26 @@ GRANT EXECUTE ON FUNCTION public.lease_id_from_path(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.lease_id_from_path(text) TO service_role;
 
 
+CREATE OR REPLACE FUNCTION public.can_delete_own_proof(p_name text)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.payments
+    WHERE proof_url = p_name
+      AND recorded_by = auth.uid()
+      AND status = 'pending'
+  );
+$$;
+
+ALTER FUNCTION public.can_delete_own_proof(text) OWNER TO postgres;
+GRANT EXECUTE ON FUNCTION public.can_delete_own_proof(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_delete_own_proof(text) TO service_role;
+
+
 -- ==========================================
 -- 1. Enable RLS on All Tables
 -- ==========================================
@@ -559,12 +579,15 @@ CREATE POLICY "leases_update_policy" ON storage.objects
     AND is_lease_landlord(lease_id_from_path(name))
   );
 
--- DELETE: bucket_id = 'leases' and the landlord of that lease only
+-- DELETE: bucket_id = 'leases' and either landlord of that lease or owner of pending payment proof
 CREATE POLICY "leases_delete_policy" ON storage.objects
   FOR DELETE
   TO authenticated
   USING (
     bucket_id = 'leases'
-    AND is_lease_landlord(lease_id_from_path(name))
+    AND (
+      is_lease_landlord(lease_id_from_path(name))
+      OR can_delete_own_proof(name)
+    )
   );
 

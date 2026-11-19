@@ -808,6 +808,131 @@ export const paymentsRouter = router({
       };
     }),
 
+  // Delete payment proof (recorder while pending, or reviewing landlord while pending)
+  deleteProof: authedProcedure
+    .input(z.object({ paymentId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const payment = await prisma.payment.findUnique({
+        where: { id: input.paymentId },
+        include: {
+          lease: {
+            include: {
+              unit: {
+                include: { property: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!payment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment not found.",
+        });
+      }
+
+      if (!payment.proofUrl) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No proof found to delete.",
+        });
+      }
+
+      if (payment.status !== PaymentStatus.pending) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Proof is locked because this payment is confirmed.",
+        });
+      }
+
+      const isRecorder = payment.recordedBy === ctx.user.id;
+      const isLandlord =
+        ctx.user.role === Role.landlord &&
+        payment.lease.unit.property.landlordId === ctx.user.id;
+
+      if (!isRecorder && !isLandlord) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not authorized to delete the proof for this payment.",
+        });
+      }
+
+      const { error } = await ctx.supabase.storage
+        .from("leases")
+        .remove([payment.proofUrl]);
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to delete payment proof from storage: ${error.message}`,
+        });
+      }
+
+      await prisma.payment.update({
+        where: { id: input.paymentId },
+        data: { proofUrl: null },
+      });
+
+      return {
+        success: true,
+      };
+    }),
+
+  // Attach/replace proof on a pending payment
+  attachProof: authedProcedure
+    .input(
+      z.object({
+        paymentId: z.string().uuid(),
+        proofUrl: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const payment = await prisma.payment.findUnique({
+        where: { id: input.paymentId },
+        include: {
+          lease: {
+            include: {
+              unit: {
+                include: { property: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!payment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Payment not found.",
+        });
+      }
+
+      if (payment.status !== PaymentStatus.pending) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Proof is locked because this payment is confirmed.",
+        });
+      }
+
+      const isRecorder = payment.recordedBy === ctx.user.id;
+      const isLandlord =
+        ctx.user.role === Role.landlord &&
+        payment.lease.unit.property.landlordId === ctx.user.id;
+
+      if (!isRecorder && !isLandlord) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not authorized to upload proof for this payment.",
+        });
+      }
+
+      return await prisma.payment.update({
+        where: { id: input.paymentId },
+        data: { proofUrl: input.proofUrl },
+      });
+    }),
+
   // Get current period billing summary (rent, paid, outstanding)
   getBillingSummary: authedProcedure
     .input(z.object({ leaseId: z.string().uuid() }))
