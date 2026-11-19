@@ -604,13 +604,15 @@ export default function UnitDetailPage() {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeLease) return;
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
     setUploadError(null);
+    if (!file || !activeLease) return;
 
     // 10MB limit
     if (file.size > 10 * 1024 * 1024) {
       setUploadError("File size exceeds 10MB limit.");
+      inputEl.value = "";
       return;
     }
 
@@ -618,6 +620,7 @@ export default function UnitDetailPage() {
     const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       setUploadError("Only PDF and image files are allowed.");
+      inputEl.value = "";
       return;
     }
 
@@ -645,10 +648,13 @@ export default function UnitDetailPage() {
 
       // 3. Refresh lease details to reflect documentUrl in UI
       utils.leases.getForUnit.invalidate({ unitId });
+      inputEl.value = "";
+      setUploadError(null);
       alert("Lease agreement uploaded successfully!");
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred during file upload.";
       setUploadError(message);
+      inputEl.value = "";
     } finally {
       setUploading(false);
     }
@@ -1033,6 +1039,10 @@ export default function UnitDetailPage() {
                     <input
                       type="file"
                       accept=".pdf, image/*"
+                      onClick={(e) => {
+                        setUploadError(null);
+                        (e.target as HTMLInputElement).value = "";
+                      }}
                       onChange={handleFileUpload}
                       disabled={uploading}
                       className="block w-full text-xs text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white file:text-neutral-950 hover:file:bg-neutral-200 file:cursor-pointer disabled:opacity-50"

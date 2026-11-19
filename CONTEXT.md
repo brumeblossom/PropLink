@@ -22,6 +22,7 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Functional Hardening & Specific UI Fixes (Epic I / Prompt 9) — Enabled strict app-wide dark mode styling, refactored outline button layout, consolidated property add unit buttons into an Add Unit dropdown, aligned Edit/Delete buttons, and made Sign Out text bolder.
 - [x] Signup Error Sanitization — Catch Prisma unique constraint on phone number and return user-friendly message, preventing database traces exposure during registration.
 - [x] Performance & Skeleton Optimization — Colocate Vercel server functions in dub1 next to Supabase, 30s query staleTime, 30s polling intervals, and instant skeleton layout loaders.
+- [x] RLS Policy Recursion & Leases Storage Fix — Break mutual recursion using SECURITY DEFINER helpers, rewrite table and storage policies for bucket 'leases', fix file input state reset on error.
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).
@@ -95,7 +96,6 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 
 ## Known issues / TODO
 - **Overlap UI Guard**: The "Create Lease" button is intentionally hidden on the unit detail page when an active lease exists (the form is only shown when the unit is vacant). Attempting to create a second overlapping lease via a direct API call will be rejected by the tRPC `leases.create` procedure with a descriptive error. The UI guard and API guard together satisfy B1/AC2.
-- **Document upload**: Lease document upload flow has a known issue (parked — not yet re-investigated).
 
 ## Performance Audit (2026-07-29)
 
@@ -127,5 +127,18 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
 - **Polling Harmonization (30s)**: Harmonized background polling intervals to 30s across `NotificationBell` (both system notifications and tenant notices), `landlord/notifications` (15s → 30s), and `tenant/payments` (10s → 30s), reducing idle request pressure.
 - **Skeleton Loaders**: Implemented standard shadcn `<Skeleton />` primitive in `src/components/ui/skeleton.tsx` and replaced full-page loading spinners across all primary landlord and tenant screens (landlord: dashboard, properties list, property detail, unit detail, tenants, notices, notifications, profile; tenant: dashboard, payments, profile), instantly rendering page frames and layout placeholders.
 - **Next.js Link Prefetching**: Confirmed sidebar navigation items in landlord and tenant layouts use `next/link` `<Link>` components for automatic prefetching on viewport entry / hover.
+
+## RLS Policy Recursion & Storage Objects Fix (2026-11-19)
+
+- **RLS Policy Recursion Root Cause**: Supabase Storage returned Postgres error `42P17` ("The database schema is invalid or incompatible" / "infinite recursion detected in policy") because `tenant_read_properties_policy` on `properties` queried `units`, while `landlord_units_policy` on `units` queried `properties`. When evaluating storage policies on `storage.objects` for bucket `leases`, this circular reference triggered Postgres's infinite recursion limit.
+- **SECURITY DEFINER Helper Functions**: Created 6 stable `SECURITY DEFINER` functions in the `public` schema (`is_property_landlord`, `is_unit_landlord`, `is_unit_tenant`, `is_property_tenant`, `can_access_lease`, `is_lease_landlord`) owned by `postgres` and granted `EXECUTE` to `authenticated`. Because `SECURITY DEFINER` functions run with postgres privileges and bypass RLS on their internal reads, cross-table checks no longer invoke recursive policy chains.
+- **Rewritten Table Policies**: Updated `tenant_read_properties_policy`, `landlord_units_policy`, `tenant_read_units_policy`, and `landlord_leases_policy` to call these helpers rather than performing table JOINs directly in policy expressions, keeping access boundaries strict.
+- **Storage Policies for 'leases' Bucket**: Standardized file paths to `<leaseId>/<timestamp>.<ext>` across lease agreements and tenant payment proofs. Defined 4 scoped policies on `storage.objects`:
+  - `SELECT`: `bucket_id = 'leases' AND can_access_lease((storage.foldername(name))[1]::uuid)`
+  - `INSERT`: `bucket_id = 'leases' AND can_access_lease((storage.foldername(name))[1]::uuid)`
+  - `UPDATE`: `bucket_id = 'leases' AND is_lease_landlord((storage.foldername(name))[1]::uuid)`
+  - `DELETE`: `bucket_id = 'leases' AND is_lease_landlord((storage.foldername(name))[1]::uuid)`
+- **File Input UX Hardening**: Fixed the UI issue on the landlord unit detail page where failed file uploads left the file name and error message persistent. Both the file input value and error state are now cleared when the user selects a new file.
+
 
 

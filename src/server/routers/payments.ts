@@ -734,7 +734,7 @@ export const paymentsRouter = router({
       }
 
       const fileExtension = input.fileName.split(".").pop() || "pdf";
-      const filePath = `payments/${input.leaseId}/${Date.now()}.${fileExtension}`;
+      const filePath = `${input.leaseId}/${Date.now()}.${fileExtension}`;
 
       const { data, error } = await ctx.supabase.storage
         .from("leases")
@@ -758,14 +758,14 @@ export const paymentsRouter = router({
     .input(z.object({ path: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const pathParts = input.path.split("/");
-      if (pathParts[0] !== "payments" || pathParts.length < 3) {
+      const leaseId = pathParts[0] === "payments" ? pathParts[1] : pathParts[0];
+      if (!leaseId) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Invalid payment proof file path format.",
         });
       }
 
-      const leaseId = pathParts[1];
       const lease = await prisma.lease.findUnique({
         where: { id: leaseId },
         include: {
