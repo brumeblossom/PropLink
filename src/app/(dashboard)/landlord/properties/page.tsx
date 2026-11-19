@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Select } from "@/components/ui/select";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
+import { Plus } from "lucide-react";
 
 export default function PropertiesPage() {
   const router = useRouter();
@@ -68,19 +71,7 @@ export default function PropertiesPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* Top Navbar */}
-        <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center space-x-4 ml-10 md:ml-0">
-              <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-                PropLink
-              </Link>
-              <span className="text-neutral-500">/</span>
-              <span className="text-sm font-medium text-neutral-300">Properties</span>
-            </div>
-            <Skeleton className="h-9 w-32 rounded-lg" />
-          </div>
-        </header>
+        <PageHeader title="Properties" />
 
         {/* Main Container */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -121,24 +112,18 @@ export default function PropertiesPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Top Navbar */}
-      <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4 ml-10 md:ml-0">
-            <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-              PropLink
-            </Link>
-            <span className="text-neutral-500">/</span>
-            <span className="text-sm font-medium text-neutral-300">Properties</span>
-          </div>
+      <PageHeader
+        title="Properties"
+        actions={
           <Button
             onClick={() => setIsModalOpen(true)}
-            className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm"
+            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm flex items-center"
           >
+            <Plus className="w-4 h-4 mr-1.5" />
             Add Property
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -269,7 +254,7 @@ export default function PropertiesPage() {
                     <label htmlFor="state" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       State
                     </label>
-                    <select
+                    <Select
                       id="state"
                       required
                       value={state}
@@ -277,7 +262,7 @@ export default function PropertiesPage() {
                         setState(e.target.value);
                         setCity(""); // Reset LGA (city column) when state changes
                       }}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1"
                     >
                       <option value="">Select State</option>
                       {NIGERIA_STATES.map((s) => (
@@ -285,19 +270,19 @@ export default function PropertiesPage() {
                           {s}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label htmlFor="city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       Local Government Area
                     </label>
-                    <select
+                    <Select
                       id="city"
                       required
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       disabled={!state}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px] disabled:opacity-50"
+                      className="mt-1"
                     >
                       <option value="">Select LGA</option>
                       {state &&
@@ -306,7 +291,7 @@ export default function PropertiesPage() {
                             {lga}
                           </option>
                         ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
 
@@ -314,16 +299,16 @@ export default function PropertiesPage() {
                   <label htmlFor="propertyType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Property Type
                   </label>
-                  <select
+                  <Select
                     id="propertyType"
                     value={propertyType}
                     onChange={(e) => setPropertyType(e.target.value as PropertyType)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    className="mt-1"
                   >
                     <option value={PropertyType.residential}>Residential</option>
                     <option value={PropertyType.commercial}>Commercial</option>
                     <option value={PropertyType.mixed}>Mixed-Use</option>
-                  </select>
+                  </Select>
                 </div>
 
                 {propertyType !== PropertyType.residential && (

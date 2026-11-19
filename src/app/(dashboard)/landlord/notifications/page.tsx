@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   payment_logged: {
@@ -123,56 +124,45 @@ export default function LandlordNotificationsPage() {
     };
 
   return (
-    <main className="max-w-3xl mx-auto px-6 py-10 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight flex items-center space-x-3">
-            <Bell className="w-7 h-7 text-neutral-400" />
-            <span>Notifications</span>
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <PageHeader
+        title="Notifications"
+        actions={
+          <div className="flex items-center space-x-3">
+            {/* Filter toggle */}
+            <div className="flex rounded-lg bg-neutral-900 border border-neutral-800 p-0.5 text-xs">
+              {(["all", "unread"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md font-medium capitalize transition-all",
+                    filter === f
+                      ? "bg-white text-neutral-950 shadow"
+                      : "text-neutral-400 hover:text-white"
+                  )}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
             {unreadCount > 0 && (
-              <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-full bg-red-500 text-[11px] font-bold text-white">
-                {unreadCount}
-              </span>
-            )}
-          </h1>
-          <p className="text-neutral-400 mt-1 text-sm">
-            Tenant payments, invite redemptions, messages and lease events.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {/* Filter toggle */}
-          <div className="flex rounded-lg bg-neutral-900 border border-neutral-800 p-0.5 text-xs">
-            {(["all", "unread"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "px-3 py-1.5 rounded-md font-medium capitalize transition-all",
-                  filter === f
-                    ? "bg-white text-neutral-950 shadow"
-                    : "text-neutral-400 hover:text-white"
-                )}
+              <Button
+                onClick={() => markAllRead.mutate()}
+                disabled={markAllRead.isPending}
+                variant="outline"
+                className="border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 h-8 px-3 text-xs flex items-center space-x-1.5"
               >
-                {f}
-              </button>
-            ))}
+                <Check className="w-3.5 h-3.5" />
+                <span>Mark all read</span>
+              </Button>
+            )}
           </div>
+        }
+      />
 
-          {unreadCount > 0 && (
-            <Button
-              onClick={() => markAllRead.mutate()}
-              disabled={markAllRead.isPending}
-              variant="outline"
-              className="border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 h-8 px-3 text-xs flex items-center space-x-1.5"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Mark all read</span>
-            </Button>
-          )}
-        </div>
-      </div>
+      <main className="max-w-3xl mx-auto px-6 py-10 space-y-8">
 
       {/* List */}
       {isLoading ? (
@@ -267,5 +257,6 @@ export default function LandlordNotificationsPage() {
         </div>
       )}
     </main>
+  </div>
   );
 }

@@ -3,6 +3,7 @@
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { Home } from "lucide-react";
@@ -18,62 +19,67 @@ export default function TenantDashboard() {
 
   if (isLoadingUser || isLoadingLeases) {
     return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Welcome */}
-        <div>
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-4 w-80 mt-2" />
-        </div>
-
-        {/* Lease Section Skeleton */}
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
-            <div className="flex items-center space-x-3">
-              <Skeleton className="h-7 w-32" />
-              <Skeleton className="h-4 w-40" />
-            </div>
-            <Skeleton className="h-6 w-20 rounded-full" />
+      <div className="min-h-screen bg-neutral-950 text-white">
+        <PageHeader title="Dashboard" />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Welcome */}
+          <div>
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-4 w-80 mt-2" />
           </div>
 
-          {/* 3 Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-8 w-32" />
-                <Skeleton className="h-3 w-40 mt-1" />
+          {/* Lease Section Skeleton */}
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-7 w-32" />
+                <Skeleton className="h-4 w-40" />
               </div>
-            ))}
-          </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
 
-          {/* Terms & Duration Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 backdrop-blur-sm space-y-4">
-            <Skeleton className="h-6 w-40" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            {/* 3 Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="space-y-1">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-5 w-32 mt-1" />
+                <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-3 w-40 mt-1" />
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Agreement Download Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <Skeleton className="h-5 w-44" />
-              <Skeleton className="h-3 w-64" />
+            {/* Terms & Duration Card */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 backdrop-blur-sm space-y-4">
+              <Skeleton className="h-6 w-40" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-1">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-5 w-32 mt-1" />
+                  </div>
+                ))}
+              </div>
             </div>
-            <Skeleton className="h-9 w-36 rounded-md" />
+
+            {/* Agreement Download Card */}
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex items-center justify-between">
+              <div className="space-y-1">
+                <Skeleton className="h-5 w-44" />
+                <Skeleton className="h-3 w-64" />
+              </div>
+              <Skeleton className="h-9 w-36 rounded-md" />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <PageHeader title="Dashboard" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Welcome */}
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight">
@@ -103,6 +109,7 @@ export default function TenantDashboard() {
         </div>
       )}
     </main>
+  </div>
   );
 }
 

@@ -197,6 +197,22 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
     - Payment modals display `"₦X left on this lease"` directly under the Amount input and reject amounts above it on client submit.
 - **UI Standard (CLAUDE.md Section 16)**:
   - Added strict UI standards covering Linear/Stripe/Vercel level polish, no redundant text, hover tooltips for disabled actions, standard 8px/12px radius, and responsive checks.
+- **UI Standard Polish & App-Wide Overhaul (Prompt 9)**:
+  - **Sticky Page Header**: Added shared `<PageHeader title actions? />` across all landlord and tenant dashboard pages (`h-16`, matching sidebar logo area height, with bottom border forming one continuous horizontal line at `top: 64px`). Integrated `SidebarProvider` and `useSidebar()` for mobile hamburger toggle. Phone view displays page title, notification bell, and `⋯` popover actions menu. Existing `← Back to ...` links retained under the header.
+  - **Dropdown Arrows (`<Select />`)**: Created shared `<Select />` with `appearance-none`, vertically centered `ChevronDown` at `right-3`, and `pr-9` padding across all forms, filters, and modals.
+  - **Button Styling**: Primary buttons are consistently filled (`bg-white text-neutral-950 font-semibold hover:bg-neutral-200`). Creation buttons incorporate a `+` icon (`Plus` from lucide): "Add Property", "Add Unit", "Add Payment", "Compose Notice". Destructive buttons use red filled (`bg-red-600 hover:bg-red-500 text-white`).
+  - **Confirm Dialogs (`<ConfirmDialog />`)**: Replaced all `window.confirm()` and `confirm()` calls with shared modal `<ConfirmDialog />` (`rounded-xl`, Cancel outline, Delete red filled). Grep confirms 0 `confirm(` calls remaining in codebase.
+  - **Avatar Removal**: Removed all avatar images, placeholder user icons, circle wrappers, and upload controls from UI across sidebar footers, cards, tables, chat, and notification bell, displaying clean text (name and email).
+  - **Consistent Renames**:
+    - Sidebar "Profile" → "Settings" on both landlord and tenant sides (`/landlord/settings` and `/tenant/settings`, with permanent redirects from old `/profile` routes).
+    - Sidebar "All Tenants" → "Tenant List".
+    - Sidebar "Send Announcements" → "Announcements".
+    - "Payment Ledger" → "Payment history" (landlord unit page & tenant payments page).
+    - "Log Payment" / "Log My Payment" → "+ Add Payment", modal title & submit button → "Add Payment".
+    - Notifications page: Bell icon beside page title removed.
+  - **Payment Notes**: Removed note text under date in payment history tables. Notes are displayed inside payment detail modals under "Notes" label (hidden when no note).
+  - **Invite Box**: On landlord unit page, "Tenant Invitation Pending" card is conditionally rendered only for unredeemed, non-expired invites. Displays clean "Invite expired" notice if expired and unclaimed.
+
 
 
 

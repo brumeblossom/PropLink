@@ -4,8 +4,10 @@ import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Select } from "@/components/ui/select";
 import { PaymentMethod } from "@prisma/client";
-import { X, CreditCard, ChevronLeft, Building2, Home } from "lucide-react";
+import { X, CreditCard, ChevronLeft, Building2, Home, Plus } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
@@ -39,60 +41,63 @@ function getLeaseStatus(lease: LeaseItem): "active" | "renewal_due" | "expired" 
 // ─── Lease Selector ────────────────────────────────────────────────────────────
 function LeaseSelector({ leases, onSelect }: { leases: LeaseItem[]; onSelect: (id: string) => void }) {
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h1>
-        <p className="text-neutral-400 text-sm mt-1">
-          You have multiple leases. Select a lease to view its payment ledger.
-        </p>
-      </div>
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <PageHeader title="Payments" />
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h1>
+          <p className="text-neutral-400 text-sm mt-1">
+            You have multiple leases. Select a lease to view its payment ledger.
+          </p>
+        </div>
 
-      <div className="space-y-3">
-        {leases.map((lease) => {
-          const status = getLeaseStatus(lease);
-          return (
-            <button
-              key={lease.id}
-              onClick={() => onSelect(lease.id)}
-              className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/10 hover:bg-neutral-900/30 hover:border-neutral-700 transition-all p-5 group"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg border border-neutral-800 bg-neutral-900 flex items-center justify-center shrink-0 group-hover:border-neutral-700 transition-colors">
-                    <Building2 className="w-5 h-5 text-neutral-400" />
+        <div className="space-y-3">
+          {leases.map((lease) => {
+            const status = getLeaseStatus(lease);
+            return (
+              <button
+                key={lease.id}
+                onClick={() => onSelect(lease.id)}
+                className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/10 hover:bg-neutral-900/30 hover:border-neutral-700 transition-all p-5 group"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg border border-neutral-800 bg-neutral-900 flex items-center justify-center shrink-0 group-hover:border-neutral-700 transition-colors">
+                      <Building2 className="w-5 h-5 text-neutral-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white leading-tight">
+                        {lease.unit.property.name}
+                      </p>
+                      <p className="text-neutral-400 text-xs mt-0.5">
+                        Unit {lease.unit.unitNumber} · {lease.unit.property.address}, {lease.unit.property.city}
+                      </p>
+                      <p className="text-neutral-400 text-xs mt-1">
+                        {formatCurrency(lease.rentAmount)}/{lease.rentFrequency} ·{" "}
+                        {new Date(lease.startDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                        {" – "}
+                        {new Date(lease.endDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-white leading-tight">
-                      {lease.unit.property.name}
-                    </p>
-                    <p className="text-neutral-400 text-xs mt-0.5">
-                      Unit {lease.unit.unitNumber} · {lease.unit.property.address}, {lease.unit.property.city}
-                    </p>
-                    <p className="text-neutral-400 text-xs mt-1">
-                      {formatCurrency(lease.rentAmount)}/{lease.rentFrequency} ·{" "}
-                      {new Date(lease.startDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
-                      {" – "}
-                      {new Date(lease.endDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
-                    </p>
-                  </div>
+                  <span
+                    className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      status === "renewal_due"
+                        ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                        : status === "active"
+                        ? "bg-green-950/30 text-green-400 border-green-900/30"
+                        : "bg-neutral-900 text-neutral-400 border-neutral-800"
+                    }`}
+                  >
+                    {status.replace("_", " ")}
+                  </span>
                 </div>
-                <span
-                  className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                    status === "renewal_due"
-                      ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                      : status === "active"
-                      ? "bg-green-950/30 text-green-400 border-green-900/30"
-                      : "bg-neutral-900 text-neutral-400 border-neutral-800"
-                  }`}
-                >
-                  {status.replace("_", " ")}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </main>
+              </button>
+            );
+          })}
+        </div>
+      </main>
+    </div>
   );
 }
 
@@ -389,83 +394,86 @@ function LeasePaymentLedger({
   const leaseStatus = getLeaseStatus(lease);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          {showBackButton && (
-            <button
-              onClick={onBack}
-              className="mt-1 text-neutral-400 hover:text-white transition-colors shrink-0"
-              title="Back to lease selector"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Billing &amp; Payments</h1>
-            <p className="text-neutral-400 text-sm mt-0.5 flex items-center gap-1.5">
-              <Home className="w-3.5 h-3.5 shrink-0" />
-              {lease.unit.property.name} · Unit {lease.unit.unitNumber}
-              <span
-                className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                  leaseStatus === "active"
-                    ? "bg-green-950/30 text-green-400 border-green-900/30"
-                    : leaseStatus === "renewal_due"
-                    ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                    : "bg-neutral-900 text-neutral-400 border-neutral-800"
-                }`}
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <PageHeader title="Payments" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            {showBackButton && (
+              <button
+                onClick={onBack}
+                className="mt-1 text-neutral-400 hover:text-white transition-colors shrink-0"
+                title="Back to lease selector"
               >
-                {leaseStatus.replace("_", " ")}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          {/* Year filter */}
-          <select
-            id="tenant-ledger-year-filter"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="h-9 rounded-lg border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-200 focus:outline-none focus:ring-1 focus:ring-white/20 cursor-pointer"
-            aria-label="Filter payment history by year"
-          >
-            {availableYears.map((yr) => (
-              <option key={yr} value={yr}>{yr}</option>
-            ))}
-          </select>
-          {(() => {
-            const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
-            return (
-              <div className={`relative inline-block ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
-                <Button
-                  onClick={() => {
-                    setIsLogPaymentOpen(true);
-                    setPaymentAmount(
-                      billingSummary?.outstanding
-                        ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
-                        : ""
-                    );
-                    setPaymentError(null);
-                  }}
-                  disabled={isPaidInFull}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none"
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Payment history</h1>
+              <p className="text-neutral-400 text-sm mt-0.5 flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 shrink-0" />
+                {lease.unit.property.name} · Unit {lease.unit.unitNumber}
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    leaseStatus === "active"
+                      ? "bg-green-950/30 text-green-400 border-green-900/30"
+                      : leaseStatus === "renewal_due"
+                      ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                      : "bg-neutral-900 text-neutral-400 border-neutral-800"
+                  }`}
                 >
-                  Log My Payment
-                </Button>
-                {isPaidInFull && (
-                  <div
-                    role="tooltip"
-                    className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                  {leaseStatus.replace("_", " ")}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            {/* Year filter */}
+            <Select
+              id="tenant-ledger-year-filter"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="h-9 w-28 text-sm"
+              aria-label="Filter payment history by year"
+            >
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </Select>
+            {(() => {
+              const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
+              return (
+                <div className={`relative inline-block ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
+                  <Button
+                    onClick={() => {
+                      setIsLogPaymentOpen(true);
+                      setPaymentAmount(
+                        billingSummary?.outstanding
+                          ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                          : ""
+                      );
+                      setPaymentError(null);
+                    }}
+                    disabled={isPaidInFull}
+                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none flex items-center"
                   >
-                    This lease is fully paid.
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    Add Payment
+                  </Button>
+                  {isPaidInFull && (
+                    <div
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                    >
+                      This lease is fully paid.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
       </div>
 
       {/* Billing Summary Banner */}
@@ -687,7 +695,7 @@ function LeasePaymentLedger({
           <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl my-8">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-800">
               <h2 className="text-xl font-bold text-white font-sans">
-                {editingPaymentId ? "Edit Pending Payment" : "Log My Payment"}
+                {editingPaymentId ? "Edit Pending Payment" : "Add Payment"}
               </h2>
               <button
                 onClick={() => { setIsLogPaymentOpen(false); resetPaymentForm(); }}
@@ -748,17 +756,17 @@ function LeasePaymentLedger({
                 <label htmlFor="paymentMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                   Payment Method
                 </label>
-                <select
+                <Select
                   id="paymentMethod"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  className="mt-1 h-10 text-sm"
                 >
                   <option value={PaymentMethod.cash}>Cash</option>
                   <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
                   <option value={PaymentMethod.cheque}>Cheque</option>
                   <option value={PaymentMethod.other}>Other</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -815,7 +823,7 @@ function LeasePaymentLedger({
                     ? "Saving..."
                     : editingPaymentId
                     ? "Save Changes"
-                    : "Log Payment"}
+                    : "Add Payment"}
                 </Button>
               </div>
             </form>
@@ -1053,6 +1061,7 @@ function LeasePaymentLedger({
         isLoading={deleteProofMutation.isPending}
       />
     </main>
+  </div>
   );
 }
 
@@ -1078,70 +1087,76 @@ export default function TenantPaymentsPage() {
 
   if (isLoading) {
     return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <Skeleton className="h-8 w-44" />
-            <Skeleton className="h-4 w-60" />
-          </div>
-          <Skeleton className="h-10 w-36 rounded-md" />
-        </div>
-
-        {/* 3 Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-2"
-            >
-              <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-3 w-40 mt-1" />
+      <div className="min-h-screen bg-neutral-950 text-white">
+        <PageHeader title="Payments" />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <Skeleton className="h-8 w-44" />
+              <Skeleton className="h-4 w-60" />
             </div>
-          ))}
-        </div>
+            <Skeleton className="h-10 w-36 rounded-md" />
+          </div>
 
-        {/* Ledger Table Card */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm overflow-hidden">
-          <div className="p-6 border-b border-neutral-800/80 flex justify-between items-center">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-8 w-28 rounded-lg" />
-          </div>
-          <div className="p-4 border-b border-neutral-800 flex gap-4">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-16 ml-auto" />
-          </div>
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
-              <div className="flex items-center space-x-6">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-28" />
+          {/* 3 Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-2"
+              >
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-3 w-40 mt-1" />
               </div>
-              <Skeleton className="h-5 w-20 rounded-full" />
+            ))}
+          </div>
+
+          {/* Ledger Table Card */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm overflow-hidden">
+            <div className="p-6 border-b border-neutral-800/80 flex justify-between items-center">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-8 w-28 rounded-lg" />
             </div>
-          ))}
-        </div>
-      </main>
+            <div className="p-4 border-b border-neutral-800 flex gap-4">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
+                <div className="flex items-center space-x-6">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!leases || leases.length === 0) {
     return (
-      <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto">
-          <CreditCard className="w-8 h-8 text-neutral-600" />
-        </div>
-        <h1 className="text-xl font-bold text-white">No active lease</h1>
-        <p className="text-neutral-400 text-sm">
-          You need an active tenancy to view your payment ledger.
-        </p>
-      </main>
+      <div className="min-h-screen bg-neutral-950 text-white">
+        <PageHeader title="Payments" />
+        <main className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto">
+            <CreditCard className="w-8 h-8 text-neutral-600" />
+          </div>
+          <h1 className="text-xl font-bold text-white">No active lease</h1>
+          <p className="text-neutral-400 text-sm">
+            You need an active tenancy to view your payment ledger.
+          </p>
+        </main>
+      </div>
     );
   }
 

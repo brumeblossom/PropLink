@@ -6,8 +6,10 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Select } from "@/components/ui/select";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X, User, Trash2 } from "lucide-react";
+import { X, Trash2, Plus } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
@@ -183,6 +185,7 @@ export default function UnitDetailPage() {
     onSuccess: () => {
       utils.units.listByProperty.invalidate({ propertyId });
       utils.properties.list.invalidate();
+      toast("Unit deleted", "success");
       router.push(`/landlord/properties/${propertyId}`);
     },
     onError: (err) => {
@@ -218,13 +221,7 @@ export default function UnitDetailPage() {
 
   const handleDeleteUnit = async () => {
     setDeleteError(null);
-    if (confirm("Are you sure you want to delete this unit? This action is permanent.")) {
-      try {
-        await deleteUnit.mutateAsync({ id: unitId });
-      } catch {
-        // handled
-      }
-    }
+    setIsDeleteUnitConfirmOpen(true);
   };
 
   // Payments queries
@@ -339,6 +336,8 @@ export default function UnitDetailPage() {
 
   // States
   const [isAddLeaseOpen, setIsAddLeaseOpen] = useState(false);
+  const [isDeleteUnitConfirmOpen, setIsDeleteUnitConfirmOpen] = useState(false);
+  const [paymentToVoid, setPaymentToVoid] = useState<string | null>(null);
 
   // Payment Ledger States
   const [isLogPaymentOpen, setIsLogPaymentOpen] = useState(false);
@@ -761,25 +760,7 @@ export default function UnitDetailPage() {
   if (isLoadingStatus || isLoadingLeases) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* Top Navbar */}
-        <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center space-x-4 ml-10 md:ml-0">
-              <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-                PropLink
-              </Link>
-              <span className="text-neutral-500">/</span>
-              <Link
-                href={`/landlord/properties/${propertyId}`}
-                className="text-sm font-medium text-neutral-400 hover:text-white transition-colors"
-              >
-                Property
-              </Link>
-              <span className="text-neutral-500">/</span>
-              <Skeleton className="h-4 w-20" />
-            </div>
-          </div>
-        </header>
+        <PageHeader title={unit ? `Unit ${unit.unitNumber}` : "Unit"} />
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -884,36 +865,19 @@ export default function UnitDetailPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Top Navbar */}
-      <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4 ml-10 md:ml-0">
-            <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-              PropLink
-            </Link>
-            <span className="text-neutral-500">/</span>
-            <Link
-              href={`/landlord/properties/${propertyId}`}
-              className="text-sm font-medium text-neutral-400 hover:text-white transition-colors"
-            >
-              {property.name}
-            </Link>
-            <span className="text-neutral-500">/</span>
-            <span className="text-sm font-medium text-neutral-300">Unit {unit.unitNumber}</span>
-          </div>
-
+      <PageHeader
+        title={`Unit ${unit.unitNumber}`}
+        actions={
           <div className="flex items-center space-x-3">
             <Button
               onClick={handleOpenEditUnit}
-              variant="outline"
-              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 px-4 text-sm"
+              className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm font-semibold"
             >
               Edit Unit
             </Button>
             <Button
               onClick={handleDeleteUnit}
-              variant="outline"
-              className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:text-red-300 h-9 px-4 text-sm"
+              className="bg-red-600 hover:bg-red-500 text-white font-medium h-9 px-4 text-sm"
             >
               Delete Unit
             </Button>
@@ -921,14 +885,14 @@ export default function UnitDetailPage() {
             {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && (
               <Button
                 onClick={handleOpenRenewLease}
-                className="bg-emerald-700 hover:bg-emerald-600 text-white h-9 px-4 text-sm font-semibold"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 px-4 text-sm font-semibold"
               >
                 Renew Lease
               </Button>
             )}
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -961,20 +925,7 @@ export default function UnitDetailPage() {
           {activeLease ? (
             <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
               <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Current Tenant</span>
-              <div className="flex items-center space-x-2">
-                {activeLease.tenant.avatarUrl ? (
-                  <img
-                    src={activeLease.tenant.avatarUrl}
-                    alt={activeLease.tenant.fullName}
-                    className="w-6 h-6 rounded-full object-cover border border-neutral-700"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-750">
-                    <User className="w-3 h-3 text-neutral-400" />
-                  </div>
-                )}
-                <span className="text-sm font-semibold text-white">{activeLease.tenant.fullName}</span>
-              </div>
+              <span className="text-sm font-semibold text-white">{activeLease.tenant.fullName}</span>
               <div className="text-xs text-neutral-400 space-y-0.5">
                 <p className="truncate">Email: {activeLease.tenant.email}</p>
                 <p>Phone: {activeLease.tenant.phone || "—"}</p>
@@ -1150,72 +1101,84 @@ export default function UnitDetailPage() {
             </div>
 
             {/* Tenant invitation card for landlords to copy/share */}
-            {activeLease.inviteCodes?.[0] && (
-              <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/5 p-6 backdrop-blur-sm space-y-4">
-                <div className="flex items-start space-x-3">
-                  <span className="text-xl">✉️</span>
-                  <div>
-                    <h3 className="text-lg font-bold text-yellow-550">Tenant Invitation Pending</h3>
-                    <p className="text-neutral-400 text-sm mt-1">
-                      This lease has been created, but the tenant hasn&apos;t joined PropLink yet. Share the code or the direct signup link below so they can claim their lease.
-                    </p>
+            {(() => {
+              const invite = activeLease.inviteCodes?.[0];
+              if (!invite || invite.redeemedAt) return null;
+              const isExpired = new Date(invite.expiresAt) <= new Date();
+              if (isExpired) {
+                return (
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-400">
+                    Invite expired
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="rounded-lg bg-neutral-900 border border-neutral-800/60 p-4 flex items-center justify-between">
+                );
+              }
+              return (
+                <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/5 p-6 backdrop-blur-sm space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-xl">✉️</span>
                     <div>
-                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Invite Code</span>
-                      <span className="font-mono text-lg font-bold text-white block mt-1 tracking-wider">{activeLease.inviteCodes[0].code}</span>
+                      <h3 className="text-lg font-bold text-yellow-550">Tenant Invitation Pending</h3>
+                      <p className="text-neutral-400 text-sm mt-1">
+                        This lease has been created, but the tenant hasn&apos;t joined PropLink yet. Share the code or the direct signup link below so they can claim their lease.
+                      </p>
                     </div>
-                    <Button
-                      onClick={() => handleCopyCode(activeLease.inviteCodes[0].code)}
-                      variant="outline"
-                      className="border-neutral-800 text-xs h-9 px-3 hover:bg-neutral-800 hover:text-white transition-colors"
-                    >
-                      {copiedCode ? "Copied! ✓" : "Copy Code"}
-                    </Button>
                   </div>
 
-                  <div className="rounded-lg bg-neutral-900 border border-neutral-800/60 p-4 flex items-center justify-between">
-                    <div>
-                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Direct Signup Link</span>
-                      <span className="text-neutral-400 text-xs truncate max-w-[200px] sm:max-w-xs block mt-1">
-                        {`${typeof window !== "undefined" ? window.location.origin : ""}/signup?code=${activeLease.inviteCodes[0].code}`}
-                      </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="rounded-lg bg-neutral-900 border border-neutral-800/60 p-4 flex items-center justify-between">
+                      <div>
+                        <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Invite Code</span>
+                        <span className="font-mono text-lg font-bold text-white block mt-1 tracking-wider">{invite.code}</span>
+                      </div>
+                      <Button
+                        onClick={() => handleCopyCode(invite.code)}
+                        variant="outline"
+                        className="border-neutral-800 text-xs h-9 px-3 hover:bg-neutral-800 hover:text-white transition-colors"
+                      >
+                        {copiedCode ? "Copied! ✓" : "Copy Code"}
+                      </Button>
                     </div>
-                    <Button
-                      onClick={() => handleCopyLink(activeLease.inviteCodes[0].code)}
-                      variant="outline"
-                      className="border-neutral-800 text-xs h-9 px-3 hover:bg-neutral-800 hover:text-white transition-colors"
-                    >
-                      {copiedLink ? "Link Copied! ✓" : "Copy Link"}
-                    </Button>
+
+                    <div className="rounded-lg bg-neutral-900 border border-neutral-800/60 p-4 flex items-center justify-between">
+                      <div>
+                        <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Direct Signup Link</span>
+                        <span className="text-neutral-400 text-xs truncate max-w-[200px] sm:max-w-xs block mt-1">
+                          {`${typeof window !== "undefined" ? window.location.origin : ""}/signup?code=${invite.code}`}
+                        </span>
+                      </div>
+                      <Button
+                        onClick={() => handleCopyLink(invite.code)}
+                        variant="outline"
+                        className="border-neutral-800 text-xs h-9 px-3 hover:bg-neutral-800 hover:text-white transition-colors"
+                      >
+                        {copiedLink ? "Link Copied! ✓" : "Copy Link"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Payment Ledger Section */}
             <div className="pt-6 border-t border-neutral-800 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h3 className="font-bold text-white text-xl">Payment Ledger</h3>
+                  <h3 className="font-bold text-white text-xl">Payment history</h3>
                   <p className="text-neutral-400 text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
                 </div>
                 <div className="flex items-center gap-3 self-start sm:self-auto">
                   {/* Year filter */}
-                  <select
+                  <Select
                     id="landlord-ledger-year-filter"
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="h-9 rounded-lg border border-neutral-700 bg-neutral-900 px-3 text-sm text-neutral-200 focus:outline-none focus:ring-1 focus:ring-white/20 cursor-pointer"
+                    className="h-9 w-28 text-sm"
                     aria-label="Filter payment history by year"
                   >
                     {availableYears.map((yr) => (
                       <option key={yr} value={yr}>{yr}</option>
                     ))}
-                  </select>
+                  </Select>
                   {(() => {
                     const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
                     return (
@@ -1231,9 +1194,10 @@ export default function UnitDetailPage() {
                             setPaymentError(null);
                           }}
                           disabled={isPaidInFull}
-                          className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none"
+                          className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none flex items-center"
                         >
-                          Log Payment
+                          <Plus className="w-4 h-4 mr-1.5" />
+                          Add Payment
                         </Button>
                         {isPaidInFull && (
                           <div
@@ -1357,11 +1321,6 @@ export default function UnitDetailPage() {
                           >
                             <td className="px-6 py-4 text-sm text-neutral-300">
                               {new Date(p.paymentDate).toLocaleDateString()}
-                              {p.notes && (
-                                <span className="block text-xs text-neutral-500 mt-0.5 truncate max-w-xs" title={p.notes}>
-                                  Note: {p.notes}
-                                </span>
-                              )}
                             </td>
                             <td className="px-6 py-4 text-sm font-semibold text-white">
                               {formatCurrency(p.amount)}
@@ -1443,12 +1402,7 @@ export default function UnitDetailPage() {
                                   <Button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (confirm("Are you sure you want to void this payment record? This will exclude it from outstanding balance calculations.")) {
-                                        resolvePayment.mutate({
-                                          paymentId: p.id,
-                                          action: "void"
-                                        });
-                                      }
+                                      setPaymentToVoid(p.id);
                                     }}
                                     variant="outline"
                                     size="sm"
@@ -1546,7 +1500,7 @@ export default function UnitDetailPage() {
                   <label htmlFor="editUnitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Unit Type
                   </label>
-                  <select
+                  <Select
                     id="editUnitType"
                     value={editUnitType}
                     onChange={(e) => {
@@ -1556,14 +1510,14 @@ export default function UnitDetailPage() {
                         setEditRoomsCount("");
                       }
                     }}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    className="mt-1 h-[38px] text-sm"
                   >
                     {allowedUnitTypes.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {isResidentialUnitType(editUnitType) && (
@@ -1701,16 +1655,16 @@ export default function UnitDetailPage() {
                   <label htmlFor="renewRentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Frequency
                   </label>
-                  <select
+                  <Select
                     id="renewRentFrequency"
                     value={renewRentFrequency}
                     onChange={(e) => setRenewRentFrequency(e.target.value as RentFrequency)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    className="mt-1 h-10 text-sm"
                   >
                     {Object.values(RentFrequency).map((f) => (
                       <option key={f} value={f}>{f}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -1950,16 +1904,16 @@ export default function UnitDetailPage() {
                     <label htmlFor="editRentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       Frequency
                     </label>
-                    <select
+                    <Select
                       id="editRentFrequency"
                       value={editRentFrequency}
                       onChange={(e) => setEditRentFrequency(e.target.value as RentFrequency)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 h-[38px] text-sm"
                     >
                       <option value={RentFrequency.monthly}>Monthly</option>
                       <option value={RentFrequency.quarterly}>Quarterly</option>
                       <option value={RentFrequency.annually}>Annually</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
 
@@ -2006,7 +1960,7 @@ export default function UnitDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl my-8">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-800">
-              <h2 className="text-xl font-bold text-white font-sans">Log Manual Payment</h2>
+              <h2 className="text-xl font-bold text-white font-sans">Add Payment</h2>
               <button
                 onClick={() => {
                   setIsLogPaymentOpen(false);
@@ -2065,17 +2019,17 @@ export default function UnitDetailPage() {
                 <label htmlFor="paymentMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                   Payment Method
                 </label>
-                <select
+                <Select
                   id="paymentMethod"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  className="mt-1 h-10 text-sm"
                 >
                   <option value={PaymentMethod.cash}>Cash</option>
                   <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
                   <option value={PaymentMethod.cheque}>Cheque</option>
                   <option value={PaymentMethod.other}>Other</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -2108,7 +2062,7 @@ export default function UnitDetailPage() {
                   disabled={createPayment.isPending}
                   className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
                 >
-                  {createPayment.isPending ? "Logging..." : "Log Payment"}
+                  {createPayment.isPending ? "Adding..." : "Add Payment"}
                 </Button>
               </div>
             </form>
@@ -2383,15 +2337,15 @@ export default function UnitDetailPage() {
                 <label htmlFor="editAction" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                   Resolution Action
                 </label>
-                <select
+                <Select
                   id="editAction"
                   value={editAction}
                   onChange={(e) => setEditAction(e.target.value as "edit" | "void")}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  className="mt-1 h-10 text-sm"
                 >
                   <option value="edit">Correct Details & Keep Confirmed</option>
                   <option value="void">Void Payment Entirely</option>
-                </select>
+                </Select>
               </div>
 
               {editAction === "edit" ? (
@@ -2427,17 +2381,17 @@ export default function UnitDetailPage() {
                     <label htmlFor="editMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       Corrected Method
                     </label>
-                    <select
+                    <Select
                       id="editMethod"
                       value={editMethod}
                       onChange={(e) => setEditMethod(e.target.value as PaymentMethod)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                      className="mt-1 h-10 text-sm"
                     >
                       <option value={PaymentMethod.cash}>Cash</option>
                       <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
                       <option value={PaymentMethod.cheque}>Cheque</option>
                       <option value={PaymentMethod.other}>Other</option>
-                    </select>
+                    </Select>
                   </div>
                 </>
               ) : (
@@ -2501,6 +2455,51 @@ export default function UnitDetailPage() {
         confirmText="Remove"
         variant="danger"
         isLoading={deletePaymentProofMutation.isPending}
+      />
+
+      {/* Delete Unit Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteUnitConfirmOpen}
+        onClose={() => setIsDeleteUnitConfirmOpen(false)}
+        onConfirm={async () => {
+          setDeleteError(null);
+          try {
+            await deleteUnit.mutateAsync({ id: unitId });
+            setIsDeleteUnitConfirmOpen(false);
+          } catch {
+            // handled
+          }
+        }}
+        title={`Delete Unit ${unit?.unitNumber || ""}?"`}
+        description="Are you sure you want to delete this unit? This action is permanent."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleteUnit.isPending}
+      />
+
+      {/* Void Payment Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(paymentToVoid)}
+        onClose={() => setPaymentToVoid(null)}
+        onConfirm={async () => {
+          if (!paymentToVoid) return;
+          try {
+            await resolvePayment.mutateAsync({
+              paymentId: paymentToVoid,
+              action: "void",
+            });
+            setPaymentToVoid(null);
+          } catch {
+            // handled
+          }
+        }}
+        title="Void Payment?"
+        description="Are you sure you want to void this payment record? This will exclude it from outstanding balance calculations."
+        confirmText="Void"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={resolvePayment.isPending}
       />
     </div>
   );

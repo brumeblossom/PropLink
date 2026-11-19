@@ -31,7 +31,7 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in-0 duration-150">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+      <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl animate-in zoom-in-95 duration-150">
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
           <h2 className="text-lg font-bold text-white font-sans flex items-center gap-2">
             {variant === "danger" && <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />}
@@ -56,7 +56,7 @@ export function ConfirmDialog({
             onClick={onClose}
             disabled={isLoading}
             variant="outline"
-            className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-[38px]"
+            className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm font-medium"
           >
             {cancelText}
           </Button>
@@ -64,10 +64,10 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`w-1/2 font-semibold h-[38px] ${
+            className={`w-1/2 font-semibold h-10 text-sm ${
               variant === "danger"
                 ? "bg-red-600 hover:bg-red-500 text-white"
-                : "bg-white text-black hover:bg-neutral-200"
+                : "bg-white text-neutral-950 hover:bg-neutral-200"
             }`}
           >
             {isLoading ? "Deleting..." : confirmText}

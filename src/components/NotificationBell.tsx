@@ -13,8 +13,7 @@ import {
   UserCheck, 
   Check, 
   Inbox, 
-  X,
-  User
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatWidget } from "@/components/ChatWidgetContext";
@@ -282,11 +281,6 @@ export function NotificationBell() {
                 <div className="flex items-center space-x-2 mt-1.5">
                   {item.senderName && (
                     <span className="text-[10px] text-neutral-500 truncate flex items-center space-x-1">
-                      {item.senderAvatar ? (
-                        <img src={item.senderAvatar} alt="" className="w-3.5 h-3.5 rounded-full object-cover" />
-                      ) : (
-                        <span className="w-3.5 h-3.5 rounded-full bg-neutral-800 flex items-center justify-center text-[8px]"><User className="w-2 h-2" /></span>
-                      )}
                       <span className="font-medium text-neutral-400">{item.senderName}</span>
                     </span>
                   )}
@@ -348,13 +342,6 @@ export function NotificationBell() {
             </div>
 
             <div className="flex items-center space-x-3 mt-5 pt-4 border-t border-neutral-900">
-              {selectedNotice.senderAvatar ? (
-                <img src={selectedNotice.senderAvatar} alt="" className="w-9 h-9 rounded-full object-cover border border-neutral-700" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700">
-                  <User className="w-4 h-4 text-neutral-400" />
-                </div>
-              )}
               <div>
                 <p className="text-xs font-semibold text-white">{selectedNotice.senderName}</p>
                 <p className="text-[10px] text-neutral-500">Property Landlord</p>

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Select } from "@/components/ui/select";
 import { PropertyType } from "@prisma/client";
 
 export default function LandlordDashboard() {
@@ -18,6 +20,7 @@ export default function LandlordDashboard() {
   if (isLoadingUser || isLoadingProperties) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
+        <PageHeader title="Dashboard" />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
@@ -115,6 +118,7 @@ export default function LandlordDashboard() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
+      <PageHeader title="Dashboard" />
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -165,30 +169,30 @@ export default function LandlordDashboard() {
             {/* Property Type Filter */}
             <div className="flex items-center space-x-2">
               <span className="text-xs text-neutral-500 uppercase font-semibold">Type:</span>
-              <select
+              <Select
                 value={propertyTypeFilter}
                 onChange={(e) => setPropertyTypeFilter(e.target.value)}
-                className="bg-neutral-900 border border-neutral-800 rounded-lg text-xs px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-neutral-700"
+                className="text-xs h-8 w-32"
               >
                 <option value="all">All Types</option>
                 <option value={PropertyType.residential}>Residential</option>
                 <option value={PropertyType.commercial}>Commercial</option>
                 <option value={PropertyType.mixed}>Mixed-Use</option>
-              </select>
+              </Select>
             </div>
 
             {/* Lease Status Filter */}
             <div className="flex items-center space-x-2">
               <span className="text-xs text-neutral-500 uppercase font-semibold">Status:</span>
-              <select
+              <Select
                 value={leaseStatusFilter}
                 onChange={(e) => setLeaseStatusFilter(e.target.value)}
-                className="bg-neutral-900 border border-neutral-800 rounded-lg text-xs px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-neutral-700"
+                className="text-xs h-8 w-32"
               >
                 <option value="all">All Statuses</option>
                 <option value="occupied">Occupied</option>
                 <option value="vacant">Vacant</option>
-              </select>
+              </Select>
             </div>
           </div>
         </div>

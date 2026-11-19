@@ -6,6 +6,10 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Select } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { X, Trash2, ChevronDown, Plus } from "lucide-react";
@@ -28,12 +32,17 @@ export default function PropertyDetailPage() {
   const { data: units, isLoading: isLoadingUnits } = trpc.units.listByProperty.useQuery({ propertyId });
 
 
+  const { toast } = useToast();
+  const [isDeletePropertyConfirmOpen, setIsDeletePropertyConfirmOpen] = useState(false);
+  const [unitToDelete, setUnitToDelete] = useState<{ id: string; unitNumber: string } | null>(null);
+
   // Mutations
   const updateProperty = trpc.properties.update.useMutation({
     onSuccess: () => {
       utils.properties.list.invalidate();
       utils.properties.getById.invalidate({ id: propertyId });
       setIsEditPropertyOpen(false);
+      toast("Property updated", "success");
     },
   });
 
@@ -41,6 +50,7 @@ export default function PropertyDetailPage() {
     onSuccess: () => {
       utils.properties.list.invalidate();
       utils.properties.getById.invalidate({ id: propertyId });
+      toast("Property deleted", "success");
       router.push("/landlord/properties");
     },
     onError: (err) => {
@@ -55,6 +65,7 @@ export default function PropertyDetailPage() {
       utils.properties.getById.invalidate({ id: propertyId });
       setIsAddUnitOpen(false);
       resetUnitForm();
+      toast("Unit created", "success");
     },
     onError: (err) => {
       setUnitError(err.message);
@@ -68,6 +79,7 @@ export default function PropertyDetailPage() {
       utils.properties.getById.invalidate({ id: propertyId });
       setIsBulkAddOpen(false);
       resetBulkForm();
+      toast("Units created successfully", "success");
     },
     onError: (err) => {
       setBulkError(err.message);
@@ -81,6 +93,7 @@ export default function PropertyDetailPage() {
       utils.properties.getById.invalidate({ id: propertyId });
       setIsEditUnitOpen(false);
       resetEditUnitForm();
+      toast("Unit updated", "success");
     },
     onError: (err) => {
       setEditUnitError(err.message);
@@ -92,6 +105,8 @@ export default function PropertyDetailPage() {
       utils.units.listByProperty.invalidate({ propertyId });
       utils.properties.list.invalidate();
       utils.properties.getById.invalidate({ id: propertyId });
+      toast("Unit deleted", "success");
+      setUnitToDelete(null);
     },
     onError: (err) => {
       setDeleteError(err.message);
@@ -304,12 +319,11 @@ export default function PropertyDetailPage() {
 
   const handleDeleteProperty = async () => {
     setDeleteError(null);
-    if (confirm("Are you sure you want to delete this property? This action is permanent.")) {
-      try {
-        await deleteProperty.mutateAsync({ id: propertyId });
-      } catch (err) {
-        console.error(err);
-      }
+    try {
+      await deleteProperty.mutateAsync({ id: propertyId });
+      setIsDeletePropertyConfirmOpen(false);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -359,14 +373,13 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleDeleteUnit = async (id: string) => {
+  const handleDeleteUnit = async () => {
+    if (!unitToDelete) return;
     setDeleteError(null);
-    if (confirm("Are you sure you want to delete this unit? This action is permanent.")) {
-      try {
-        await deleteUnit.mutateAsync({ id });
-      } catch {
-        // handled
-      }
+    try {
+      await deleteUnit.mutateAsync({ id: unitToDelete.id });
+    } catch {
+      // handled
     }
   };
 
@@ -397,22 +410,7 @@ export default function PropertyDetailPage() {
   if (isLoadingProperty || isLoadingUnits) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
-        {/* Top Navbar */}
-        <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center space-x-4 ml-10 md:ml-0">
-              <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-                PropLink
-              </Link>
-              <span className="text-neutral-500">/</span>
-              <Link href="/landlord/properties" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">
-                Properties
-              </Link>
-              <span className="text-neutral-500">/</span>
-              <Skeleton className="h-4 w-28" />
-            </div>
-          </div>
-        </header>
+        <PageHeader title={<Skeleton className="h-6 w-36" />} />
 
         {/* Main Container */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -494,39 +492,25 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      {/* Top Navbar */}
-      <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4 ml-10 md:ml-0">
-            <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90">
-              PropLink
-            </Link>
-            <span className="text-neutral-500">/</span>
-            <Link href="/landlord/properties" className="text-sm font-medium text-neutral-400 hover:text-white transition-colors">
-              Properties
-            </Link>
-            <span className="text-neutral-500">/</span>
-            <span className="text-sm font-medium text-neutral-300 truncate max-w-[150px]">{property.name}</span>
-          </div>
-
-          <div className="flex items-center space-x-3">
+      <PageHeader
+        title={property.name}
+        actions={
+          <>
             <Button
               onClick={handleOpenEdit}
-              variant="outline"
-              className="border-neutral-800 text-white hover:bg-neutral-900 h-9 text-sm bg-transparent"
+              className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm"
             >
               Edit Property
             </Button>
             <Button
-              onClick={handleDeleteProperty}
-              variant="destructive"
-              className="bg-red-950/30 text-red-400 border border-red-900/50 hover:bg-red-950/60 h-9 text-sm"
+              onClick={() => setIsDeletePropertyConfirmOpen(true)}
+              className="bg-red-600 hover:bg-red-500 text-white font-semibold h-9 px-4 text-sm"
             >
               Delete Property
             </Button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -667,7 +651,7 @@ export default function PropertyDetailPage() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteUnit(unit.id)}
+                            onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
                             className="text-xs text-red-400 hover:text-red-300 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 px-2 py-1 rounded transition-colors"
                           >
                             Delete
@@ -748,7 +732,7 @@ export default function PropertyDetailPage() {
                     <label htmlFor="edit-state" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       State
                     </label>
-                    <select
+                    <Select
                       id="edit-state"
                       required
                       value={propertyState}
@@ -756,7 +740,7 @@ export default function PropertyDetailPage() {
                         setPropertyState(e.target.value);
                         setPropertyCity(""); // Reset LGA (city column) when state changes
                       }}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1"
                     >
                       <option value="">Select State</option>
                       {NIGERIA_STATES.map((s) => (
@@ -764,19 +748,19 @@ export default function PropertyDetailPage() {
                           {s}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label htmlFor="edit-city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       Local Government Area
                     </label>
-                    <select
+                    <Select
                       id="edit-city"
                       required
                       value={propertyCity}
                       onChange={(e) => setPropertyCity(e.target.value)}
                       disabled={!propertyState}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px] disabled:opacity-50"
+                      className="mt-1"
                     >
                       <option value="">Select LGA</option>
                       {propertyState &&
@@ -785,7 +769,7 @@ export default function PropertyDetailPage() {
                             {lga}
                           </option>
                         ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
 
@@ -793,16 +777,16 @@ export default function PropertyDetailPage() {
                   <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Property Type
                   </label>
-                  <select
+                  <Select
                     id="edit-propertyType"
                     value={propertyType}
                     onChange={(e) => setPropertyType(e.target.value as PropertyType)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    className="mt-1"
                   >
                     <option value={PropertyType.residential}>Residential</option>
                     <option value={PropertyType.commercial}>Commercial</option>
                     <option value={PropertyType.mixed}>Mixed-Use</option>
-                  </select>
+                  </Select>
                 </div>
 
                 {propertyType !== PropertyType.residential && (
@@ -889,21 +873,21 @@ export default function PropertyDetailPage() {
                   <label htmlFor="unitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Unit Type
                   </label>
-                  <select
+                  <Select
                     id="unitType"
                     value={unitType}
                     onChange={(e) => {
                       setUnitType(e.target.value);
                       setRoomsCount("");
                     }}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    className="mt-1"
                   >
                     {allowedUnitTypes.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {isResidentialUnitType(unitType) && (
@@ -993,7 +977,7 @@ export default function PropertyDetailPage() {
                   <label htmlFor="editUnitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Unit Type
                   </label>
-                  <select
+                  <Select
                     id="editUnitType"
                     value={editUnitType}
                     onChange={(e) => {
@@ -1003,14 +987,14 @@ export default function PropertyDetailPage() {
                         setEditRoomsCount("");
                       }
                     }}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    className="mt-1"
                   >
                     {allowedUnitTypes.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {isResidentialUnitType(editUnitType) && (
@@ -1131,21 +1115,21 @@ export default function PropertyDetailPage() {
                     <label htmlFor="rangeType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                       Unit Type
                     </label>
-                    <select
+                    <Select
                       id="rangeType"
                       value={rangeType}
                       onChange={(e) => {
                         setRangeType(e.target.value);
                         setRangeRoomsCount("");
                       }}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                      className="mt-1"
                     >
                       {allowedUnitTypes.map((type) => (
                         <option key={type} value={type}>
                           {type}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   {isResidentialUnitType(rangeType) && (
@@ -1222,7 +1206,7 @@ export default function PropertyDetailPage() {
                         />
                       </div>
                       <div className="col-span-4">
-                        <select
+                        <Select
                           value={row.unitType}
                           onChange={(e) => {
                             const newRows = [...manualRows];
@@ -1232,14 +1216,14 @@ export default function PropertyDetailPage() {
                             }
                             setManualRows(newRows);
                           }}
-                          className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                          className="h-10 text-sm"
                         >
                           {allowedUnitTypes.map((type) => (
                             <option key={type} value={type}>
                               {type}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                       <div className="col-span-2">
                         <input
@@ -1309,6 +1293,30 @@ export default function PropertyDetailPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isDeletePropertyConfirmOpen}
+        onClose={() => setIsDeletePropertyConfirmOpen(false)}
+        onConfirm={handleDeleteProperty}
+        title="Delete Property?"
+        description="Are you sure you want to delete this property? This action is permanent and will delete all units and leases."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleteProperty.isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(unitToDelete)}
+        onClose={() => setUnitToDelete(null)}
+        onConfirm={handleDeleteUnit}
+        title={`Delete Unit ${unitToDelete?.unitNumber || ""}?"`}
+        description="Are you sure you want to delete this unit? This action is permanent."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleteUnit.isPending}
+      />
     </div>
   );
 }

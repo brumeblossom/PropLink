@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Send, User, MessageSquare, Loader2 } from "lucide-react";
+import { Send, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UnitChatPanelProps {
@@ -153,22 +153,9 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
     >
       {/* Header bar */}
       <div className="px-5 py-4 border-b border-neutral-850 bg-neutral-950/45 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          {counterparty.avatarUrl ? (
-            <img 
-              src={counterparty.avatarUrl} 
-              alt={counterparty.fullName} 
-              className="w-9 h-9 rounded-full object-cover border border-neutral-800"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-850">
-              <User className="w-4 h-4 text-neutral-400" />
-            </div>
-          )}
-          <div>
-            <h4 className="text-sm font-semibold text-white leading-tight">{counterparty.fullName}</h4>
-            <span className="text-[10px] text-neutral-500 capitalize">{currentUser?.role === "landlord" ? "Tenant" : "Landlord"}</span>
-          </div>
+        <div>
+          <h4 className="text-sm font-semibold text-white leading-tight">{counterparty.fullName}</h4>
+          <span className="text-[10px] text-neutral-500 capitalize">{currentUser?.role === "landlord" ? "Tenant" : "Landlord"}</span>
         </div>
       </div>
 
@@ -190,22 +177,6 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
                 key={msg.id}
                 className={cn("flex items-end space-x-2.5", isMe ? "justify-end" : "justify-start")}
               >
-                {!isMe && (
-                  <div className="flex-shrink-0 mb-1">
-                    {msg.sender.avatarUrl ? (
-                      <img 
-                        src={msg.sender.avatarUrl} 
-                        alt="" 
-                        className="w-7 h-7 rounded-full object-cover border border-neutral-800"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-neutral-900 flex items-center justify-center border border-neutral-850">
-                        <User className="w-3.5 h-3.5 text-neutral-400" />
-                      </div>
-                    )}
-                  </div>
-                )}
-                
                 <div className="flex flex-col space-y-1 max-w-[70%]">
                   <div 
                     className={cn(

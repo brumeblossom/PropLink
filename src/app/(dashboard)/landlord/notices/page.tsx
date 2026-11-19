@@ -4,6 +4,8 @@ import { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { NoticeType, NotificationChannel } from "@prisma/client";
 import { 
@@ -131,25 +133,22 @@ export default function LandlordNoticesPage() {
   };
 
   return (
-    <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Send Announcements</h1>
-          <p className="text-neutral-400 mt-1 text-sm">
-            Send updates, maintenance announcements, and payment reminders to your tenants.
-          </p>
-        </div>
-        <Button
-          onClick={() => setIsComposeOpen(true)}
-          className="bg-white text-neutral-950 hover:bg-neutral-200 transition-all font-semibold flex items-center space-x-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Compose Notice</span>
-        </Button>
-      </div>
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <PageHeader
+        title="Announcements"
+        actions={
+          <Button
+            onClick={() => setIsComposeOpen(true)}
+            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm flex items-center"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Compose Notice
+          </Button>
+        }
+      />
 
-      {/* Notices List */}
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        {/* Notices List */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-neutral-200">Sent History</h2>
 
@@ -364,32 +363,32 @@ export default function LandlordNoticesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-neutral-300">Select Property</label>
-                    <select
+                    <Select
                       value={selectedPropertyId}
                       onChange={(e) => { setSelectedPropertyId(e.target.value); setSelectedUnitId(""); }}
-                      className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2 text-white text-xs focus:border-neutral-700 focus:outline-none"
+                      className="text-xs h-9"
                     >
                       <option value="">-- Choose Property --</option>
                       {properties?.map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   {targetType === "unit" && (
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-neutral-300">Select Unit</label>
-                      <select
+                      <Select
                         value={selectedUnitId}
                         onChange={(e) => setSelectedUnitId(e.target.value)}
                         disabled={!selectedPropertyId}
-                        className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2 text-white text-xs focus:border-neutral-700 focus:outline-none disabled:opacity-55"
+                        className="text-xs h-9 disabled:opacity-55"
                       >
                         <option value="">-- Choose Unit --</option>
                         {units.map((u) => (
                           <option key={u.id} value={u.id}>Unit {u.unitNumber}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   )}
                 </div>
@@ -404,21 +403,21 @@ export default function LandlordNoticesPage() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Scheduled Water Maintenance"
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2 text-white text-xs focus:border-neutral-700 focus:outline-none placeholder-neutral-600"
+                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2 text-white text-xs focus:border-neutral-700 focus:outline-none placeholder-neutral-600 h-9"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-neutral-300">Category</label>
-                  <select
+                  <Select
                     value={type}
                     onChange={(e) => setType(e.target.value as NoticeType)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2 text-white text-xs focus:border-neutral-700 focus:outline-none"
+                    className="text-xs h-9"
                   >
                     <option value={NoticeType.general}>General</option>
                     <option value={NoticeType.maintenance}>Maintenance</option>
                     <option value={NoticeType.rent_reminder}>Rent Reminder</option>
                     <option value={NoticeType.rent_increment}>Rent Increment</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -496,5 +495,6 @@ export default function LandlordNoticesPage() {
         </div>
       )}
     </main>
+  </div>
   );
 }
