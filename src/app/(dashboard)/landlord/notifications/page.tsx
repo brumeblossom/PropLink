@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PageTitleRow } from "@/components/layout/PageTitleRow";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -126,44 +127,54 @@ export default function LandlordNotificationsPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <PageHeader
-        title="Notifications"
-        actions={
-          <div className="flex items-center space-x-3">
-            {/* Filter toggle */}
-            <div className="flex rounded-lg bg-neutral-900 border border-neutral-800 p-0.5 text-xs">
-              {(["all", "unread"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-md font-medium capitalize transition-all",
-                    filter === f
-                      ? "bg-white text-neutral-950 shadow"
-                      : "text-neutral-400 hover:text-white"
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
+      <PageHeader title="Notifications" />
+
+      <PageContainer className="space-y-6">
+        <PageTitleRow
+          title="Notifications"
+          actions={
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Filter toggle */}
+              <div className="flex rounded-lg bg-neutral-900 border border-neutral-800 p-0.5 text-xs">
+                {(["all", "unread"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md font-medium capitalize transition-all",
+                      filter === f
+                        ? "bg-white text-neutral-950 shadow"
+                        : "text-neutral-400 hover:text-white"
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+
+              {unreadCount > 0 && (
+                <div className="relative group">
+                  <Button
+                    onClick={() => markAllRead.mutate()}
+                    disabled={markAllRead.isPending}
+                    variant="outline"
+                    className="border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 h-8 px-2.5 sm:px-3 text-xs flex items-center space-x-1.5"
+                    aria-label="Mark all read"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Mark all read</span>
+                  </Button>
+                  <div
+                    role="tooltip"
+                    className="pointer-events-none absolute bottom-full right-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 hidden group-hover:block sm:group-hover:hidden z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                  >
+                    Mark all read
+                  </div>
+                </div>
+              )}
             </div>
-
-            {unreadCount > 0 && (
-              <Button
-                onClick={() => markAllRead.mutate()}
-                disabled={markAllRead.isPending}
-                variant="outline"
-                className="border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 h-8 px-3 text-xs flex items-center space-x-1.5"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Mark all read</span>
-              </Button>
-            )}
-          </div>
-        }
-      />
-
-      <PageContainer>
+          }
+        />
 
       {/* List */}
       {isLoading ? (

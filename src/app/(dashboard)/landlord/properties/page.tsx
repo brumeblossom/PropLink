@@ -6,6 +6,7 @@ import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PageTitleRow } from "@/components/layout/PageTitleRow";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
@@ -213,27 +214,32 @@ export default function PropertiesPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <PageHeader
-        title="Properties"
-        actions={
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Add Property
-          </Button>
-        }
-      />
+      <PageHeader title="Properties" />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight">Your Properties</h1>
-          <p className="text-neutral-400 text-sm">
-            Manage your buildings, leasable units, and view active leases.
-          </p>
-        </div>
+        <PageTitleRow
+          title="Your Properties"
+          description="Manage your buildings, leasable units, and view active leases."
+          actions={
+            <div className="relative group">
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
+                aria-label="Add Property"
+              >
+                <Plus className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Add Property</span>
+              </Button>
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full right-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 hidden group-hover:block sm:group-hover:hidden z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+              >
+                Add Property
+              </div>
+            </div>
+          }
+        />
 
         {properties && properties.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

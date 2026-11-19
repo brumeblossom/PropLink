@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Select } from "@/components/ui/select";
 import { PaymentMethod } from "@prisma/client";
-import { X, CreditCard, ChevronLeft, Building2, Home, Plus } from "lucide-react";
+import { X, CreditCard, ChevronLeft, Building2, Home, Plus, Check, AlertTriangle, Pencil, FileText, MoreHorizontal } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
@@ -218,6 +218,7 @@ function LeasePaymentLedger({
   // Payment details modal
   const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
+  const [openPaymentMenuId, setOpenPaymentMenuId] = useState<string | null>(null);
 
   // Year filter
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -562,9 +563,9 @@ function LeasePaymentLedger({
                 Method
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Status / Verification
+                Status
               </th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -577,7 +578,7 @@ function LeasePaymentLedger({
                   <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                   <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                  <td className="px-6 py-4 text-right"><Skeleton className="h-7 w-16 rounded ml-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Skeleton className="h-8 w-8 rounded-lg mx-auto" /></td>
                 </tr>
               ))
             ) : filteredPayments.length === 0 ? (
@@ -591,7 +592,6 @@ function LeasePaymentLedger({
             ) : (
               filteredPayments.map((p) => {
                 const isLandlordLogged = p.recordedByRole === "landlord";
-                const isPendingAck = isLandlordLogged && !p.counterVerifiedAt && !p.disputedByTenant;
                 return (
                   <tr
                     key={p.id}
@@ -609,77 +609,237 @@ function LeasePaymentLedger({
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex flex-col space-y-1">
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border w-fit ${
-                            p.status === "confirmed"
-                              ? "bg-green-950/30 text-green-400 border-green-900/30"
-                              : p.status === "disputed"
-                              ? "bg-red-950/30 text-red-400 border-red-900/30"
-                              : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                          }`}
-                        >
-                          {paymentStatusLabel[p.status] ?? p.status}
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border w-fit ${
+                              p.status === "confirmed"
+                                ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                : p.status === "disputed"
+                                ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                            }`}
+                          >
+                            {paymentStatusLabel[p.status] ?? p.status}
+                          </span>
+                          {p.disputedByTenant && !p.disputedByResolvedAt && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
+                              Flagged
+                            </span>
+                          )}
+                        </div>
                         {p.counterVerifiedAt && (
                           <span className="text-[11px] text-green-500 font-medium">✓ You Acknowledged</span>
                         )}
-                        {p.disputedByTenant && !p.disputedByResolvedAt && (
-                          <span className="text-[11px] text-red-400 font-medium bg-red-950/20 border border-red-900/30 rounded p-1.5 mt-1 block">
-                            ⚠️ You Disputed: {p.disputedByReason}
-                          </span>
-                        )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-right" onClick={(e) => e.stopPropagation()}>
-                      {isPendingAck ? (
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            onClick={() => acknowledgePayment.mutate({ paymentId: p.id })}
-                            disabled={acknowledgePayment.isPending}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-500 text-white h-8 text-xs font-semibold px-3"
+                    <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center">
+                        <div className="relative group/action-btn">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenPaymentMenuId(openPaymentMenuId === p.id ? null : p.id);
+                            }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                            aria-label="Payment actions"
                           >
-                            Acknowledge
-                          </Button>
-                          <Button
-                            onClick={() => { setFlagPaymentId(p.id); setFlagReason(""); setIsFlagOpen(true); }}
-                            variant="outline"
-                            size="sm"
-                            className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 h-8 text-xs font-semibold px-3"
-                          >
-                            Flag Incorrect
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-end space-x-2">
-                          {p.status === "pending" && p.recordedBy === user?.id && (
-                            <Button
-                              onClick={() => {
-                                setEditingPaymentId(p.id);
-                                setPaymentAmount(formatInputNumber(String(p.amount)));
-                                setPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
-                                setPaymentMethod(p.method);
-                                setPaymentNotes(p.notes || "");
-                                setProofUrl(p.proofUrl || null);
-                                setPaymentError(null);
-                                setUploadError(null);
-                                setIsLogPaymentOpen(true);
-                              }}
-                              className="bg-emerald-700 hover:bg-emerald-600 text-white h-8 text-xs font-semibold px-3"
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+
+                          {/* Button tooltip when menu closed */}
+                          {openPaymentMenuId !== p.id && (
+                            <div
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/action-btn:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
                             >
-                              Edit
-                            </Button>
+                              Actions
+                            </div>
                           )}
-                          <Button
-                            onClick={() => { setSelectedPayment(p); setIsPaymentDetailsOpen(true); }}
-                            variant="outline"
-                            size="sm"
-                            className="border-neutral-800 text-neutral-300 hover:bg-neutral-900 h-8 text-xs font-semibold px-3"
-                          >
-                            Details
-                          </Button>
+
+                          {/* Menu dropdown, right-aligned to the icon */}
+                          {openPaymentMenuId === p.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-30"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenPaymentMenuId(null);
+                                }}
+                              />
+                              <div className="absolute right-0 mt-1 w-44 rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl z-40 animate-in fade-in-0 zoom-in-95 duration-100 text-left">
+                                {isLandlordLogged ? (
+                                  <>
+                                    {/* Acknowledge */}
+                                    {p.counterVerifiedAt ? (
+                                      <div className="relative group/tip w-full">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                        >
+                                          <Check className="w-3.5 h-3.5 text-neutral-600" />
+                                          <span>Acknowledge</span>
+                                        </button>
+                                        <div
+                                          role="tooltip"
+                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                        >
+                                          Already acknowledged
+                                        </div>
+                                      </div>
+                                    ) : p.disputedByTenant && !p.disputedByResolvedAt ? (
+                                      <div className="relative group/tip w-full">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                        >
+                                          <Check className="w-3.5 h-3.5 text-neutral-600" />
+                                          <span>Acknowledge</span>
+                                        </button>
+                                        <div
+                                          role="tooltip"
+                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                        >
+                                          Already flagged
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenPaymentMenuId(null);
+                                          acknowledgePayment.mutate({ paymentId: p.id });
+                                        }}
+                                        disabled={acknowledgePayment.isPending}
+                                        className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
+                                      >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Acknowledge</span>
+                                      </button>
+                                    )}
+
+                                    {/* Flag incorrect */}
+                                    {p.disputedByTenant && !p.disputedByResolvedAt ? (
+                                      <div className="relative group/tip w-full">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                        >
+                                          <AlertTriangle className="w-3.5 h-3.5 text-neutral-600" />
+                                          <span>Flag incorrect</span>
+                                        </button>
+                                        <div
+                                          role="tooltip"
+                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                        >
+                                          Already flagged
+                                        </div>
+                                      </div>
+                                    ) : p.counterVerifiedAt ? (
+                                      <div className="relative group/tip w-full">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                        >
+                                          <AlertTriangle className="w-3.5 h-3.5 text-neutral-600" />
+                                          <span>Flag incorrect</span>
+                                        </button>
+                                        <div
+                                          role="tooltip"
+                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                        >
+                                          Already acknowledged
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenPaymentMenuId(null);
+                                          setFlagPaymentId(p.id);
+                                          setFlagReason("");
+                                          setIsFlagOpen(true);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-xs rounded-lg text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center space-x-2 transition-colors"
+                                      >
+                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                        <span>Flag incorrect</span>
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    {/* Tenant's own entry */}
+                                    {p.recordedBy === user?.id && (
+                                      p.status === "pending" ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenPaymentMenuId(null);
+                                            setEditingPaymentId(p.id);
+                                            setPaymentAmount(formatInputNumber(String(p.amount)));
+                                            setPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
+                                            setPaymentMethod(p.method);
+                                            setPaymentNotes(p.notes || "");
+                                            setProofUrl(p.proofUrl || null);
+                                            setPaymentError(null);
+                                            setUploadError(null);
+                                            setIsLogPaymentOpen(true);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
+                                        >
+                                          <Pencil className="w-3.5 h-3.5" />
+                                          <span>Edit payment</span>
+                                        </button>
+                                      ) : (
+                                        <div className="relative group/tip w-full">
+                                          <button
+                                            type="button"
+                                            disabled
+                                            className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5 text-neutral-600" />
+                                            <span>Edit payment</span>
+                                          </button>
+                                          <div
+                                            role="tooltip"
+                                            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                          >
+                                            {p.status === "confirmed" ? "Already confirmed" : "Already rejected"}
+                                          </div>
+                                        </div>
+                                      )
+                                    )}
+                                  </>
+                                )}
+
+                                {/* Divider + View Details */}
+                                <div className="my-1 border-t border-neutral-800" />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenPaymentMenuId(null);
+                                    setSelectedPayment(p);
+                                    setIsPaymentDetailsOpen(true);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>View details</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 );

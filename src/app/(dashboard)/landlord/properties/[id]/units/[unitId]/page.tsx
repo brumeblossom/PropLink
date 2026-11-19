@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { Select } from "@/components/ui/select";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X, Trash2, Plus, Pencil } from "lucide-react";
+import { X, Trash2, Plus, Pencil, Check, MoreHorizontal } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
@@ -385,6 +385,7 @@ export default function UnitDetailPage() {
   // Landlord payment detail modal
   const [selectedLandlordPayment, setSelectedLandlordPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isLandlordPaymentDetailOpen, setIsLandlordPaymentDetailOpen] = useState(false);
+  const [openPaymentMenuId, setOpenPaymentMenuId] = useState<string | null>(null);
 
   // Year filter for payment ledger
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -1314,8 +1315,8 @@ export default function UnitDetailPage() {
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Logged</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Method</th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status / Verification</th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/60">
@@ -1326,7 +1327,7 @@ export default function UnitDetailPage() {
                           <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
                           <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                           <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                          <td className="px-6 py-4 text-right"><Skeleton className="h-7 w-16 rounded ml-auto" /></td>
+                          <td className="px-6 py-4 text-center"><Skeleton className="h-8 w-8 rounded-lg mx-auto" /></td>
                         </tr>
                       ))
                     ) : filteredPayments.length === 0 ? (
@@ -1338,6 +1339,9 @@ export default function UnitDetailPage() {
                     ) : (
                       filteredPayments.map((p) => {
                         const hasTenantDispute = p.disputedByTenant && !p.disputedByResolvedAt;
+                        const isResolved = p.status === "confirmed" || p.status === "disputed";
+                        const disabledTooltip = p.status === "confirmed" ? "Already confirmed" : "Already rejected";
+
                         return (
                           <tr
                             key={p.id}
@@ -1368,78 +1372,164 @@ export default function UnitDetailPage() {
                                   }`}>
                                     {paymentStatusLabel[p.status] ?? p.status}
                                   </span>
+                                  {hasTenantDispute && (
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
+                                      Flagged
+                                    </span>
+                                  )}
                                 </div>
                                 {p.counterVerifiedAt && (
                                   <span className="text-[11px] text-green-500 font-medium">
                                     ✓ Acknowledged by tenant
                                   </span>
                                 )}
-                                {hasTenantDispute && (
-                                  <span className="text-[11px] text-red-400 font-medium bg-red-950/20 border border-red-900/30 rounded p-1.5 mt-1 block">
-                                    ⚠️ Tenant Flagged: {p.disputedByReason}
-                                  </span>
-                                )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                              {p.status === "pending" && (
-                                <div className="flex items-center justify-end space-x-2">
-                                  <Button
+                            <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-center">
+                                <div className="relative group/action-btn">
+                                  <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      confirmPayment.mutate({ paymentId: p.id });
+                                      setOpenPaymentMenuId(openPaymentMenuId === p.id ? null : p.id);
                                     }}
-                                    disabled={confirmPayment.isPending}
-                                    size="sm"
-                                    className="bg-green-600 hover:bg-green-500 text-white h-8 text-xs font-semibold px-3"
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                                    aria-label="Payment actions"
                                   >
-                                    Confirm
-                                  </Button>
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setRejectPaymentId(p.id);
-                                      setRejectReason("");
-                                      setIsRejectOpen(true);
-                                    }}
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 h-8 text-xs font-semibold px-3"
-                                  >
-                                    Reject
-                                  </Button>
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </button>
+
+                                  {/* Button tooltip when menu closed */}
+                                  {openPaymentMenuId !== p.id && (
+                                    <div
+                                      role="tooltip"
+                                      className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/action-btn:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                    >
+                                      Actions
+                                    </div>
+                                  )}
+
+                                  {/* Menu dropdown, right-aligned to the icon */}
+                                  {openPaymentMenuId === p.id && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-30"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenPaymentMenuId(null);
+                                        }}
+                                      />
+                                      <div className="absolute right-0 mt-1 w-44 rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl z-40 animate-in fade-in-0 zoom-in-95 duration-100 text-left">
+                                        {/* Confirm payment */}
+                                        {isResolved ? (
+                                          <div className="relative group/tip w-full">
+                                            <button
+                                              type="button"
+                                              disabled
+                                              className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                            >
+                                              <Check className="w-3.5 h-3.5 text-neutral-600" />
+                                              <span>Confirm payment</span>
+                                            </button>
+                                            <div
+                                              role="tooltip"
+                                              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                            >
+                                              {disabledTooltip}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOpenPaymentMenuId(null);
+                                              confirmPayment.mutate({ paymentId: p.id });
+                                            }}
+                                            disabled={confirmPayment.isPending}
+                                            className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
+                                          >
+                                            <Check className="w-3.5 h-3.5" />
+                                            <span>Confirm payment</span>
+                                          </button>
+                                        )}
+
+                                        {/* Reject payment */}
+                                        {isResolved ? (
+                                          <div className="relative group/tip w-full">
+                                            <button
+                                              type="button"
+                                              disabled
+                                              className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
+                                            >
+                                              <X className="w-3.5 h-3.5 text-neutral-600" />
+                                              <span>Reject payment</span>
+                                            </button>
+                                            <div
+                                              role="tooltip"
+                                              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
+                                            >
+                                              {disabledTooltip}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setOpenPaymentMenuId(null);
+                                              setRejectPaymentId(p.id);
+                                              setRejectReason("");
+                                              setIsRejectOpen(true);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-xs rounded-lg text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center space-x-2 transition-colors"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                            <span>Reject payment</span>
+                                          </button>
+                                        )}
+
+                                        {/* If flagged by tenant: divider + Correct details */}
+                                        {hasTenantDispute && (
+                                          <>
+                                            <div className="my-1 border-t border-neutral-800" />
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenPaymentMenuId(null);
+                                                setEditPaymentId(p.id);
+                                                setEditAmount(formatInputNumber(String(p.amount)));
+                                                setEditPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
+                                                setEditMethod(p.method);
+                                                setEditAction("edit");
+                                                setIsEditOpen(true);
+                                              }}
+                                              className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
+                                            >
+                                              <Pencil className="w-3.5 h-3.5" />
+                                              <span>Correct details</span>
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenPaymentMenuId(null);
+                                                setPaymentToVoid(p.id);
+                                              }}
+                                              className="w-full px-3 py-2 text-left text-xs rounded-lg text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center space-x-2 transition-colors"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                              <span>Void payment</span>
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
-                              )}
-                              {hasTenantDispute && (
-                                <div className="flex items-center justify-end space-x-2">
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditPaymentId(p.id);
-                                      setEditAmount(formatInputNumber(String(p.amount)));
-                                      setEditPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
-                                      setEditMethod(p.method);
-                                      setEditAction("edit");
-                                      setIsEditOpen(true);
-                                    }}
-                                    size="sm"
-                                    className="bg-white text-neutral-950 hover:bg-neutral-200 h-8 text-xs font-semibold px-3"
-                                  >
-                                    Correct Details
-                                  </Button>
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPaymentToVoid(p.id);
-                                    }}
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 h-8 text-xs font-semibold px-3"
-                                  >
-                                    Void
-                                  </Button>
-                                </div>
-                              )}
+                              </div>
                             </td>
                           </tr>
                         );

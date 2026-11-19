@@ -5,6 +5,7 @@ import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PageTitleRow } from "@/components/layout/PageTitleRow";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { NoticeType, NotificationChannel } from "@prisma/client";
@@ -134,20 +135,32 @@ export default function LandlordNoticesPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
-      <PageHeader
-        title="Announcements"
-        actions={
-          <Button
-            onClick={() => setIsComposeOpen(true)}
-            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Compose Notice
-          </Button>
-        }
-      />
+      <PageHeader title="Announcements" />
 
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+        <PageTitleRow
+          title="Announcements"
+          description="Broadcast notices to tenants across your properties."
+          actions={
+            <div className="relative group">
+              <Button
+                onClick={() => setIsComposeOpen(true)}
+                className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
+                aria-label="Compose Notice"
+              >
+                <Plus className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Compose Notice</span>
+              </Button>
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full right-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 hidden group-hover:block sm:group-hover:hidden z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+              >
+                Compose Notice
+              </div>
+            </div>
+          }
+        />
+
         {/* Notices List */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-neutral-200">Sent History</h2>
