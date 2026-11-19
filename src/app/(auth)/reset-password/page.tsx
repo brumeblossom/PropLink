@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
+import { PasswordChecklist, isPasswordValid } from "@/components/auth/PasswordChecklist";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -35,8 +36,8 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (!isPasswordValid(password)) {
+      setError("Password does not satisfy all security requirements.");
       return;
     }
 
@@ -125,6 +126,7 @@ export default function ResetPasswordPage() {
                     )}
                   </button>
                 </div>
+                <PasswordChecklist password={password} className="mt-2.5" />
               </div>
 
               <div>
@@ -157,11 +159,16 @@ export default function ResetPasswordPage() {
                     )}
                   </button>
                 </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="mt-1.5 text-xs text-red-500">
+                    Passwords don&apos;t match
+                  </p>
+                )}
               </div>
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isPasswordValid(password) || !confirmPassword || password !== confirmPassword}
                 className="w-full bg-white py-2.5 text-neutral-950 hover:bg-neutral-200 transition-colors h-11 text-sm font-medium"
               >
                 {loading ? "Resetting..." : "Reset Password"}

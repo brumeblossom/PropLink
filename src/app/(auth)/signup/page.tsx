@@ -6,6 +6,7 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
+import { PasswordChecklist, isPasswordValid } from "@/components/auth/PasswordChecklist";
 
 function SignupForm() {
   const router = useRouter();
@@ -213,7 +214,7 @@ function SignupForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 pl-4 pr-10 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters"
                 />
                 <button
                   type="button"
@@ -227,12 +228,13 @@ function SignupForm() {
                   )}
                 </button>
               </div>
+              <PasswordChecklist password={password} className="mt-2.5" />
             </div>
           </div>
 
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || !isPasswordValid(password)}
             className="w-full bg-white mt-6 py-2 text-neutral-950 hover:bg-neutral-200 transition-colors"
           >
             {loading ? "Registering..." : "Create Account"}

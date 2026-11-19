@@ -1,128 +1,38 @@
 'use client';
 
-import { useState } from "react";
 import { trpc } from "@/utils/trpc";
-import { Button } from "@/components/ui/button";
-import { BackButton } from "@/components/ui/back-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { createClient } from "@/utils/supabase/client";
-import { Shield, Save, Key, Eye, EyeOff } from "lucide-react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { AccountSection } from "@/components/settings/AccountSection";
 
 export default function LandlordSettingsPage() {
-  const utils = trpc.useUtils();
-
   const { data: user, isLoading } = trpc.auth.me.useQuery();
-  
-  const updateProfile = trpc.auth.updateProfile.useMutation({
-    onSuccess: () => {
-      utils.auth.me.invalidate();
-      setProfileSuccess("Settings updated successfully!");
-      setProfileError(null);
-      setTimeout(() => setProfileSuccess(null), 3000);
-    },
-    onError: (err) => {
-      setProfileError(err.message);
-      setProfileSuccess(null);
-    },
-  });
-
-  const [fullName, setFullName] = useState("");
-  const [isProfileInitialized, setIsProfileInitialized] = useState(false);
-  
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
-
-  // Password State
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [updatingPassword, setUpdatingPassword] = useState(false);
-
-  if (user && !isProfileInitialized) {
-    setFullName(user.fullName);
-    setIsProfileInitialized(true);
-  }
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim() || fullName.trim().length < 2) {
-      setProfileError("Full name must be at least 2 characters long.");
-      return;
-    }
-
-    try {
-      await updateProfile.mutateAsync({ fullName: fullName.trim() });
-    } catch {
-      // Handled by mutation onError
-    }
-  };
-
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(null);
-
-    if (newPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters long.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match.");
-      return;
-    }
-
-    setUpdatingPassword(true);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-      if (error) {
-        throw error;
-      }
-
-      setPasswordSuccess("Password updated successfully!");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTimeout(() => setPasswordSuccess(null), 3000);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to update password.";
-      setPasswordError(message);
-    } finally {
-      setUpdatingPassword(false);
-    }
-  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
         <PageHeader title="Settings" />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-          <Skeleton className="h-5 w-40" />
+        <PageContainer>
           <div className="space-y-4">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-72" />
           </div>
-          <div className="space-y-6">
-            <Skeleton className="h-48 w-full rounded-xl" />
-            <Skeleton className="h-48 w-full rounded-xl" />
-          </div>
-        </main>
+          <Skeleton className="h-56 w-full rounded-xl" />
+        </PageContainer>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Settings" />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        <BackButton href="/landlord" label="Back to Dashboard" />
-
+      <PageContainer>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Account Settings</h1>
           <p className="text-neutral-400 mt-1 text-sm">
@@ -130,145 +40,8 @@ export default function LandlordSettingsPage() {
           </p>
         </div>
 
-        <div className="space-y-6">
-          {/* General Information Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-6">
-            <div className="flex items-center space-x-2 border-b border-neutral-800 pb-3">
-              <Shield className="w-5 h-5 text-neutral-400" />
-              <h2 className="text-lg font-bold text-white">General Information</h2>
-            </div>
-
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              {profileSuccess && (
-                <div className="rounded-lg bg-green-950/20 border border-green-900/30 p-3 text-sm text-green-400">
-                  {profileSuccess}
-                </div>
-              )}
-              {profileError && (
-                <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-sm text-red-400">
-                  {profileError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  disabled
-                  value={user?.email || ""}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-2 text-neutral-400 text-sm cursor-not-allowed"
-                />
-                <p className="text-xs text-neutral-500 mt-1">Your registered login address cannot be changed.</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                  placeholder="Enter your full name"
-                />
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  disabled={updateProfile.isPending}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-10 px-6 flex items-center space-x-2 text-sm"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{updateProfile.isPending ? "Saving..." : "Save Changes"}</span>
-                </Button>
-              </div>
-            </form>
-          </div>
-
-          {/* Security & Password Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-6">
-            <div className="flex items-center space-x-2 border-b border-neutral-800 pb-3">
-              <Key className="w-5 h-5 text-neutral-400" />
-              <h2 className="text-lg font-bold text-white">Security &amp; Password</h2>
-            </div>
-
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
-              {passwordSuccess && (
-                <div className="rounded-lg bg-green-950/20 border border-green-900/30 p-3 text-sm text-green-400">
-                  {passwordSuccess}
-                </div>
-              )}
-              {passwordError && (
-                <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-sm text-red-400">
-                  {passwordError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                  New Password
-                </label>
-                <div className="relative mt-1">
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 pr-10 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="Minimum 8 characters"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-white"
-                  >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                  Confirm New Password
-                </label>
-                <div className="relative mt-1">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 pr-10 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="Repeat new password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-white"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  disabled={updatingPassword}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-10 px-6 flex items-center space-x-2 text-sm"
-                >
-                  <Key className="w-4 h-4" />
-                  <span>{updatingPassword ? "Updating..." : "Update Password"}</span>
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </main>
+        <AccountSection user={user} />
+      </PageContainer>
     </div>
   );
 }

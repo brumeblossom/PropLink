@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   payment_logged: {
@@ -162,7 +163,7 @@ export default function LandlordNotificationsPage() {
         }
       />
 
-      <main className="max-w-3xl mx-auto px-6 py-10 space-y-8">
+      <PageContainer>
 
       {/* List */}
       {isLoading ? (
@@ -256,7 +257,7 @@ export default function LandlordNotificationsPage() {
           })}
         </div>
       )}
-    </main>
+      </PageContainer>
   </div>
   );
 }

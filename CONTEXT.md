@@ -23,6 +23,7 @@ A Next.js 14 multi-tenant SaaS application with fully operational user authentic
 - [x] Signup Error Sanitization — Catch Prisma unique constraint on phone number and return user-friendly message, preventing database traces exposure during registration.
 - [x] Performance & Skeleton Optimization — Colocate Vercel server functions in dub1 next to Supabase, 30s query staleTime, 30s polling intervals, and instant skeleton layout loaders.
 - [x] RLS Policy Recursion & Leases Storage Fix — Break mutual recursion using SECURITY DEFINER helpers, rewrite table and storage policies for bucket 'leases', fix file input state reset on error.
+- [x] Settings Refactor & Password Security Flow — Consolidated account settings into a single Account card with Edit name modal (40-char limit with live counter) and Change password modal (with current password verification and live rule checklist), shared PasswordChecklist component across settings, signup, and reset-password, shared PageContainer layout component aligning settings and notifications, and sanitized user-friendly signup duplicate messages.
 
 ## Key decisions made
 - **Node.js Environment**: Configured commands to run with Node `v22.11.0` (using Node/npm path from the workspace's Meal Planner `.node-env`).

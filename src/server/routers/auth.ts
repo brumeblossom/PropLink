@@ -4,6 +4,7 @@ import { router, publicProcedure, authedProcedure } from "../trpc";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "../utils/notifications";
+import { getSanitizedAuthError } from "@/lib/auth-errors";
 
 export const authRouter = router({
   signupLandlord: publicProcedure
@@ -33,14 +34,14 @@ export const authRouter = router({
       if (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error.message,
+          message: getSanitizedAuthError(error, error.message),
         });
       }
 
-      if (!data.user) {
+      if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "User creation failed.",
+          code: "BAD_REQUEST",
+          message: "An account with this email already exists. Log in instead.",
         });
       }
 
@@ -60,25 +61,12 @@ export const authRouter = router({
         // Rollback Supabase user if public profile insertion fails
         await supabase.auth.admin.deleteUser(data.user.id);
         
-        let userMessage = "An unexpected error occurred while creating your profile. Please try again.";
-        if (dbError && typeof dbError === "object") {
-          const err = dbError as { code?: string; message?: string; meta?: { target?: string[] } };
-          const isPhoneUnique = 
-            err.code === "P2002" && 
-            (err.meta?.target?.includes("phone") || (typeof err.message === "string" && err.message.includes("phone")));
-          const isPhoneUniqueFallback = 
-            typeof err.message === "string" && 
-            err.message.includes("Unique constraint failed") && 
-            err.message.includes("phone");
-            
-          if (isPhoneUnique || isPhoneUniqueFallback) {
-            userMessage = "This phone number is already registered. Please use a different number or leave it blank.";
-          }
-        }
-
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: userMessage,
+          code: "BAD_REQUEST",
+          message: getSanitizedAuthError(
+            dbError,
+            "An unexpected error occurred while creating your profile. Please try again."
+          ),
         });
       }
     }),
@@ -157,14 +145,14 @@ export const authRouter = router({
       if (error) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: error.message,
+          message: getSanitizedAuthError(error, error.message),
         });
       }
 
-      if (!data.user) {
+      if (!data.user || (data.user.identities && data.user.identities.length === 0)) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "User creation failed.",
+          code: "BAD_REQUEST",
+          message: "An account with this email already exists. Log in instead.",
         });
       }
 
@@ -216,25 +204,12 @@ export const authRouter = router({
 
         return { success: true };
       } catch (dbError) {
-        let userMessage = "An unexpected error occurred while linking your account. Please try again.";
-        if (dbError && typeof dbError === "object") {
-          const err = dbError as { code?: string; message?: string; meta?: { target?: string[] } };
-          const isPhoneUnique = 
-            err.code === "P2002" && 
-            (err.meta?.target?.includes("phone") || (typeof err.message === "string" && err.message.includes("phone")));
-          const isPhoneUniqueFallback = 
-            typeof err.message === "string" && 
-            err.message.includes("Unique constraint failed") && 
-            err.message.includes("phone");
-            
-          if (isPhoneUnique || isPhoneUniqueFallback) {
-            userMessage = "This phone number is already registered. Please use a different number or leave it blank.";
-          }
-        }
-
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: userMessage,
+          code: "BAD_REQUEST",
+          message: getSanitizedAuthError(
+            dbError,
+            "An unexpected error occurred while linking your account. Please try again."
+          ),
         });
       }
     }),
@@ -302,13 +277,17 @@ export const authRouter = router({
   updateProfile: authedProcedure
     .input(
       z.object({
-        fullName: z.string().min(2),
+        fullName: z
+          .string()
+          .trim()
+          .min(1, "Name is required")
+          .max(40, "Name cannot exceed 40 characters"),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const user = await prisma.user.update({
         where: { id: ctx.user.id },
-        data: { fullName: input.fullName },
+        data: { fullName: input.fullName.trim() },
       });
       return { user };
     }),
