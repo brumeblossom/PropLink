@@ -9,9 +9,11 @@ import { noticesRouter } from "./notices";
 import { conversationsRouter } from "./conversations";
 import { notificationsRouter } from "./notifications";
 import { internalRouter } from "./internal";
+import { dashboardRouter } from "./dashboard";
 
 export const appRouter = router({
   auth: authRouter,
+  dashboard: dashboardRouter,
   properties: propertiesRouter,
   units: unitsRouter,
   leases: leasesRouter,

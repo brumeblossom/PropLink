@@ -387,6 +387,18 @@ export default function UnitDetailPage() {
   const [selectedLandlordPayment, setSelectedLandlordPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isLandlordPaymentDetailOpen, setIsLandlordPaymentDetailOpen] = useState(false);
 
+  // Auto-open payment detail if paymentId param is present
+  useEffect(() => {
+    const paymentId = searchParams?.get("paymentId");
+    if (paymentId && payments && payments.length > 0) {
+      const p = payments.find((item) => item.id === paymentId);
+      if (p) {
+        setSelectedLandlordPayment(p);
+        setIsLandlordPaymentDetailOpen(true);
+      }
+    }
+  }, [searchParams, payments]);
+
   // Year filter for payment ledger
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
