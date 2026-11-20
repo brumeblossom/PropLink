@@ -16,12 +16,14 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  CartesianGrid,
 } from "recharts";
 
-const PROPERTY_TYPE_COLORS: Record<string, string> = {
-  residential: "#3b82f6", // blue-500
-  commercial: "#a855f7", // purple-500
-  mixed: "#06b6d4", // cyan-500
+// Calm, single-tone palette for donut chart
+const DONUT_COLORS: Record<string, string> = {
+  residential: "rgba(96, 165, 250, 0.85)", // blue-400
+  commercial: "rgba(129, 140, 248, 0.85)", // indigo-400
+  mixed: "rgba(148, 163, 184, 0.85)", // slate-400
 };
 
 export default function LandlordDashboard() {
@@ -38,37 +40,36 @@ export default function LandlordDashboard() {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
         <PageHeader title="Dashboard" />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           <div>
-            <Skeleton className="h-9 w-64" />
-            <Skeleton className="h-4 w-72 mt-2" />
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="h-4 w-64 mt-1.5" />
           </div>
 
-          {/* Stats Skeletons */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Stats Skeletons (84px tall, 4 across desktop, 2 across mobile) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6">
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-8 w-16 mt-3" />
-                {i === 2 && <Skeleton className="h-3 w-24 mt-2" />}
+              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 h-[84px] flex flex-col justify-center">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-12 mt-1.5" />
               </div>
             ))}
           </div>
 
           {/* Grid Skeletons */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 h-72">
-                <Skeleton className="h-5 w-40 mb-4" />
-                <Skeleton className="h-48 w-full rounded-lg" />
+              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 h-[264px]">
+                <Skeleton className="h-4 w-36 mb-4" />
+                <Skeleton className="h-[180px] w-full rounded-lg" />
               </div>
             ))}
           </div>
 
           {/* Table Skeleton */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6">
-            <Skeleton className="h-6 w-36 mb-4" />
-            <Skeleton className="h-40 w-full rounded-lg" />
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5">
+            <Skeleton className="h-4 w-32 mb-4" />
+            <Skeleton className="h-44 w-full rounded-lg" />
           </div>
         </main>
       </div>
@@ -93,14 +94,32 @@ export default function LandlordDashboard() {
   const pendingPayments = summary?.pendingPayments || { count: 0, items: [] };
   const propertiesTable = summary?.propertiesTable || [];
 
+  // Dynamic height calculation: charts with 1-3 rows shrink to rows * 32px + 24px (min 120px)
+  const getChartHeight = (rowsCount: number) => {
+    if (rowsCount <= 0) return 200;
+    if (rowsCount <= 3) return Math.max(120, rowsCount * 32 + 24);
+    return 200;
+  };
+
+  // Calculate dynamic label width clamped to max 120px
+  const getYAxisWidth = (labels: string[]) => {
+    if (labels.length === 0) return 70;
+    const maxLen = Math.max(...labels.map((l) => l.length));
+    return Math.min(120, Math.max(70, maxLen * 7.5));
+  };
+
+  const unitsYWidth = getYAxisWidth(unitsByType.map((u) => u.type));
+  const occupancyYWidth = getYAxisWidth(occupancyByProperty.map((p) => p.propertyName));
+  const tenantsYWidth = getYAxisWidth(tenantsByLocation.data.map((t) => t.location));
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Dashboard" />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Welcome Section */}
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             Welcome back, {user?.fullName || "Landlord"}
           </h1>
           <p className="text-neutral-400 mt-1 text-sm">
@@ -108,393 +127,470 @@ export default function LandlordDashboard() {
           </p>
         </div>
 
-        {/* 4 Stat Cards */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm">
-            <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Properties</span>
-            <span className="text-3xl font-bold mt-2 block">{stats.totalProperties}</span>
+        {/* 1. Stat Cards: 16px 20px padding, 84px height, 4 across desktop, 2 across mobile */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Properties</span>
+            <span className="text-2xl font-semibold text-white mt-1 block">{stats.totalProperties}</span>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm">
-            <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total Units</span>
-            <span className="text-3xl font-bold mt-2 block">{stats.totalUnits}</span>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Total units</span>
+            <span className="text-2xl font-semibold text-white mt-1 block">{stats.totalUnits}</span>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm">
-            <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Occupied</span>
-            <span className="text-3xl font-bold mt-2 block text-green-400">{stats.occupiedUnits}</span>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Occupied</span>
+            <span className="text-2xl font-semibold text-white mt-1 block">{stats.occupiedUnits}</span>
             <span className="text-xs text-neutral-400 mt-1 block">{stats.occupancyRate}% occupancy</span>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm">
-            <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Vacant</span>
-            <span className="text-3xl font-bold mt-2 block text-neutral-300">{stats.vacantUnits}</span>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Vacant</span>
+            <span className="text-2xl font-semibold text-white mt-1 block">{stats.vacantUnits}</span>
           </div>
         </div>
 
-        {/* Responsive Grid: 2 columns on desktop, 1 on phones */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 1. Properties by type: Donut chart */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-white">Properties by Type</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">Distribution across residential, commercial, and mixed-use</p>
-            </div>
+        {/* 2 & 3. Responsive Grid: 2 columns on desktop, 1 on phones with 16px gap */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Chart 1: Properties by Type (Donut) */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+            <h2 className="text-sm font-semibold text-white mb-4">Properties by Type</h2>
 
-            <div className="h-60 w-full mt-4 flex items-center justify-center">
+            <div className="h-[200px] w-full flex items-center justify-center">
               {totalTypedProperties === 0 ? (
-                <div className="text-center text-sm text-neutral-500">No properties added yet.</div>
+                <div className="text-center text-xs text-neutral-500">No properties added yet.</div>
               ) : isMounted ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={propertiesByType}
-                      dataKey="count"
-                      nameKey="label"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={3}
-                    >
-                      {propertiesByType.map((entry) => (
-                        <Cell
-                          key={`cell-${entry.type}`}
-                          fill={PROPERTY_TYPE_COLORS[entry.type] || "#737373"}
+                <div className="w-full h-full flex flex-col sm:flex-row items-center justify-center gap-6">
+                  <div className="w-[180px] h-[180px] shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={propertiesByType}
+                          dataKey="count"
+                          nameKey="label"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={56}
+                          outerRadius={76}
+                          paddingAngle={2}
+                        >
+                          {propertiesByType.map((entry) => (
+                            <Cell
+                              key={`cell-${entry.type}`}
+                              fill={DONUT_COLORS[entry.type] || "#525252"}
+                              stroke="#0a0a0a"
+                              strokeWidth={1}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#0a0a0a",
+                            borderColor: "#262626",
+                            borderRadius: "8px",
+                            fontSize: "12px",
+                            color: "#ffffff",
+                          }}
+                          itemStyle={{ color: "#e5e5e5" }}
                         />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#171717",
-                        borderColor: "#262626",
-                        borderRadius: "0.5rem",
-                        color: "#fff",
-                        fontSize: "0.75rem",
-                      }}
-                      itemStyle={{ color: "#e5e5e5" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : null}
-            </div>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
 
-            {/* Custom Legend with counts */}
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-2 border-t border-neutral-800/40">
-              {propertiesByType.map((item) => (
-                <div key={item.type} className="flex items-center space-x-2 text-xs">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: PROPERTY_TYPE_COLORS[item.type] || "#737373" }}
-                  />
-                  <span className="text-neutral-300">
-                    {item.label}: <strong className="text-white">{item.count}</strong>
-                  </span>
+                  {/* Legend on the right on desktop, under on phones */}
+                  <div className="flex flex-col gap-2">
+                    {propertiesByType.map((item) => (
+                      <div key={item.type} className="flex items-center text-xs text-neutral-400">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0 mr-2"
+                          style={{ backgroundColor: DONUT_COLORS[item.type] || "#525252" }}
+                        />
+                        <span>{item.label}</span>
+                        <span className="text-white font-medium ml-1.5">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              ) : null}
             </div>
           </div>
 
-          {/* 2. Units by unit type: Horizontal bar chart */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-white">Units by Unit Type</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">Breakdown of unit categories across your properties</p>
-            </div>
+          {/* Chart 2: Units by Unit Type (Horizontal Bar) */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+            <h2 className="text-sm font-semibold text-white mb-4">Units by Unit Type</h2>
 
-            <div className="h-64 w-full mt-4 flex items-center justify-center">
+            <div
+              style={{ height: getChartHeight(unitsByType.length) }}
+              className="w-full flex items-center justify-center transition-all"
+            >
               {unitsByType.length === 0 ? (
-                <div className="text-center text-sm text-neutral-500">No units found.</div>
+                <div className="text-center text-xs text-neutral-500">No units found.</div>
               ) : isMounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
                     data={unitsByType}
-                    margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
+                    barCategoryGap="35%"
+                    margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
                   >
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#a3a3a3", fontSize: 11 }} />
+                    <CartesianGrid horizontal={false} vertical={true} stroke="#262626" strokeDasharray="3 3" />
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#737373", fontSize: 12 }}
+                    />
                     <YAxis
                       dataKey="type"
                       type="category"
-                      width={100}
-                      tick={{ fill: "#d4d4d4", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={unitsYWidth}
+                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tickFormatter={(v) => (v && v.length > 14 ? `${v.slice(0, 13)}…` : v)}
                     />
                     <Tooltip
+                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
                       contentStyle={{
-                        backgroundColor: "#171717",
+                        backgroundColor: "#0a0a0a",
                         borderColor: "#262626",
-                        borderRadius: "0.5rem",
-                        color: "#fff",
-                        fontSize: "0.75rem",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        color: "#ffffff",
                       }}
                       itemStyle={{ color: "#e5e5e5" }}
                     />
-                    <Bar dataKey="count" name="Units" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                    <Bar
+                      dataKey="count"
+                      name="Units"
+                      fill="rgba(96, 165, 250, 0.8)"
+                      barSize={14}
+                      maxBarSize={14}
+                      radius={[0, 3, 3, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : null}
             </div>
           </div>
 
-          {/* 3. Occupancy by property: Horizontal stacked bar */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-white">Occupancy by Property</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">Occupied vs vacant units per property</p>
+          {/* Chart 3: Occupancy by Property (Stacked Horizontal Bar) */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-white">Occupancy by Property</h2>
+              <div className="flex items-center space-x-3 text-xs text-neutral-400">
+                <div className="flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "rgba(34, 197, 94, 0.8)" }} />
+                  <span>Occupied</span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-neutral-700" />
+                  <span>Vacant</span>
+                </div>
+              </div>
             </div>
 
-            <div className="h-64 w-full mt-4 flex items-center justify-center">
+            <div
+              style={{ height: getChartHeight(occupancyByProperty.length) }}
+              className="w-full flex items-center justify-center transition-all"
+            >
               {occupancyByProperty.length === 0 ? (
-                <div className="text-center text-sm text-neutral-500">No properties available.</div>
+                <div className="text-center text-xs text-neutral-500">No properties available.</div>
               ) : isMounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
                     data={occupancyByProperty}
-                    margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
+                    barCategoryGap="35%"
+                    margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
                   >
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#a3a3a3", fontSize: 11 }} />
+                    <CartesianGrid horizontal={false} vertical={true} stroke="#262626" strokeDasharray="3 3" />
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#737373", fontSize: 12 }}
+                    />
                     <YAxis
                       dataKey="propertyName"
                       type="category"
-                      width={120}
-                      tick={{ fill: "#d4d4d4", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={occupancyYWidth}
+                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tickFormatter={(v) => (v && v.length > 14 ? `${v.slice(0, 13)}…` : v)}
                     />
                     <Tooltip
+                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
                       contentStyle={{
-                        backgroundColor: "#171717",
+                        backgroundColor: "#0a0a0a",
                         borderColor: "#262626",
-                        borderRadius: "0.5rem",
-                        color: "#fff",
-                        fontSize: "0.75rem",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        color: "#ffffff",
                       }}
                       itemStyle={{ color: "#e5e5e5" }}
                     />
-                    <Bar dataKey="occupied" stackId="occupancy" name="Occupied" fill="#22c55e" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="vacant" stackId="occupancy" name="Vacant" fill="#525252" radius={[0, 4, 4, 0]} />
+                    <Bar
+                      dataKey="occupied"
+                      stackId="occupancy"
+                      name="Occupied"
+                      fill="rgba(34, 197, 94, 0.8)"
+                      barSize={14}
+                      maxBarSize={14}
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="vacant"
+                      stackId="occupancy"
+                      name="Vacant"
+                      fill="#404040"
+                      barSize={14}
+                      maxBarSize={14}
+                      radius={[0, 3, 3, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : null}
             </div>
-
-            {/* Legend for Occupied vs Vacant */}
-            <div className="flex items-center justify-center space-x-6 pt-2 border-t border-neutral-800/40">
-              <div className="flex items-center space-x-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                <span className="text-neutral-300">Occupied</span>
-              </div>
-              <div className="flex items-center space-x-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-neutral-600" />
-                <span className="text-neutral-300">Vacant</span>
-              </div>
-            </div>
           </div>
 
-          {/* 4. Tenants by location: Bar chart */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-white">
-                Tenants by {tenantsByLocation.level === "city" ? "City" : "State"}
-              </h2>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Active tenant count grouped by {tenantsByLocation.level === "city" ? "city" : "state"}
-              </p>
-            </div>
+          {/* Chart 4: Tenants by Location (Horizontal Bar) */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+            <h2 className="text-sm font-semibold text-white mb-4">
+              Tenants by {tenantsByLocation.level === "city" ? "City" : "State"}
+            </h2>
 
-            <div className="h-64 w-full mt-4 flex items-center justify-center">
+            <div
+              style={{ height: getChartHeight(tenantsByLocation.data.length) }}
+              className="w-full flex items-center justify-center transition-all"
+            >
               {tenantsByLocation.data.length === 0 ? (
-                <div className="text-center text-sm text-neutral-500">No active tenants.</div>
+                <div className="text-center text-xs text-neutral-500">No active tenants.</div>
               ) : isMounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
                     data={tenantsByLocation.data}
-                    margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
+                    barCategoryGap="35%"
+                    margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
                   >
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: "#a3a3a3", fontSize: 11 }} />
+                    <CartesianGrid horizontal={false} vertical={true} stroke="#262626" strokeDasharray="3 3" />
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#737373", fontSize: 12 }}
+                    />
                     <YAxis
                       dataKey="location"
                       type="category"
-                      width={100}
-                      tick={{ fill: "#d4d4d4", fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={tenantsYWidth}
+                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tickFormatter={(v) => (v && v.length > 14 ? `${v.slice(0, 13)}…` : v)}
                     />
                     <Tooltip
+                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
                       contentStyle={{
-                        backgroundColor: "#171717",
+                        backgroundColor: "#0a0a0a",
                         borderColor: "#262626",
-                        borderRadius: "0.5rem",
-                        color: "#fff",
-                        fontSize: "0.75rem",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                        color: "#ffffff",
                       }}
                       itemStyle={{ color: "#e5e5e5" }}
                     />
-                    <Bar dataKey="count" name="Tenants" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                    <Bar
+                      dataKey="count"
+                      name="Tenants"
+                      fill="rgba(96, 165, 250, 0.8)"
+                      barSize={14}
+                      maxBarSize={14}
+                      radius={[0, 3, 3, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : null}
             </div>
           </div>
 
-          {/* 5. Leases ending soon */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between">
+          {/* List 1: Leases Ending Soon (44px rows, thin dividers, max 5 rows, View all link) */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
             <div>
-              <h2 className="text-base font-semibold text-white">Leases Ending Soon</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">
-                Leases up for renewal or expiring within the next 60 days
-              </p>
-            </div>
+              <h2 className="text-sm font-semibold text-white">Leases Ending Soon</h2>
 
-            <div className="mt-4 flex-1">
-              {leasesEndingSoon.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-center text-sm text-neutral-500">
-                  No leases ending in the next 60 days.
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                  {leasesEndingSoon.map((lease) => (
-                    <Link
-                      key={lease.leaseId}
-                      href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}`}
-                      className="block p-3 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">{lease.tenantName}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            lease.daysLeft <= 14
-                              ? "bg-red-950/30 text-red-400 border-red-900/30"
-                              : "bg-amber-950/30 text-amber-400 border-amber-900/30"
-                          }`}
-                        >
+              <div className="mt-3">
+                {leasesEndingSoon.length === 0 ? (
+                  <div className="h-[120px] flex items-center justify-center text-xs text-neutral-500">
+                    No leases ending in the next 60 days.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-800/60">
+                    {leasesEndingSoon.slice(0, 5).map((lease) => (
+                      <Link
+                        key={lease.leaseId}
+                        href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}`}
+                        className="h-[44px] flex items-center justify-between px-1 hover:bg-neutral-900/40 transition-colors group"
+                      >
+                        <div className="flex items-center space-x-2 min-w-0 pr-3">
+                          <span className="text-sm font-medium text-white truncate group-hover:underline">
+                            {lease.tenantName}
+                          </span>
+                          <span className="text-xs text-neutral-400 truncate">
+                            · Unit {lease.unitNumber}
+                          </span>
+                        </div>
+                        <span className="text-xs text-neutral-400 shrink-0">
                           {lease.daysLeft === 0
                             ? "Expires today"
                             : lease.daysLeft === 1
                             ? "Expires tomorrow"
-                            : `Expires in ${lease.daysLeft} days`}
+                            : `in ${lease.daysLeft}d`}
                         </span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between text-xs text-neutral-400">
-                        <span>
-                          Unit {lease.unitNumber} · {lease.propertyName}
-                        </span>
-                        <span>Ends {lease.endDate}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {leasesEndingSoon.length > 0 && (
+              <div className="flex justify-end pt-3 border-t border-neutral-800/40 mt-1">
+                <Link
+                  href="/landlord/tenants"
+                  className="text-xs text-neutral-400 hover:text-white transition-colors"
+                >
+                  View all &rarr;
+                </Link>
+              </div>
+            )}
           </div>
 
-          {/* 6. Payments waiting for you */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-white">Payments Waiting for You</h2>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Tenant-logged payments awaiting your confirmation
-                </p>
+          {/* List 2: Payments Waiting for You (44px rows, thin dividers, max 5 rows, View all link) */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-white">Payments Waiting for You</h2>
+                {pendingPayments.count > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    {pendingPayments.count}
+                  </span>
+                )}
               </div>
-              {pendingPayments.count > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {pendingPayments.count}
-                </span>
-              )}
+
+              <div className="mt-3">
+                {pendingPayments.items.length === 0 ? (
+                  <div className="h-[120px] flex items-center justify-center text-xs text-neutral-500">
+                    Nothing to confirm.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-800/60">
+                    {pendingPayments.items.slice(0, 5).map((p) => (
+                      <Link
+                        key={p.paymentId}
+                        href={`/landlord/properties/${p.propertyId}/units/${p.unitId}?paymentId=${p.paymentId}`}
+                        className="h-[44px] flex items-center justify-between px-1 hover:bg-neutral-900/40 transition-colors group"
+                      >
+                        <div className="flex items-center space-x-2 min-w-0 pr-3">
+                          <span className="text-sm font-medium text-white truncate group-hover:underline">
+                            {p.tenantName}
+                          </span>
+                          <span className="text-xs text-neutral-400 truncate">
+                            · Unit {p.unitNumber}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-3 shrink-0">
+                          <span className="text-sm font-medium text-white">{formatCurrency(p.amount)}</span>
+                          <span className="text-xs text-neutral-500">{p.date}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="mt-4 flex-1">
-              {pendingPayments.items.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-center text-sm text-neutral-500">
-                  Nothing to confirm.
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                  {pendingPayments.items.map((p) => (
-                    <Link
-                      key={p.paymentId}
-                      href={`/landlord/properties/${p.propertyId}/units/${p.unitId}?paymentId=${p.paymentId}`}
-                      className="block p-3 rounded-lg border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 hover:border-neutral-700 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">{p.tenantName}</span>
-                        <span className="text-sm font-bold text-green-400">{formatCurrency(p.amount)}</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between text-xs text-neutral-400">
-                        <span>
-                          Unit {p.unitNumber} · {p.propertyName}
-                        </span>
-                        <span>Paid {p.date}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+            {pendingPayments.items.length > 0 && (
+              <div className="flex justify-end pt-3 border-t border-neutral-800/40 mt-1">
+                <Link
+                  href="/landlord/properties"
+                  className="text-xs text-neutral-400 hover:text-white transition-colors"
+                >
+                  View all &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Properties Table Section */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-4">
+        {/* 4. All Properties Table: 14px semibold title, 48px rows, 20px padding */}
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white">All Properties</h2>
+            <h2 className="text-sm font-semibold text-white">All Properties</h2>
             <span className="text-xs text-neutral-400">{propertiesTable.length} properties</span>
           </div>
 
           {propertiesTable.length === 0 ? (
-            <div className="py-10 text-center text-sm text-neutral-500">No properties added yet.</div>
+            <div className="py-8 text-center text-xs text-neutral-500">No properties added yet.</div>
           ) : (
             <>
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-neutral-800 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                      <th className="py-3 px-4">Name</th>
-                      <th className="py-3 px-4">Type</th>
-                      <th className="py-3 px-4">Location</th>
-                      <th className="py-3 px-4 text-center">Units</th>
-                      <th className="py-3 px-4 text-center">Occupied</th>
-                      <th className="py-3 px-4 text-center">Vacant</th>
-                      <th className="py-3 px-4 text-right">Occupancy %</th>
+                    <tr className="border-b border-neutral-800 text-xs font-medium text-neutral-400 uppercase tracking-wider">
+                      <th className="py-2.5 px-4">Name</th>
+                      <th className="py-2.5 px-4">Type</th>
+                      <th className="py-2.5 px-4">Location</th>
+                      <th className="py-2.5 px-4 text-center">Units</th>
+                      <th className="py-2.5 px-4 text-center">Occupied</th>
+                      <th className="py-2.5 px-4 text-center">Vacant</th>
+                      <th className="py-2.5 px-4 text-right">Occupancy %</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/60">
                     {propertiesTable.map((p) => (
                       <tr
                         key={p.id}
-                        className="hover:bg-neutral-900/60 transition-colors group cursor-pointer"
+                        className="h-[48px] hover:bg-neutral-900/60 transition-colors group cursor-pointer"
                       >
-                        <td className="py-3.5 px-4 font-semibold text-white">
-                          <Link href={`/landlord/properties/${p.id}`} className="hover:underline block">
+                        <td className="py-2 px-4 font-medium text-white">
+                          <Link href={`/landlord/properties/${p.id}`} className="hover:underline block truncate">
                             {p.name}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 capitalize text-neutral-300">
+                        <td className="py-2 px-4 capitalize text-neutral-400">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.propertyType}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-300">
+                        <td className="py-2 px-4 text-neutral-400">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.city}, {p.state}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 text-center text-neutral-200">
+                        <td className="py-2 px-4 text-center text-neutral-300">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.totalUnits}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 text-center font-medium text-green-400">
+                        <td className="py-2 px-4 text-center font-medium text-green-400">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.occupiedUnits}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 text-center text-neutral-300">
+                        <td className="py-2 px-4 text-center text-neutral-400">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.vacantUnits}
                           </Link>
                         </td>
-                        <td className="py-3.5 px-4 text-right font-semibold text-white">
+                        <td className="py-2 px-4 text-right font-medium text-white">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.occupancyRate}%
                           </Link>
@@ -523,7 +619,7 @@ export default function LandlordDashboard() {
                       {p.city}, {p.state}
                     </p>
 
-                    <div className="mt-4 pt-3 border-t border-neutral-800/60 grid grid-cols-4 gap-2 text-center text-xs">
+                    <div className="mt-3 pt-3 border-t border-neutral-800/60 grid grid-cols-4 gap-2 text-center text-xs">
                       <div>
                         <span className="block text-neutral-500 text-[10px] uppercase">Units</span>
                         <span className="font-bold text-white mt-0.5 block">{p.totalUnits}</span>
