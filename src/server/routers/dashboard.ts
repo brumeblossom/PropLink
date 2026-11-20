@@ -3,6 +3,7 @@ import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { PaymentStatus, Role } from "@prisma/client";
 import { formatDateGB } from "@/lib/billing";
+import { getCurrentLease, getUnitStatus } from "@/lib/leases";
 
 export const dashboardRouter = router({
   landlordSummary: authedProcedure.query(async ({ ctx }) => {
@@ -27,8 +28,6 @@ export const dashboardRouter = router({
               leases: {
                 where: {
                   terminatedAt: null,
-                  startDate: { lte: now },
-                  endDate: { gte: now },
                 },
                 include: {
                   tenant: {
@@ -38,6 +37,7 @@ export const dashboardRouter = router({
                     },
                   },
                 },
+                orderBy: { startDate: "desc" },
               },
             },
           },
@@ -63,6 +63,13 @@ export const dashboardRouter = router({
               unitNumber: true,
               property: {
                 select: { id: true, name: true },
+              },
+              leases: {
+                where: {
+                  terminatedAt: null,
+                  startDate: { gt: now },
+                },
+                select: { id: true },
               },
             },
           },
@@ -122,7 +129,7 @@ export const dashboardRouter = router({
     // Occupancy per property
     const occupancyByProperty = properties.map((property) => {
       const pTotal = property.units.length;
-      const pOccupied = property.units.filter((u) => u.leases.length > 0).length;
+      const pOccupied = property.units.filter((u) => getUnitStatus(u.leases, now) === "occupied").length;
       const pVacant = pTotal - pOccupied;
 
       totalUnits += pTotal;
@@ -175,11 +182,10 @@ export const dashboardRouter = router({
         locationMap[loc] = new Set<string>();
       }
       p.units.forEach((u) => {
-        u.leases.forEach((l) => {
-          if (l.tenant?.id) {
-            locationMap[loc].add(l.tenant.id);
-          }
-        });
+        const current = getCurrentLease(u.leases, now);
+        if (current?.tenant?.id) {
+          locationMap[loc].add(current.tenant.id);
+        }
       });
     });
 
@@ -204,6 +210,7 @@ export const dashboardRouter = router({
         const isEndingIn60Days = daysLeft <= 60;
 
         if (!isRenewalDue && !isEndingIn60Days) return null;
+        if (lease.unit.leases && lease.unit.leases.length > 0) return null;
 
         return {
           leaseId: lease.id,
@@ -238,7 +245,7 @@ export const dashboardRouter = router({
     // Properties table
     const propertiesTable = properties.map((property) => {
       const pTotal = property.units.length;
-      const pOccupied = property.units.filter((u) => u.leases.length > 0).length;
+      const pOccupied = property.units.filter((u) => getUnitStatus(u.leases, now) === "occupied").length;
       const pVacant = pTotal - pOccupied;
       const pRate = pTotal > 0 ? Math.round((pOccupied / pTotal) * 100) : 0;
 

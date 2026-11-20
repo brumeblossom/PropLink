@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { RentFrequency, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
 import { getLeaseBalance, getDueDateStatus, formatLagosYMD } from "@/lib/billing";
+import { getCurrentLease, getNextLease } from "@/lib/leases";
 
 export const leasesRouter = router({
   create: authedProcedure
@@ -192,7 +193,7 @@ export const leasesRouter = router({
         });
       }
 
-      return await prisma.lease.findMany({
+      const leases = await prisma.lease.findMany({
         where: { unitId: input.unitId },
         include: {
           tenant: {
@@ -207,6 +208,36 @@ export const leasesRouter = router({
           },
         },
         orderBy: { startDate: "desc" },
+      });
+
+      const today = new Date();
+      const currentLease = getCurrentLease(leases, today);
+      const nextLease = getNextLease(leases, today);
+
+      return {
+        leases,
+        currentLease,
+        nextLease,
+      };
+    }),
+
+  delete: authedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.id },
+        include: { unit: { include: { property: true } } },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this lease's parent property.",
+        });
+      }
+
+      return await prisma.lease.delete({
+        where: { id: input.id },
       });
     }),
 
@@ -666,20 +697,31 @@ export const leasesRouter = router({
       const todayStr = formatLagosYMD(today);
 
       const computedTenants = users.map((user) => {
-        const processedLeases = user.leasesAsTenant.map((lease) => {
+        // Group leases by unitId so a unit with a current lease + renewal counts as 1 unit
+        const leasesByUnit = new Map<string, typeof user.leasesAsTenant>();
+        for (const lease of user.leasesAsTenant) {
+          const list = leasesByUnit.get(lease.unitId) || [];
+          list.push(lease);
+          leasesByUnit.set(lease.unitId, list);
+        }
+
+        const processedLeases = Array.from(leasesByUnit.values()).map((unitLeases) => {
+          const current = getCurrentLease(unitLeases, today) || unitLeases[0];
+          const next = getNextLease(unitLeases, today);
+
           let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" = "active";
-          if (lease.terminatedAt) {
+          if (current.terminatedAt) {
             leaseStatus = "terminated";
           } else {
-            const startStr = formatLagosYMD(lease.startDate);
-            const endStr = formatLagosYMD(lease.endDate);
+            const startStr = formatLagosYMD(current.startDate);
+            const endStr = formatLagosYMD(current.endDate);
             if (todayStr < startStr) {
               leaseStatus = "upcoming";
             } else if (todayStr > endStr) {
               leaseStatus = "expired";
             } else {
-              const renewalDate = new Date(lease.endDate);
-              renewalDate.setDate(renewalDate.getDate() - (lease.renewalWindowDays ?? 60));
+              const renewalDate = new Date(current.endDate);
+              renewalDate.setDate(renewalDate.getDate() - (current.renewalWindowDays ?? 60));
               const renewalStr = formatLagosYMD(renewalDate);
               if (todayStr >= renewalStr) {
                 leaseStatus = "renewal_due";
@@ -691,37 +733,46 @@ export const leasesRouter = router({
 
           const balance = getLeaseBalance(
             {
-              startDate: lease.startDate,
-              endDate: lease.endDate,
-              rentAmount: lease.rentAmount,
-              rentFrequency: lease.rentFrequency,
+              startDate: current.startDate,
+              endDate: current.endDate,
+              rentAmount: current.rentAmount,
+              rentFrequency: current.rentFrequency,
             },
-            lease.payments,
+            current.payments,
             today
           );
 
           const dueStatus = getDueDateStatus(
             balance.nextDueDate,
-            lease.endDate,
+            current.endDate,
             today,
             balance.unpaidPeriods
           );
 
           return {
-            id: lease.id,
-            unitId: lease.unit.id,
-            unitName: lease.unit.unitNumber,
-            propertyId: lease.unit.property.id,
-            propertyName: lease.unit.property.name,
-            startDate: lease.startDate.toISOString(),
-            endDate: lease.endDate.toISOString(),
-            rentAmount: Number(lease.rentAmount),
-            rentFrequency: lease.rentFrequency,
+            id: current.id,
+            unitId: current.unit.id,
+            unitName: current.unit.unitNumber,
+            propertyId: current.unit.property.id,
+            propertyName: current.unit.property.name,
+            startDate: current.startDate.toISOString(),
+            endDate: current.endDate.toISOString(),
+            rentAmount: Number(current.rentAmount),
+            rentFrequency: current.rentFrequency,
             leaseStatus,
             nextDueDate: balance.nextDueDate ? balance.nextDueDate.toISOString() : null,
             unpaidPeriods: balance.unpaidPeriods,
             nextDueStatus: dueStatus.status,
             nextDueText: dueStatus.text,
+            renewal: next
+              ? {
+                  id: next.id,
+                  startDate: next.startDate.toISOString(),
+                  endDate: next.endDate.toISOString(),
+                  rentAmount: Number(next.rentAmount),
+                  rentFrequency: next.rentFrequency,
+                }
+              : null,
           };
         });
 

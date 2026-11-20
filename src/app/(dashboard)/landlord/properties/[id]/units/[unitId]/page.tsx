@@ -16,7 +16,8 @@ import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
-import { getDueDateStatus } from "@/lib/billing";
+import { getDueDateStatus, formatDateGB } from "@/lib/billing";
+import { getCurrentLease, getNextLease } from "@/lib/leases";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -40,14 +41,17 @@ export default function UnitDetailPage() {
   // Queries
   const { data: properties } = trpc.properties.list.useQuery();
   const { data: unitStatus, isLoading: isLoadingStatus } = trpc.units.getStatus.useQuery({ id: unitId });
-  const { data: leases, isLoading: isLoadingLeases } = trpc.leases.getForUnit.useQuery({ unitId });
+  const { data: leaseData, isLoading: isLoadingLeases } = trpc.leases.getForUnit.useQuery({ unitId });
 
   // Find unit details from properties list
   const property = properties?.find((p) => p.id === propertyId);
   const unit = property?.units.find((u) => u.id === unitId);
 
-  // Active Lease if exists
-  const activeLease = leases?.find((l) => !l.terminatedAt);
+  // Leases: current and next lease
+  const leases = leaseData?.leases;
+  const currentLease = leaseData?.currentLease ?? getCurrentLease(leases);
+  const nextLease = leaseData?.nextLease ?? getNextLease(leases);
+  const activeLease = currentLease;
 
   // Timeline query
   const { data: timeline } = trpc.leases.getTimeline.useQuery(
@@ -94,6 +98,21 @@ export default function UnitDetailPage() {
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
   const [editLeaseError, setEditLeaseError] = useState<string | null>(null);
+  const [editingLeaseId, setEditingLeaseId] = useState<string | null>(null);
+  const [deleteLeaseConfirmId, setDeleteLeaseConfirmId] = useState<string | null>(null);
+
+  const deleteLease = trpc.leases.delete.useMutation({
+    onSuccess: () => {
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      utils.properties.list.invalidate();
+      toast("Lease deleted", "success");
+      setDeleteLeaseConfirmId(null);
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
 
   const updateLease = trpc.leases.update.useMutation({
     onSuccess: () => {
@@ -105,19 +124,21 @@ export default function UnitDetailPage() {
         utils.payments.getBillingSummary.invalidate({ leaseId: activeLease.id });
       }
       setIsEditLeaseOpen(false);
+      setEditingLeaseId(null);
     },
     onError: (err) => {
       setEditLeaseError(err.message);
     },
   });
 
-  const handleOpenEditLease = () => {
-    if (activeLease) {
-      setEditRentAmount(Number(activeLease.rentAmount) === 0 ? "" : formatInputNumber(activeLease.rentAmount.toString()));
-      setEditRentFrequency(activeLease.rentFrequency);
-      setEditDepositAmount(activeLease.depositAmount ? formatInputNumber(activeLease.depositAmount.toString()) : "");
-      setEditStartDate(new Date(activeLease.startDate).toISOString().split("T")[0]);
-      setEditEndDate(new Date(activeLease.endDate).toISOString().split("T")[0]);
+  const handleOpenEditLease = (leaseToEdit = currentLease) => {
+    if (leaseToEdit) {
+      setEditingLeaseId(leaseToEdit.id);
+      setEditRentAmount(Number(leaseToEdit.rentAmount) === 0 ? "" : formatInputNumber(leaseToEdit.rentAmount.toString()));
+      setEditRentFrequency(leaseToEdit.rentFrequency);
+      setEditDepositAmount(leaseToEdit.depositAmount ? formatInputNumber(leaseToEdit.depositAmount.toString()) : "");
+      setEditStartDate(new Date(leaseToEdit.startDate).toISOString().split("T")[0]);
+      setEditEndDate(new Date(leaseToEdit.endDate).toISOString().split("T")[0]);
       setEditLeaseError(null);
       setIsEditLeaseOpen(true);
     }
@@ -148,7 +169,7 @@ export default function UnitDetailPage() {
 
     try {
       await updateLease.mutateAsync({
-        id: activeLease!.id,
+        id: editingLeaseId || activeLease!.id,
         startDate: editStartDate,
         endDate: editEndDate,
         rentAmount: rent,
@@ -348,6 +369,7 @@ export default function UnitDetailPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.cash);
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [selectedPaymentLeaseId, setSelectedPaymentLeaseId] = useState<string>("");
 
   // Reject State
   const [isRejectOpen, setIsRejectOpen] = useState(false);
@@ -554,6 +576,7 @@ export default function UnitDetailPage() {
     setPaymentMethod(PaymentMethod.cash);
     setPaymentNotes("");
     setPaymentError(null);
+    setSelectedPaymentLeaseId(currentLease?.id || "");
   };
 
   const resetEditForm = () => {
@@ -624,18 +647,22 @@ export default function UnitDetailPage() {
       return;
     }
 
-    if (billingSummary && billingSummary.isRentSet && amount > billingSummary.remainingLeaseRent) {
+    const targetLeaseId = selectedPaymentLeaseId || activeLease!.id;
+    const isPayingNextLease = Boolean(nextLease && targetLeaseId === nextLease.id);
+
+    if (!isPayingNextLease && billingSummary && billingSummary.isRentSet && amount > billingSummary.remainingLeaseRent) {
       setPaymentError(`This is more than the ${formatCurrency(billingSummary.remainingLeaseRent)} left on this lease.`);
       return;
     }
 
     try {
       await createPayment.mutateAsync({
-        leaseId: activeLease!.id,
+        leaseId: targetLeaseId,
         amount,
         paymentDate: new Date(paymentDate).toISOString(),
         method: paymentMethod,
         notes: paymentNotes || undefined,
+        confirmUpcoming: isPayingNextLease,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to log payment.";
@@ -938,13 +965,15 @@ export default function UnitDetailPage() {
             <div className="flex items-center space-x-3">
               <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
               <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${
                   unitStatus?.status === "occupied"
                     ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                    : unitStatus?.status === "reserved"
+                    ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
                     : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
                 }`}
               >
-                {unitStatus?.status}
+                {unitStatus?.status === "reserved" ? "Reserved" : unitStatus?.status}
               </span>
             </div>
             <p className="text-neutral-400 text-sm mt-1 capitalize">
@@ -981,12 +1010,12 @@ export default function UnitDetailPage() {
                   <div className="flex items-center space-x-3">
                     <h3 className="font-bold text-white text-lg">Lease Timeline</h3>
                     <button
-                      onClick={handleOpenEditLease}
+                      onClick={() => handleOpenEditLease()}
                       className="text-xs text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 px-2 py-1 rounded transition-colors"
                     >
                       Edit Details
                     </button>
-                    {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && (
+                    {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && !nextLease && (
                       <Button
                         onClick={handleOpenRenewLease}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 px-2.5 text-xs font-semibold"
@@ -1073,6 +1102,55 @@ export default function UnitDetailPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Slim Next lease row */}
+                {nextLease && (() => {
+                  const todayMidnight = new Date();
+                  todayMidnight.setHours(0, 0, 0, 0);
+                  const nextStart = new Date(nextLease.startDate);
+                  nextStart.setHours(0, 0, 0, 0);
+                  const diffDays = Math.max(0, Math.ceil((nextStart.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)));
+
+                  const nextLeaseMenuItems: ActionMenuItem[] = [
+                    {
+                      label: "Edit",
+                      icon: <Pencil className="w-4 h-4" />,
+                      onClick: () => handleOpenEditLease(nextLease),
+                    },
+                    {
+                      label: "Delete",
+                      icon: <Trash2 className="w-4 h-4" />,
+                      variant: "danger",
+                      onClick: () => setDeleteLeaseConfirmId(nextLease.id),
+                    },
+                  ];
+
+                  return (
+                    <div className="pt-4 border-t border-neutral-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-neutral-300">
+                        <span className="font-semibold text-neutral-400">Next lease:</span>
+                        <span className="font-medium text-white">
+                          {formatDateGB(nextLease.startDate)} – {formatDateGB(nextLease.endDate)}
+                        </span>
+                        <span className="text-neutral-500">·</span>
+                        <span>
+                          {Number(nextLease.rentAmount) === 0
+                            ? "TBD"
+                            : `${formatCurrency(nextLease.rentAmount)} / ${nextLease.rentFrequency}`}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-950/40 text-blue-400 border border-blue-900/40 leading-none">
+                          Upcoming
+                        </span>
+                        <span className="text-neutral-400">
+                          Starts in {diffDays} {diffDays === 1 ? "day" : "days"}
+                        </span>
+                      </div>
+                      <div className="self-end sm:self-auto">
+                        <ActionMenu items={nextLeaseMenuItems} />
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Signed Document Wallet Card */}
@@ -1224,6 +1302,7 @@ export default function UnitDetailPage() {
                         <Button
                           onClick={() => {
                             setIsLogPaymentOpen(true);
+                            setSelectedPaymentLeaseId(currentLease?.id || "");
                             setPaymentAmount(
                               billingSummary?.outstanding
                                 ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
@@ -2120,6 +2199,27 @@ export default function UnitDetailPage() {
                 </div>
               )}
 
+              {nextLease && currentLease && (
+                <div>
+                  <label htmlFor="paymentLease" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Lease
+                  </label>
+                  <Select
+                    id="paymentLease"
+                    value={selectedPaymentLeaseId || currentLease.id}
+                    onChange={(e) => setSelectedPaymentLeaseId(e.target.value)}
+                    className="mt-1 h-10 text-sm"
+                  >
+                    <option value={currentLease.id}>
+                      Current · {formatDateGB(currentLease.startDate)} – {formatDateGB(currentLease.endDate)}
+                    </option>
+                    <option value={nextLease.id}>
+                      Next · {formatDateGB(nextLease.startDate)} – {formatDateGB(nextLease.endDate)}
+                    </option>
+                  </Select>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="paymentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                   Amount (₦)
@@ -2134,10 +2234,16 @@ export default function UnitDetailPage() {
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                   placeholder="e.g. 150,000"
                 />
-                {billingSummary && billingSummary.isRentSet && (
+                {selectedPaymentLeaseId === nextLease?.id ? (
                   <span className="text-xs text-neutral-400 block mt-1">
-                    {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
+                    {formatCurrency(nextLease.rentAmount)} left on this lease
                   </span>
+                ) : (
+                  billingSummary && billingSummary.isRentSet && (
+                    <span className="text-xs text-neutral-400 block mt-1">
+                      {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
+                    </span>
+                  )
                 )}
               </div>
 
@@ -2641,6 +2747,26 @@ export default function UnitDetailPage() {
         cancelText="Cancel"
         variant="danger"
         isLoading={resolvePayment.isPending}
+      />
+
+      {/* Delete Lease Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(deleteLeaseConfirmId)}
+        onClose={() => setDeleteLeaseConfirmId(null)}
+        onConfirm={async () => {
+          if (!deleteLeaseConfirmId) return;
+          try {
+            await deleteLease.mutateAsync({ id: deleteLeaseConfirmId });
+          } catch {
+            // handled
+          }
+        }}
+        title="Delete Lease?"
+        description="Are you sure you want to delete this upcoming lease? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleteLease.isPending}
       />
     </div>
   );

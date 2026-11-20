@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
+import { getCurrentLease, getNextLease, getUnitStatus } from "@/lib/leases";
 
 
 export const unitsRouter = router({
@@ -26,21 +27,22 @@ export const unitsRouter = router({
           leases: {
             where: {
               terminatedAt: null,
-              startDate: { lte: now },
-              endDate: { gte: now },
             },
             include: {
               tenant: {
                 select: { fullName: true },
               },
             },
+            orderBy: { startDate: "desc" },
           },
         },
         orderBy: { unitNumber: "asc" },
       });
 
       return units.map((unit) => {
-        const activeLease = unit.leases[0] || null;
+        const currentLease = getCurrentLease(unit.leases, now);
+        const nextLease = getNextLease(unit.leases, now);
+        const status = getUnitStatus(unit.leases, now);
         return {
           id: unit.id,
           propertyId: unit.propertyId,
@@ -48,14 +50,23 @@ export const unitsRouter = router({
           unitType: unit.unitType,
           sizeSqm: unit.sizeSqm,
           createdAt: unit.createdAt,
-          status: activeLease ? "occupied" : "vacant",
-          activeLease: activeLease
+          status,
+          activeLease: currentLease
             ? {
-                id: activeLease.id,
-                tenantName: activeLease.tenant.fullName,
-                startDate: activeLease.startDate,
-                endDate: activeLease.endDate,
-                rentAmount: activeLease.rentAmount,
+                id: currentLease.id,
+                tenantName: currentLease.tenant.fullName,
+                startDate: currentLease.startDate,
+                endDate: currentLease.endDate,
+                rentAmount: currentLease.rentAmount,
+              }
+            : null,
+          nextLease: nextLease
+            ? {
+                id: nextLease.id,
+                tenantName: nextLease.tenant.fullName,
+                startDate: nextLease.startDate,
+                endDate: nextLease.endDate,
+                rentAmount: nextLease.rentAmount,
               }
             : null,
         };
@@ -132,9 +143,23 @@ export const unitsRouter = router({
   getStatus: authedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
+      const now = new Date();
       const unit = await prisma.unit.findFirst({
         where: { id: input.id, deletedAt: null },
-        include: { property: true },
+        include: {
+          property: true,
+          leases: {
+            where: {
+              terminatedAt: null,
+            },
+            include: {
+              tenant: {
+                select: { fullName: true },
+              },
+            },
+            orderBy: { startDate: "desc" },
+          },
+        },
       });
 
       if (!unit || unit.property.landlordId !== ctx.user.id) {
@@ -144,32 +169,23 @@ export const unitsRouter = router({
         });
       }
 
-      const now = new Date();
-      const activeLease = await prisma.lease.findFirst({
-        where: {
-          unitId: unit.id,
-          terminatedAt: null,
-          startDate: { lte: now },
-          endDate: { gte: now },
-        },
-        include: {
-          tenant: {
-            select: { fullName: true },
-          },
-        },
-      });
+      const currentLease = getCurrentLease(unit.leases, now);
+      const nextLease = getNextLease(unit.leases, now);
+      const status = getUnitStatus(unit.leases, now);
 
       return {
-        status: activeLease ? "occupied" : "vacant",
-        activeLease: activeLease
+        status,
+        activeLease: currentLease
           ? {
-              id: activeLease.id,
-              tenantName: activeLease.tenant.fullName,
-              startDate: activeLease.startDate,
-              endDate: activeLease.endDate,
-              rentAmount: activeLease.rentAmount,
+              id: currentLease.id,
+              tenantName: currentLease.tenant.fullName,
+              startDate: currentLease.startDate,
+              endDate: currentLease.endDate,
+              rentAmount: currentLease.rentAmount,
             }
           : null,
+        currentLease,
+        nextLease,
       };
     }),
 

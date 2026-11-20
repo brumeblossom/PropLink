@@ -35,6 +35,13 @@ interface ProcessedLease {
   unpaidPeriods: number;
   nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full";
   nextDueText: string;
+  renewal?: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    rentAmount: number;
+    rentFrequency: string;
+  } | null;
 }
 
 interface TenantRow {
@@ -601,7 +608,7 @@ export default function LandlordTenantsPage() {
                   <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6 space-y-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                        Leases ({selectedTenant.leases.length})
+                        Units ({selectedTenant.leases.length})
                       </h3>
                     </div>
 
@@ -664,6 +671,13 @@ export default function LandlordTenantsPage() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Renewal note if renewal exists */}
+                            {lease.renewal && (
+                              <div className="pt-2 border-t border-neutral-800/40 text-xs text-neutral-400">
+                                Renewal · {formatDateGB(lease.renewal.startDate)} – {formatDateGB(lease.renewal.endDate)}
+                              </div>
+                            )}
 
                             {/* Footer link: View unit ↗ */}
                             <div className="pt-2 border-t border-neutral-800/60">

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
+import { getUnitStatus } from "@/lib/leases";
 import { PropertyType } from "@prisma/client";
 
 export const propertiesRouter = router({
@@ -16,8 +17,6 @@ export const propertiesRouter = router({
             leases: {
               where: {
                 terminatedAt: null,
-                startDate: { lte: now },
-                endDate: { gte: now },
               },
               include: {
                 tenant: {
@@ -26,6 +25,7 @@ export const propertiesRouter = router({
                   },
                 },
               },
+              orderBy: { startDate: "desc" },
             },
           },
         },
@@ -35,7 +35,7 @@ export const propertiesRouter = router({
 
     return properties.map((property) => {
       const totalUnits = property.units.length;
-      const occupiedUnits = property.units.filter((u) => u.leases.length > 0).length;
+      const occupiedUnits = property.units.filter((u) => getUnitStatus(u.leases, now) === "occupied").length;
       const vacantUnits = totalUnits - occupiedUnits;
 
       return {
@@ -73,12 +73,11 @@ export const propertiesRouter = router({
               leases: {
                 where: {
                   terminatedAt: null,
-                  startDate: { lte: now },
-                  endDate: { gte: now },
                 },
                 include: {
                   tenant: { select: { fullName: true } },
                 },
+                orderBy: { startDate: "desc" },
               },
             },
           },
@@ -93,7 +92,7 @@ export const propertiesRouter = router({
       }
 
       const totalUnits = property.units.length;
-      const occupiedUnits = property.units.filter((u) => u.leases.length > 0).length;
+      const occupiedUnits = property.units.filter((u) => getUnitStatus(u.leases, now) === "occupied").length;
 
       return {
         ...property,

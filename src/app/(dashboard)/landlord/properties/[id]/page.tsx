@@ -614,6 +614,7 @@ export default function PropertyDetailPage() {
                   >
                     <option value="all">All statuses</option>
                     <option value="occupied">Occupied</option>
+                    <option value="reserved">Reserved</option>
                     <option value="vacant">Vacant</option>
                   </Select>
 
@@ -725,9 +726,11 @@ export default function PropertyDetailPage() {
                           <td className="whitespace-nowrap px-6 py-4 text-sm">
                             <span
                               className={cn(
-                                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+                                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
                                 unit.status === "occupied"
                                   ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                                  : unit.status === "reserved"
+                                  ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
                                   : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
                               )}
                             >
@@ -780,9 +783,11 @@ export default function PropertyDetailPage() {
                         </div>
                         <span
                           className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+                            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
                             unit.status === "occupied"
                               ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                              : unit.status === "reserved"
+                              ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
                               : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
                           )}
                         >

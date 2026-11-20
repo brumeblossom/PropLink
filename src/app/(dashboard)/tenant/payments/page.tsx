@@ -11,6 +11,7 @@ import { PaymentMethod } from "@prisma/client";
 import { X, CreditCard, Building2, Home, Plus, Check, AlertTriangle, Pencil, FileText } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
+import { getCurrentLease } from "@/lib/leases";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
@@ -1201,21 +1202,39 @@ function LeasePaymentLedger({
 export default function TenantPaymentsPage() {
   const { data: leases, isLoading } = trpc.leases.getMine.useQuery();
 
-  // Auto-select if there's only one lease; null = show selector
+  // Group leases by unit to find currentLease per unit
+  const activeLeasesPerUnit = useMemo(() => {
+    if (!leases) return [];
+    const map = new Map<string, typeof leases>();
+    for (const l of leases) {
+      const arr = map.get(l.unitId) || [];
+      arr.push(l);
+      map.set(l.unitId, arr);
+    }
+    const today = new Date();
+    return Array.from(map.values()).map(
+      (unitLeases) => getCurrentLease(unitLeases, today) || unitLeases[0]
+    );
+  }, [leases]);
+
+  // Auto-select if there's only one unit; null = show selector
   const [selectedLeaseId, setSelectedLeaseId] = useState<string | null>(null);
 
-  // Once leases load, auto-select when there's exactly one
+  // Once leases load, auto-select when there's exactly one unit
   useEffect(() => {
-    if (!leases) return;
-    if (leases.length === 1) {
-      setSelectedLeaseId(leases[0].id);
+    if (activeLeasesPerUnit.length === 1) {
+      setSelectedLeaseId(activeLeasesPerUnit[0].id);
     }
-    // If there are multiple leases AND we have a previously selected id that's
+    // If there are multiple units AND we have a previously selected id that's
     // no longer valid (edge case), reset to null
-    if (leases.length > 1 && selectedLeaseId && !leases.find((l) => l.id === selectedLeaseId)) {
+    if (
+      activeLeasesPerUnit.length > 1 &&
+      selectedLeaseId &&
+      !leases?.find((l) => l.id === selectedLeaseId)
+    ) {
       setSelectedLeaseId(null);
     }
-  }, [leases]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeLeasesPerUnit, leases]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
@@ -1292,18 +1311,18 @@ export default function TenantPaymentsPage() {
     );
   }
 
-  // Multiple leases, none selected yet → show selector
-  if (leases.length > 1 && !selectedLeaseId) {
-    return <LeaseSelector leases={leases} onSelect={setSelectedLeaseId} />;
+  // Multiple units, none selected yet → show selector
+  if (activeLeasesPerUnit.length > 1 && !selectedLeaseId) {
+    return <LeaseSelector leases={activeLeasesPerUnit} onSelect={setSelectedLeaseId} />;
   }
 
   // Find the selected lease object
-  const selectedLease = leases.find((l) => l.id === selectedLeaseId) ?? leases[0];
+  const selectedLease = leases.find((l) => l.id === selectedLeaseId) ?? activeLeasesPerUnit[0];
 
   return (
     <LeasePaymentLedger
       lease={selectedLease}
-      showBackButton={leases.length > 1}
+      showBackButton={activeLeasesPerUnit.length > 1}
       onBack={() => setSelectedLeaseId(null)}
     />
   );

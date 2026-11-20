@@ -5,13 +5,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountSection } from "@/components/settings/AccountSection";
+import { getCurrentLease } from "@/lib/leases";
 import { UserCheck } from "lucide-react";
 
 export default function TenantSettingsPage() {
   const { data: user, isLoading: isLoadingUser } = trpc.auth.me.useQuery();
   const { data: leases, isLoading: isLoadingLeases } = trpc.leases.getMine.useQuery();
 
-  const activeLease = leases?.find((l) => !l.terminatedAt);
+  const activeLease = leases ? getCurrentLease(leases) : null;
   const landlord = activeLease?.unit?.property?.landlord;
 
   if (isLoadingUser || isLoadingLeases) {

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { trpc } from "@/utils/trpc";
 import { UnitChatPanel } from "@/components/UnitChatPanel";
 import { useChatWidget } from "@/components/ChatWidgetContext";
+import { getCurrentLease } from "@/lib/leases";
 import { MessageSquare, X } from "lucide-react";
 
 /**
@@ -24,7 +25,7 @@ export function ChatWidget() {
   const { data: leases } = trpc.leases.getMine.useQuery(undefined, {
     enabled: currentUser?.role === "tenant",
   });
-  const tenantActiveLease = leases?.find((l) => !l.terminatedAt);
+  const tenantActiveLease = leases ? getCurrentLease(leases) : null;
 
   // The unit this widget will chat on:
   // - tenant: always their active lease unit

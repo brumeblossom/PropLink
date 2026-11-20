@@ -1,0 +1,110 @@
+import { formatLagosYMD } from "./billing";
+
+export interface LeaseLike {
+  id?: string;
+  startDate: Date | string;
+  endDate: Date | string;
+  terminatedAt?: Date | string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Among non-terminated leases, returns:
+ * 1. The one where startDate <= today <= endDate (Africa/Lagos date).
+ * 2. If none is running today, the earliest upcoming one (startDate > today, sorted ascending).
+ * 3. If none, the most recent past one (endDate < today, sorted descending).
+ */
+export function getCurrentLease<T extends LeaseLike>(
+  leases: T[] | null | undefined,
+  today: Date | string = new Date()
+): T | null {
+  if (!leases || leases.length === 0) return null;
+
+  const todayStr = formatLagosYMD(today);
+  const activeLeases = leases.filter((l) => !l.terminatedAt);
+  if (activeLeases.length === 0) return null;
+
+  // 1. Running today: startDate <= todayStr <= endDate
+  const running = activeLeases.filter((l) => {
+    const startStr = formatLagosYMD(l.startDate);
+    const endStr = formatLagosYMD(l.endDate);
+    return startStr <= todayStr && todayStr <= endStr;
+  });
+
+  if (running.length > 0) {
+    running.sort((a, b) => formatLagosYMD(a.startDate).localeCompare(formatLagosYMD(b.startDate)));
+    return running[0];
+  }
+
+  // 2. Earliest upcoming: startDate > todayStr
+  const upcoming = activeLeases.filter((l) => formatLagosYMD(l.startDate) > todayStr);
+  if (upcoming.length > 0) {
+    upcoming.sort((a, b) => formatLagosYMD(a.startDate).localeCompare(formatLagosYMD(b.startDate)));
+    return upcoming[0];
+  }
+
+  // 3. Most recent past: endDate < todayStr
+  const past = activeLeases.filter((l) => formatLagosYMD(l.endDate) < todayStr);
+  if (past.length > 0) {
+    past.sort((a, b) => formatLagosYMD(b.endDate).localeCompare(formatLagosYMD(a.endDate)));
+    return past[0];
+  }
+
+  return null;
+}
+
+/**
+ * Returns the earliest non-terminated lease that starts after the current lease ends.
+ */
+export function getNextLease<T extends LeaseLike>(
+  leases: T[] | null | undefined,
+  today: Date | string = new Date()
+): T | null {
+  if (!leases || leases.length === 0) return null;
+
+  const current = getCurrentLease(leases, today);
+  if (!current) return null;
+
+  const currentEndStr = formatLagosYMD(current.endDate);
+  const activeLeases = leases.filter((l) => !l.terminatedAt);
+
+  // Subsequent leases that start after the current lease ends
+  const subsequent = activeLeases.filter((l) => {
+    if (l === current || (l.id && current.id && l.id === current.id)) return false;
+    const startStr = formatLagosYMD(l.startDate);
+    return startStr > currentEndStr;
+  });
+
+  if (subsequent.length === 0) return null;
+
+  subsequent.sort((a, b) => formatLagosYMD(a.startDate).localeCompare(formatLagosYMD(b.startDate)));
+  return subsequent[0];
+}
+
+/**
+ * Derives unit occupancy status:
+ * - "occupied": current lease is running today
+ * - "reserved": no lease running today, but an upcoming lease exists
+ * - "vacant": no running or upcoming lease
+ */
+export function getUnitStatus(
+  leases: LeaseLike[] | null | undefined,
+  today: Date | string = new Date()
+): "occupied" | "reserved" | "vacant" {
+  const current = getCurrentLease(leases, today);
+  if (!current) return "vacant";
+
+  const todayStr = formatLagosYMD(today);
+  const startStr = formatLagosYMD(current.startDate);
+  const endStr = formatLagosYMD(current.endDate);
+
+  if (startStr <= todayStr && todayStr <= endStr) {
+    return "occupied";
+  }
+
+  if (startStr > todayStr) {
+    return "reserved";
+  }
+
+  return "vacant";
+}

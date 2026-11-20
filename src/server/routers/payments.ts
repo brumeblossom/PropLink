@@ -61,6 +61,7 @@ export const paymentsRouter = router({
         method: z.nativeEnum(PaymentMethod),
         notes: z.string().optional(),
         proofUrl: z.string().optional(),
+        confirmUpcoming: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -99,6 +100,35 @@ export const paymentsRouter = router({
           code: "BAD_REQUEST",
           message: "Payment date cannot be in the future.",
         });
+      }
+
+      const leaseStartStr = formatLagosYMD(lease.startDate);
+      const isUpcoming = leaseStartStr > todayStr;
+
+      if (isUpcoming) {
+        if (!isLandlord) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot log payment for a lease that has not started yet.",
+          });
+        }
+        if (!input.confirmUpcoming) {
+          const runningLease = await prisma.lease.findFirst({
+            where: {
+              unitId: lease.unitId,
+              id: { not: lease.id },
+              terminatedAt: null,
+              startDate: { lte: new Date() },
+              endDate: { gte: new Date() },
+            },
+          });
+          if (runningLease) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "This lease has not started yet. Please select the current lease or explicitly confirm logging against the upcoming lease.",
+            });
+          }
+        }
       }
 
       // Check remaining lease rent limit
@@ -188,6 +218,7 @@ export const paymentsRouter = router({
         method: z.nativeEnum(PaymentMethod),
         notes: z.string().optional(),
         proofUrl: z.string().optional(),
+        confirmUpcoming: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -225,6 +256,9 @@ export const paymentsRouter = router({
         });
       }
 
+      const lease = payment.lease;
+      const isLandlord = lease.unit.property.landlordId === ctx.user.id;
+
       const payDate = new Date(input.paymentDate);
       const payDateStr = formatLagosYMD(payDate);
       const todayStr = formatLagosYMD(new Date());
@@ -234,6 +268,35 @@ export const paymentsRouter = router({
           code: "BAD_REQUEST",
           message: "Payment date cannot be in the future.",
         });
+      }
+
+      const leaseStartStr = formatLagosYMD(lease.startDate);
+      const isUpcoming = leaseStartStr > todayStr;
+
+      if (isUpcoming) {
+        if (!isLandlord) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot log payment for a lease that has not started yet.",
+          });
+        }
+        if (!input.confirmUpcoming) {
+          const runningLease = await prisma.lease.findFirst({
+            where: {
+              unitId: lease.unitId,
+              id: { not: lease.id },
+              terminatedAt: null,
+              startDate: { lte: new Date() },
+              endDate: { gte: new Date() },
+            },
+          });
+          if (runningLease) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "This lease has not started yet. Please select the current lease or explicitly confirm logging against the upcoming lease.",
+            });
+          }
+        }
       }
 
       // Check remaining lease rent limit (excluding current payment's pending amount)

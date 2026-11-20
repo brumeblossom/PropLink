@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +8,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
+import { getCurrentLease, getNextLease } from "@/lib/leases";
 import { Home } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers/_app";
@@ -17,6 +19,21 @@ type LeaseElement = RouterOutputs["leases"]["getMine"][number];
 export default function TenantDashboard() {
   const { data: user, isLoading: isLoadingUser } = trpc.auth.me.useQuery();
   const { data: leases, isLoading: isLoadingLeases } = trpc.leases.getMine.useQuery();
+
+  const unitLeasePairs = useMemo(() => {
+    if (!leases) return [];
+    const map = new Map<string, typeof leases>();
+    for (const l of leases) {
+      const arr = map.get(l.unitId) || [];
+      arr.push(l);
+      map.set(l.unitId, arr);
+    }
+    const today = new Date();
+    return Array.from(map.values()).map((unitLeases) => ({
+      currentLease: getCurrentLease(unitLeases, today) || unitLeases[0],
+      nextLease: getNextLease(unitLeases, today),
+    }));
+  }, [leases]);
 
   if (isLoadingUser || isLoadingLeases) {
     return (
@@ -91,10 +108,10 @@ export default function TenantDashboard() {
         </p>
       </div>
 
-      {leases && leases.length > 0 ? (
+      {unitLeasePairs.length > 0 ? (
         <div className="space-y-12">
-          {leases.map((lease) => (
-            <TenantLeaseSection key={lease.id} lease={lease} />
+          {unitLeasePairs.map(({ currentLease, nextLease }) => (
+            <TenantLeaseSection key={currentLease.id} lease={currentLease} nextLease={nextLease} />
           ))}
         </div>
       ) : (
@@ -114,7 +131,13 @@ export default function TenantDashboard() {
   );
 }
 
-function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
+function TenantLeaseSection({
+  lease,
+  nextLease,
+}: {
+  lease: LeaseElement;
+  nextLease?: LeaseElement | null;
+}) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
 
@@ -151,8 +174,8 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
     const renewalStartDate = new Date(end);
     renewalStartDate.setDate(renewalStartDate.getDate() - lease.renewalWindowDays);
     if (today >= renewalStartDate) {
-      leaseStatus = "renewal_due";
-      isRenewalDue = true;
+      leaseStatus = nextLease ? "active" : "renewal_due";
+      isRenewalDue = !nextLease;
     } else {
       leaseStatus = "active";
     }
@@ -247,7 +270,18 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
               </div>
             </div>
 
-            {isRenewalDue && (
+            {nextLease ? (
+              <div className="rounded-lg bg-blue-950/20 border border-blue-900/30 p-3 mt-4 text-xs text-blue-400 flex items-start space-x-2.5">
+                <span className="text-sm leading-none font-bold mt-0.5">✓</span>
+                <div>
+                  <p className="font-semibold">Renewal Confirmed</p>
+                  <p className="mt-0.5 opacity-90">
+                    Your renewal lease ({new Date(nextLease.startDate).toLocaleDateString()} –{" "}
+                    {new Date(nextLease.endDate).toLocaleDateString()}) is scheduled.
+                  </p>
+                </div>
+              </div>
+            ) : isRenewalDue ? (
               <div className="rounded-lg bg-yellow-950/20 border border-yellow-900/30 p-3 mt-4 text-xs text-yellow-400 flex items-start space-x-2.5">
                 <span className="text-sm leading-none font-bold mt-0.5">⚠️</span>
                 <div>
@@ -259,7 +293,7 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
                   </p>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
