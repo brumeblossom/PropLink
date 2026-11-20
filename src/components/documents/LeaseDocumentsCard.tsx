@@ -217,13 +217,13 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
               Store and view lease agreements, inventory or receipts.
             </p>
           </div>
-          {mode === "landlord" && (
+          {mode === "landlord" && totalFiles > 0 && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs h-8 px-2.5 border-neutral-750 hover:bg-neutral-800 text-neutral-200 shrink-0 flex items-center gap-1.5"
+              className="text-xs h-8 px-2.5 border-neutral-700 hover:bg-neutral-800 text-neutral-200 shrink-0 flex items-center gap-1.5"
             >
               <Upload className="w-3.5 h-3.5" />
               Upload
@@ -261,9 +261,10 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
           ) : totalFiles === 0 ? (
             <div className="py-6 text-center">
               {mode === "landlord" ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-neutral-400 max-w-xs mx-auto">
-                    No documents yet. Upload the lease agreement, inventory or receipts.
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <FileText className="w-5 h-5 text-neutral-500" />
+                  <p className="text-xs text-neutral-400">
+                    No documents yet.
                   </p>
                   <Button
                     type="button"
