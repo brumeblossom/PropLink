@@ -49,6 +49,8 @@ export const notificationsRouter = router({
             where: { id: { in: leaseIds } },
             select: {
               id: true,
+              status: true,
+              invitationExpiresAt: true,
               unit: {
                 select: {
                   unitNumber: true,
@@ -84,12 +86,41 @@ export const notificationsRouter = router({
         : [],
     ]);
 
+    const now = new Date();
+    const expiredLeaseIds: string[] = [];
+    leases.forEach((l) => {
+      if (
+        l.status === "expired" ||
+        (l.status === "pending" && l.invitationExpiresAt && new Date(l.invitationExpiresAt) < now)
+      ) {
+        expiredLeaseIds.push(l.id);
+      }
+    });
+
+    if (expiredLeaseIds.length > 0) {
+      await prisma.notification.deleteMany({
+        where: {
+          type: "lease_invitation",
+          relatedType: "lease",
+          relatedId: { in: expiredLeaseIds },
+        },
+      }).catch((err) => console.error("Failed to clean up expired lease invitation notifications:", err));
+    }
+
     const paymentMap = new Map(payments.map((p) => [p.id, p]));
     const leaseMap = new Map(leases.map((l) => [l.id, l]));
     const unitMap = new Map(units.map((u) => [u.id, u]));
     const conversationMap = new Map(conversations.map((c) => [c.id, c]));
 
-    return notifications.map((n) => {
+    const filtered = notifications.filter((n) => {
+      if (n.relatedType === "lease") {
+        if (!n.relatedId || !leaseMap.has(n.relatedId)) return false;
+        if (n.type === "lease_invitation" && expiredLeaseIds.includes(n.relatedId)) return false;
+      }
+      return true;
+    });
+
+    return filtered.map((n) => {
       let unitNumber: string | null = null;
       let propertyName: string | null = null;
       let quote: string | null = null;

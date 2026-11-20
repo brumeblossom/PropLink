@@ -319,4 +319,31 @@ describe("Billing & Running Balance", () => {
       expect(result.line2).toBe("Lease starts 01/02/2027");
     });
   });
+
+  describe("Weekly Rent Frequency", () => {
+    it("4-week lease has 4 periods; rent due so far after 10 days is 2 × rent", () => {
+      const lease = {
+        startDate: "2026-05-01",
+        endDate: "2026-05-29", // 4 weeks later
+        rentAmount: 50000,
+        rentFrequency: "weekly",
+      };
+
+      const starts = getPeriodStarts(lease);
+      expect(starts.length).toBe(4);
+      expect(formatLagosYMD(starts[0])).toBe("2026-05-01");
+      expect(formatLagosYMD(starts[1])).toBe("2026-05-08");
+      expect(formatLagosYMD(starts[2])).toBe("2026-05-15");
+      expect(formatLagosYMD(starts[3])).toBe("2026-05-22");
+
+      // After 10 days from start (e.g. 2026-05-11): May 1 and May 8 are due
+      const after10Days = "2026-05-11";
+      const balance = getLeaseBalance(lease, [], after10Days);
+
+      expect(balance.periodsDue).toBe(2);
+      expect(balance.rentDueToDate).toBe(2 * 50000);
+      expect(balance.totalLeaseRent).toBe(4 * 50000);
+      expect(balance.outstanding).toBe(2 * 50000);
+    });
+  });
 });

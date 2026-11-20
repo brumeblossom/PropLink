@@ -18,6 +18,7 @@ import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-ty
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import { getDueDateStatus, formatDateGB } from "@/lib/billing";
 import { getCurrentLease, getNextLease } from "@/lib/leases";
+import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
@@ -418,7 +419,9 @@ export default function UnitDetailPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [rentAmount, setRentAmount] = useState("");
-  const [rentFrequency, setRentFrequency] = useState<RentFrequency>(RentFrequency.monthly);
+  const [rentFrequency, setRentFrequency] = useState<RentFrequency | "">("");
+  const [rentAmountError, setRentAmountError] = useState<string | null>(null);
+  const [rentFrequencyError, setRentFrequencyError] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState("");
   const [leaseError, setLeaseError] = useState<string | null>(null);
 
@@ -504,7 +507,9 @@ export default function UnitDetailPage() {
     setStartDate("");
     setEndDate("");
     setRentAmount("");
-    setRentFrequency(RentFrequency.monthly);
+    setRentFrequency("");
+    setRentAmountError(null);
+    setRentFrequencyError(null);
     setDepositAmount("");
     setLeaseError(null);
   };
@@ -617,6 +622,8 @@ export default function UnitDetailPage() {
     setLeaseError(null);
     setTenantNameError(null);
     setTenantEmailError(null);
+    setRentAmountError(null);
+    setRentFrequencyError(null);
 
     let hasError = false;
     if (!tenantName.trim()) {
@@ -637,8 +644,12 @@ export default function UnitDetailPage() {
     const rent = rentAmount ? parseFloat(rentAmount.replace(/,/g, "")) : undefined;
     const deposit = depositAmount ? parseFloat(depositAmount.replace(/,/g, "")) : undefined;
 
-    if (rentAmount && (isNaN(rent!) || rent! < 0)) {
-      setLeaseError("Rent amount must be a positive number.");
+    if (!rentAmount || isNaN(rent!) || rent! <= 0) {
+      setRentAmountError("Enter the rent amount");
+      hasError = true;
+    }
+    if (!rentFrequency) {
+      setRentFrequencyError("Choose how often rent is paid");
       hasError = true;
     }
     if (depositAmount && (isNaN(deposit!) || deposit! <= 0)) {
@@ -655,8 +666,8 @@ export default function UnitDetailPage() {
         tenantEmail: tenantEmail.trim(),
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        rentAmount: rent,
-        rentFrequency,
+        rentAmount: rent!,
+        rentFrequency: rentFrequency as RentFrequency,
         depositAmount: deposit,
       });
     } catch (err) {
@@ -1057,9 +1068,7 @@ export default function UnitDetailPage() {
                   <div>
                     <span className="block text-neutral-500 text-xs">Rent</span>
                     <span className="font-semibold text-white mt-0.5 block">
-                      {Number(timeline.rentAmount) === 0
-                        ? "TBD"
-                        : `${formatCurrency(timeline.rentAmount)} / ${timeline.rentFrequency}`}
+                      {formatCurrency(timeline.rentAmount)} / {formatRentFrequency(timeline.rentFrequency)}
                     </span>
                   </div>
                   <div>
@@ -1125,9 +1134,7 @@ export default function UnitDetailPage() {
                         </span>
                         <span className="text-neutral-500">·</span>
                         <span>
-                          {Number(nextLease.rentAmount) === 0
-                            ? "TBD"
-                            : `${formatCurrency(nextLease.rentAmount)} / ${nextLease.rentFrequency}`}
+                          {formatCurrency(nextLease.rentAmount)} / {formatRentFrequency(nextLease.rentFrequency)}
                         </span>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-950/40 text-blue-400 border border-blue-900/40 leading-none">
                           Upcoming
@@ -1823,8 +1830,10 @@ export default function UnitDetailPage() {
                     onChange={(e) => setRenewRentFrequency(e.target.value as RentFrequency)}
                     className="mt-1 h-10 text-sm"
                   >
-                    {Object.values(RentFrequency).map((f) => (
-                      <option key={f} value={f}>{f}</option>
+                    {RENT_FREQUENCY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
                     ))}
                   </Select>
                 </div>
@@ -1845,7 +1854,7 @@ export default function UnitDetailPage() {
                 />
               </div>
 
-              <div className="flex space-x-3 pt-2">
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <Button
                   type="button"
                   onClick={() => {
@@ -1853,14 +1862,14 @@ export default function UnitDetailPage() {
                     resetRenewForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-full border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={renewLease.isPending}
-                  className="w-1/2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold h-10 text-sm"
+                  className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-semibold h-10 text-sm"
                 >
                   {renewLease.isPending ? "Creating..." : "Create Renewal Lease"}
                 </Button>
@@ -1985,23 +1994,55 @@ export default function UnitDetailPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="rentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Rent Amount (₦) <span className="text-neutral-500 font-normal lowercase">(optional)</span>
-                  </label>
-                  <input
-                    id="rentAmount"
-                    type="text"
-                    inputMode="decimal"
-                    value={rentAmount}
-                    onChange={(e) => setRentAmount(formatInputNumber(e.target.value))}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="e.g. 150,000 (can be left blank / TBD)"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="rentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Rent amount (₦) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="rentAmount"
+                      type="text"
+                      inputMode="decimal"
+                      value={rentAmount}
+                      onChange={(e) => {
+                        setRentAmount(formatInputNumber(e.target.value));
+                        if (rentAmountError) setRentAmountError(null);
+                      }}
+                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      placeholder="e.g. 150,000"
+                    />
+                    {rentAmountError && (
+                      <p className="mt-1 text-xs text-red-500">{rentAmountError}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="rentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Rent frequency <span className="text-red-500">*</span>
+                    </label>
+                    <Select
+                      id="rentFrequency"
+                      value={rentFrequency}
+                      onChange={(e) => {
+                        setRentFrequency(e.target.value as RentFrequency);
+                        if (rentFrequencyError) setRentFrequencyError(null);
+                      }}
+                      className="mt-1 h-[38px] text-sm text-white"
+                    >
+                      <option value="" disabled>Select frequency</option>
+                      {RENT_FREQUENCY_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </Select>
+                    {rentFrequencyError && (
+                      <p className="mt-1 text-xs text-red-500">{rentFrequencyError}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-neutral-800">
                 <Button
                   type="button"
                   onClick={() => {
@@ -2009,14 +2050,14 @@ export default function UnitDetailPage() {
                     resetLeaseForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-full border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createLease.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-full bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
                 >
                   {createLease.isPending ? "Sending..." : "Send Invite"}
                 </Button>
@@ -2102,9 +2143,11 @@ export default function UnitDetailPage() {
                       onChange={(e) => setEditRentFrequency(e.target.value as RentFrequency)}
                       className="mt-1 h-[38px] text-sm"
                     >
-                      <option value={RentFrequency.monthly}>Monthly</option>
-                      <option value={RentFrequency.quarterly}>Quarterly</option>
-                      <option value={RentFrequency.annually}>Annually</option>
+                      {RENT_FREQUENCY_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 </div>
@@ -2125,19 +2168,19 @@ export default function UnitDetailPage() {
                 </div>
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-neutral-800">
                 <Button
                   type="button"
                   onClick={() => setIsEditLeaseOpen(false)}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-full border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateLease.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-full bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
                 >
                   {updateLease.isPending ? "Saving..." : "Save Changes"}
                 </Button>

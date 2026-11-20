@@ -21,6 +21,7 @@ enum PropertyType {
 
 
 enum RentFrequency {
+  weekly
   monthly
   quarterly
   annually

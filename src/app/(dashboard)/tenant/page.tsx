@@ -19,18 +19,8 @@ import {
   getPeriodStarts,
   type RentDueLines,
 } from "@/lib/billing";
+import { formatRentFrequency } from "@/lib/rent";
 import { Search, Inbox, X } from "lucide-react";
-
-function formatRentFrequency(freq: string): string {
-  const lower = freq.toLowerCase();
-  if (lower === "annually" || lower === "yearly" || lower === "annual") return "year";
-  if (lower === "monthly" || lower === "month") return "month";
-  if (lower === "quarterly" || lower === "quarter") return "quarter";
-  if (lower === "weekly" || lower === "week") return "week";
-  if (lower === "daily" || lower === "day") return "day";
-  if (lower === "bi_annually" || lower === "bi-annually" || lower === "biannually") return "6 months";
-  return lower;
-}
 
 function computeLeaseStatus(
   lease: {

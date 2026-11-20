@@ -144,6 +144,18 @@ export function computePeriodStartDate(
 export function getPeriodStarts(lease: Pick<LeaseLike, "startDate" | "endDate" | "rentFrequency">): Date[] {
   const start = getLagosYMD(lease.startDate);
   const endStr = formatLagosYMD(lease.endDate);
+  const freq = lease.rentFrequency?.toLowerCase();
+
+  if (freq === "weekly" || freq === "week") {
+    const starts: Date[] = [];
+    let current = createLagosDate(start.year, start.month, start.day);
+    while (formatLagosYMD(current) < endStr) {
+      starts.push(new Date(current));
+      current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate() + 7, 0, 0, 0));
+    }
+    return starts;
+  }
+
   const stepMonths = getStepMonths(lease.rentFrequency);
   const starts: Date[] = [];
 

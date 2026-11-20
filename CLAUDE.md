@@ -33,6 +33,7 @@ If a request during a session seems to imply any of the above, stop and flag it 
 - **Never guess at business logic that has real money or legal implications** (lease overlap rules, payment confirmation authority, RLS policies). If the PRD is ambiguous on one of these, stop and ask rather than pick a default.
 - **Use gstack skills at the right stage** — see Section 12. `/autoplan` before starting a prompt, `/review` after building, `/qa` on major features, `/cso` before any deploy.
 - Use `/browse` (gstack) for all web browsing tasks. Never use `mcp__claude-in-chrome__*` tools.
+- **Never create test users, properties or leases in the live database. Verify with the build and tests only; if a real check is needed, ask the owner to do it.**
 
 ---
 

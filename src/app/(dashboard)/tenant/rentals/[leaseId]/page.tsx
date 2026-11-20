@@ -20,6 +20,7 @@ import {
   getDueDateStatus,
 } from "@/lib/billing";
 import { getNextLease } from "@/lib/leases";
+import { formatRentFrequency } from "@/lib/rent";
 import {
   Plus,
   Paperclip,
@@ -97,17 +98,6 @@ function formatUnitType(type: string): string {
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatRentFrequency(freq: string): string {
-  const lower = freq.toLowerCase();
-  if (lower === "annually" || lower === "yearly" || lower === "annual") return "year";
-  if (lower === "monthly" || lower === "month") return "month";
-  if (lower === "quarterly" || lower === "quarter") return "quarter";
-  if (lower === "weekly" || lower === "week") return "week";
-  if (lower === "daily" || lower === "day") return "day";
-  if (lower === "bi_annually" || lower === "bi-annually" || lower === "biannually") return "6 months";
-  return lower;
 }
 
 export default function TenantRentalDetailsPage({

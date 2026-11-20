@@ -38,8 +38,10 @@ export const leasesRouter = router({
         tenantName: z.string().trim().min(1, "Tenant full name is required"),
         startDate: z.string().optional().nullable(),
         endDate: z.string().optional().nullable(),
-        rentAmount: z.number().nonnegative().optional().nullable(),
-        rentFrequency: z.nativeEnum(RentFrequency).optional().default(RentFrequency.annually),
+        rentAmount: z.number().positive("Enter the rent amount"),
+        rentFrequency: z.nativeEnum(RentFrequency, {
+          errorMap: () => ({ message: "Choose how often rent is paid" }),
+        }),
         depositAmount: z.number().positive().optional().nullable(),
         renewalWindowDays: z.number().int().positive().default(60),
       })
@@ -138,8 +140,8 @@ export const leasesRouter = router({
           tenantId: tenant.id,
           startDate: start,
           endDate: end,
-          rentAmount: input.rentAmount ?? 0,
-          rentFrequency: input.rentFrequency ?? RentFrequency.annually,
+          rentAmount: input.rentAmount,
+          rentFrequency: input.rentFrequency,
           depositAmount: input.depositAmount ?? null,
           renewalWindowDays: input.renewalWindowDays,
           status: isExistingTenant ? "pending" : "active",
@@ -362,13 +364,23 @@ export const leasesRouter = router({
         });
       }
 
-      return await prisma.lease.update({
+      const updated = await prisma.lease.update({
         where: { id: lease.id },
         data: {
           status: "cancelled",
           respondedAt: new Date(),
         },
       });
+
+      await prisma.notification.deleteMany({
+        where: {
+          type: "lease_invitation",
+          relatedType: "lease",
+          relatedId: lease.id,
+        },
+      }).catch((err) => console.error("Failed to delete invitation notification on cancel:", err));
+
+      return updated;
     }),
 
   delete: authedProcedure
@@ -385,6 +397,13 @@ export const leasesRouter = router({
           message: "You do not own this lease's parent property.",
         });
       }
+
+      await prisma.notification.deleteMany({
+        where: {
+          relatedType: "lease",
+          relatedId: input.id,
+        },
+      }).catch((err) => console.error("Failed to delete notifications on lease delete:", err));
 
       return await prisma.lease.delete({
         where: { id: input.id },
@@ -776,6 +795,14 @@ export const leasesRouter = router({
           respondedAt: new Date(),
         },
       });
+
+      await prisma.notification.deleteMany({
+        where: {
+          type: "lease_invitation",
+          relatedType: "lease",
+          relatedId: lease.id,
+        },
+      }).catch((err) => console.error("Failed to delete invitation notification on decline:", err));
 
       try {
         await createNotification({
