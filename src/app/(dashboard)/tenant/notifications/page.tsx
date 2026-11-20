@@ -201,7 +201,7 @@ export default function TenantNotificationsPage() {
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Notifications" />
 
-      <PageContainer className="space-y-6">
+      <PageContainer width="narrow" className="space-y-6">
         <PageTitleRow
           title="Your notifications"
           description="Payments, lease events and messages from your landlord."

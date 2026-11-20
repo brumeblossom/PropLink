@@ -13,7 +13,7 @@ export default function TenantSettingsPage() {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
         <PageHeader title="Settings" />
-        <PageContainer>
+        <PageContainer width="narrow">
           <div className="space-y-4">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-72" />
@@ -34,7 +34,7 @@ export default function TenantSettingsPage() {
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Settings" />
 
-      <PageContainer>
+      <PageContainer width="narrow">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Account Settings</h1>
           <p className="text-neutral-400 mt-1 text-sm">

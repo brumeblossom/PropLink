@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, use } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
@@ -99,12 +99,23 @@ function formatUnitType(type: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function formatRentFrequency(freq: string): string {
+  const lower = freq.toLowerCase();
+  if (lower === "annually" || lower === "yearly" || lower === "annual") return "year";
+  if (lower === "monthly" || lower === "month") return "month";
+  if (lower === "quarterly" || lower === "quarter") return "quarter";
+  if (lower === "weekly" || lower === "week") return "week";
+  if (lower === "daily" || lower === "day") return "day";
+  if (lower === "bi_annually" || lower === "bi-annually" || lower === "biannually") return "6 months";
+  return lower;
+}
+
 export default function TenantRentalDetailsPage({
   params,
 }: {
-  params: Promise<{ leaseId: string }>;
+  params: { leaseId: string };
 }) {
-  const { leaseId } = use(params);
+  const { leaseId } = params;
   const router = useRouter();
   const utils = trpc.useUtils();
   const { toast } = useToast();
@@ -476,10 +487,10 @@ export default function TenantRentalDetailsPage({
           </div>
         </div>
 
-        {/* Two cards side by side (Lease & Documents) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          {/* Lease Details Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 space-y-4">
+        {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          {/* Lease Details Card (3fr) */}
+          <div className="lg:col-span-3 rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 space-y-4">
             <div>
               <h3 className="font-bold text-white text-lg">Lease</h3>
               <p className="text-neutral-500 text-xs mt-0.5">
@@ -501,7 +512,7 @@ export default function TenantRentalDetailsPage({
                   Rent
                 </span>
                 <span className="text-white font-semibold block mt-1">
-                  {formatCurrency(lease.rentAmount)} / {lease.rentFrequency}
+                  {formatCurrency(lease.rentAmount)} / {formatRentFrequency(lease.rentFrequency)}
                 </span>
               </div>
               <div>
@@ -534,7 +545,7 @@ export default function TenantRentalDetailsPage({
                     </span>
                     <span className="text-neutral-500">·</span>
                     <span className="text-white font-medium">
-                      {formatCurrency(nextLease.rentAmount)}
+                      {formatCurrency(nextLease.rentAmount)} / {formatRentFrequency(nextLease.rentFrequency)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -552,8 +563,10 @@ export default function TenantRentalDetailsPage({
             )}
           </div>
 
-          {/* Documents Card (from Prompt 12, view only) */}
-          <LeaseDocumentsCard leaseId={lease.id} mode="tenant" />
+          {/* Documents Card (2fr) */}
+          <div className="lg:col-span-2">
+            <LeaseDocumentsCard leaseId={lease.id} mode="tenant" />
+          </div>
         </div>
 
         {/* Billing Summary Card */}

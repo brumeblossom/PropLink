@@ -13,9 +13,21 @@ import {
   formatLagosYMD,
   formatTwoLineRentDue,
   getLeaseBalance,
+  getPeriodStarts,
   type RentDueLines,
 } from "@/lib/billing";
-import { Search, Inbox } from "lucide-react";
+import { Search, Inbox, X } from "lucide-react";
+
+function formatRentFrequency(freq: string): string {
+  const lower = freq.toLowerCase();
+  if (lower === "annually" || lower === "yearly" || lower === "annual") return "year";
+  if (lower === "monthly" || lower === "month") return "month";
+  if (lower === "quarterly" || lower === "quarter") return "quarter";
+  if (lower === "weekly" || lower === "week") return "week";
+  if (lower === "daily" || lower === "day") return "day";
+  if (lower === "bi_annually" || lower === "bi-annually" || lower === "biannually") return "6 months";
+  return lower;
+}
 
 function computeLeaseStatus(
   lease: {
@@ -194,19 +206,63 @@ export default function TenantHomePage() {
       0
     );
 
-    // Find earliest next payment across active leases with a nextDueDate
+    // Find earliest next payment from today onwards across active leases
     let earliestPayment: { amount: number; dateStr: string; unitName: string } | null = null;
     let earliestDueDate: Date | null = null;
+    const todayStr = formatLagosYMD(today);
 
     for (const l of activeRunning) {
-      if (l.balance.nextDueDate) {
-        const due = new Date(l.balance.nextDueDate);
+      const rentAmount = Number(l.rentAmount) || 0;
+      if (rentAmount <= 0) continue;
+
+      const periodStarts = getPeriodStarts({
+        startDate: l.startDate,
+        endDate: l.endDate,
+        rentFrequency: l.rentFrequency,
+      });
+
+      // Confirmed payments on this lease
+      const confirmedPayments = (l.payments || []).filter(
+        (p) => !p.status || p.status === "confirmed"
+      );
+      const paidToDate = confirmedPayments.reduce(
+        (sum: number, p) => sum + Number(p.amount || 0),
+        0
+      );
+
+      // Periods strictly before today
+      const periodsBeforeToday = periodStarts.filter(
+        (p) => formatLagosYMD(p) < todayStr
+      );
+      const pastPeriodsRent = periodsBeforeToday.length * rentAmount;
+
+      // Excess paid covering future periods from today onwards
+      const futureCredit = Math.max(0, paidToDate - pastPeriodsRent);
+
+      // Future periods on or after today
+      const futurePeriods = periodStarts.filter(
+        (p) => formatLagosYMD(p) >= todayStr
+      );
+
+      let nextDueForThisLease: Date | null = null;
+      let remainingCredit = futureCredit;
+      for (const p of futurePeriods) {
+        if (remainingCredit >= rentAmount) {
+          remainingCredit -= rentAmount;
+        } else {
+          nextDueForThisLease = p;
+          break;
+        }
+      }
+
+      if (nextDueForThisLease) {
+        const due = new Date(nextDueForThisLease);
         if (!earliestDueDate || due < earliestDueDate) {
           earliestDueDate = due;
           earliestPayment = {
-            amount: Number(l.rentAmount) || 0,
-            dateStr: formatDateGB(l.balance.nextDueDate),
-            unitName: `Unit ${l.unit.unitNumber}`,
+            amount: rentAmount,
+            dateStr: formatDateGB(nextDueForThisLease),
+            unitName: l.unit.unitNumber,
           };
         }
       }
@@ -271,17 +327,17 @@ export default function TenantHomePage() {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
         <PageHeader title="Home" />
-        <PageContainer className="space-y-8">
+        <PageContainer className="space-y-6">
           <div>
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-4 w-80 mt-2" />
           </div>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 min-h-[84px] space-y-2"
+                className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center space-y-2"
               >
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="h-7 w-28" />
@@ -307,7 +363,7 @@ export default function TenantHomePage() {
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Home" />
 
-      <PageContainer className="space-y-8">
+      <PageContainer className="space-y-6">
         {/* Welcome Heading */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white font-sans">
@@ -319,76 +375,67 @@ export default function TenantHomePage() {
         </div>
 
         {/* Pending invitations banner(s) slot directly under heading, ABOVE metric cards (Prompt 14) */}
-        {/* Pending invitations banner slot (Prompt 14) */}
 
         {/* 4 Metric Cards */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Active leases */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 sm:p-5 backdrop-blur-sm min-w-0 flex flex-col justify-between min-h-[84px]">
-            <div className="text-xs font-medium text-neutral-400 truncate">
-              Active leases
-            </div>
-            <div
-              className="text-2xl font-bold tracking-tight text-white truncate whitespace-nowrap leading-tight mt-1"
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Active leases</span>
+            <span
+              className="text-2xl font-semibold text-white mt-1 block truncate whitespace-nowrap"
               title={String(activeLeasesCount)}
             >
               {activeLeasesCount}
-            </div>
+            </span>
           </div>
 
           {/* Landlords */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 sm:p-5 backdrop-blur-sm min-w-0 flex flex-col justify-between min-h-[84px]">
-            <div className="text-xs font-medium text-neutral-400 truncate">
-              Landlords
-            </div>
-            <div
-              className="text-2xl font-bold tracking-tight text-white truncate whitespace-nowrap leading-tight mt-1"
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Landlords</span>
+            <span
+              className="text-2xl font-semibold text-white mt-1 block truncate whitespace-nowrap"
               title={String(distinctLandlordsCount)}
             >
               {distinctLandlordsCount}
-            </div>
+            </span>
           </div>
 
           {/* Outstanding */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 sm:p-5 backdrop-blur-sm min-w-0 flex flex-col justify-between min-h-[84px]">
-            <div className="text-xs font-medium text-neutral-400 truncate">
-              Outstanding
-            </div>
-            <div
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Outstanding</span>
+            <span
               className={cn(
-                "text-2xl font-bold tracking-tight truncate whitespace-nowrap leading-tight mt-1",
+                "text-2xl font-semibold mt-1 block truncate whitespace-nowrap",
                 totalOutstanding > 0 ? "text-red-400" : "text-white"
               )}
               title={totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "₦0"}
             >
               {totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "₦0"}
-            </div>
+            </span>
           </div>
 
           {/* Next payment */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 sm:p-5 backdrop-blur-sm min-w-0 flex flex-col justify-between min-h-[84px]">
-            <div className="text-xs font-medium text-neutral-400 truncate">
-              Next payment
-            </div>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
+            <span className="block text-xs text-neutral-400">Next payment</span>
             {nextPayment ? (
               <div className="min-w-0 mt-1">
-                <div
-                  className="text-2xl font-bold tracking-tight text-white truncate whitespace-nowrap leading-tight"
+                <span
+                  className="text-2xl font-semibold text-white block truncate whitespace-nowrap leading-tight"
                   title={formatCurrency(nextPayment.amount)}
                 >
                   {formatCurrency(nextPayment.amount)}
-                </div>
-                <div
-                  className="text-xs text-neutral-400 truncate mt-0.5"
+                </span>
+                <span
+                  className="text-xs text-neutral-400 block truncate mt-0.5 whitespace-nowrap"
                   title={`${nextPayment.dateStr} · ${nextPayment.unitName}`}
                 >
                   {nextPayment.dateStr} · {nextPayment.unitName}
-                </div>
+                </span>
               </div>
             ) : (
-              <div className="text-2xl font-bold tracking-tight text-neutral-500 truncate whitespace-nowrap leading-tight mt-1">
+              <span className="text-2xl font-semibold text-neutral-500 mt-1 block truncate whitespace-nowrap leading-tight">
                 —
-              </div>
+              </span>
             )}
           </div>
         </div>
@@ -402,20 +449,30 @@ export default function TenantHomePage() {
             </span>
           </div>
 
-          {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          {/* Toolbar: search 280px wide on left with Status filter right beside it */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative w-full sm:w-[280px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search property, unit or landlord"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-neutral-900/40 border border-neutral-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+                className="w-full pl-9 pr-8 py-2 rounded-lg bg-neutral-900 border border-neutral-800 text-sm text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-700 focus:ring-1 focus:ring-neutral-700 transition-colors"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
-            <div className="w-full sm:w-48 shrink-0">
+            <div className="w-full sm:w-44">
               <Select
                 value={statusFilter}
                 onChange={(e) =>
@@ -434,27 +491,39 @@ export default function TenantHomePage() {
             </div>
           </div>
 
-          {/* Desktop Table (>= 768px) */}
+          {/* Desktop Table (>= 768px): fixed layout with colgroup */}
           <div className="hidden md:block rounded-xl border border-neutral-800 bg-neutral-900/20 overflow-hidden">
             <table className="w-full table-fixed divide-y divide-neutral-800/80 text-left text-sm">
-              <thead className="bg-neutral-900/60 text-xs font-medium text-neutral-400 uppercase tracking-wider">
+              <colgroup>
+                <col className="w-[20%]" />
+                <col className="w-[10%]" />
+                <col className="w-[19%]" />
+                <col className="w-[13%]" />
+                <col className="w-[16%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+              </colgroup>
+              <thead className="border-b border-neutral-800 bg-neutral-900/70 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                 <tr>
-                  <th scope="col" className="w-[24%] px-4 py-3">
+                  <th scope="col" className="px-5 py-3.5">
                     Property
                   </th>
-                  <th scope="col" className="w-[11%] px-4 py-3">
+                  <th scope="col" className="px-5 py-3.5">
                     Unit
                   </th>
-                  <th scope="col" className="w-[20%] px-4 py-3">
+                  <th scope="col" className="px-5 py-3.5">
                     Landlord
                   </th>
-                  <th scope="col" className="w-[14%] px-4 py-3">
+                  <th scope="col" className="px-5 py-3.5">
                     Rent
                   </th>
-                  <th scope="col" className="w-[16%] px-4 py-3">
+                  <th scope="col" className="px-5 py-3.5">
                     Lease period
                   </th>
-                  <th scope="col" className="w-[15%] px-4 py-3">
+                  <th scope="col" className="px-5 py-3.5">
+                    Status
+                  </th>
+                  <th scope="col" className="px-5 py-3.5">
                     Next rent due
                   </th>
                 </tr>
@@ -462,7 +531,7 @@ export default function TenantHomePage() {
               <tbody className="divide-y divide-neutral-800/60">
                 {filteredRentals.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-16 text-center text-neutral-500">
+                    <td colSpan={7} className="px-5 py-16 text-center text-neutral-500">
                       <Inbox className="w-8 h-8 mx-auto mb-2 opacity-40" />
                       <p className="text-sm font-medium text-neutral-300">No rentals yet.</p>
                       <p className="text-xs text-neutral-500 mt-1">
@@ -474,11 +543,18 @@ export default function TenantHomePage() {
                   filteredRentals.map((lease) => (
                     <tr
                       key={lease.id}
+                      tabIndex={0}
                       onClick={() => router.push(`/tenant/rentals/${lease.id}`)}
-                      className="hover:bg-neutral-900/40 transition-colors cursor-pointer group"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(`/tenant/rentals/${lease.id}`);
+                        }
+                      }}
+                      className="h-16 hover:bg-neutral-850/60 transition-colors cursor-pointer group focus:outline-none focus:bg-neutral-800/50"
                     >
-                      {/* Property */}
-                      <td className="px-4 py-3.5 min-w-0">
+                      {/* Property (20%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
                         <div
                           className="font-medium text-white truncate group-hover:text-neutral-200"
                           title={lease.unit.property.name}
@@ -495,18 +571,18 @@ export default function TenantHomePage() {
                         )}
                       </td>
 
-                      {/* Unit */}
-                      <td className="px-4 py-3.5 min-w-0">
+                      {/* Unit (10%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
                         <span
                           className="text-sm font-medium text-neutral-200 truncate block"
-                          title={`Unit ${lease.unit.unitNumber}`}
+                          title={lease.unit.unitNumber}
                         >
-                          Unit {lease.unit.unitNumber}
+                          {lease.unit.unitNumber}
                         </span>
                       </td>
 
-                      {/* Landlord */}
-                      <td className="px-4 py-3.5 min-w-0">
+                      {/* Landlord (19%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
                         <div
                           className="text-sm font-medium text-white truncate"
                           title={lease.unit.property.landlord.fullName}
@@ -521,28 +597,36 @@ export default function TenantHomePage() {
                         </div>
                       </td>
 
-                      {/* Rent */}
-                      <td className="px-4 py-3.5 min-w-0 text-neutral-200 whitespace-nowrap">
-                        <span className="font-medium text-white">
+                      {/* Rent (13%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden whitespace-nowrap">
+                        <span
+                          className="font-medium text-white truncate block text-sm"
+                          title={`${formatCurrency(lease.rentAmount)} / ${formatRentFrequency(lease.rentFrequency)}`}
+                        >
                           {formatCurrency(lease.rentAmount)}
-                        </span>
-                        <span className="text-neutral-400 text-xs">
-                          {" "}/ {lease.rentFrequency}
-                        </span>
-                      </td>
-
-                      {/* Lease period */}
-                      <td className="px-4 py-3.5 min-w-0 text-xs text-neutral-300 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                          <span className="text-neutral-400 text-xs font-normal">
+                            {" "}/ {formatRentFrequency(lease.rentFrequency)}
                           </span>
-                          <StatusBadge status={lease.leaseStatus} />
-                        </div>
+                        </span>
                       </td>
 
-                      {/* Next rent due */}
-                      <td className="px-4 py-3.5 min-w-0">
+                      {/* Lease period (16%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden text-xs text-neutral-300 whitespace-nowrap">
+                        <span
+                          className="truncate block"
+                          title={`${formatDateGB(lease.startDate)} – ${formatDateGB(lease.endDate)}`}
+                        >
+                          {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                        </span>
+                      </td>
+
+                      {/* Status (10%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden whitespace-nowrap">
+                        <StatusBadge status={lease.leaseStatus} />
+                      </td>
+
+                      {/* Next rent due (12%) */}
+                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
                         <TwoLineRentDue data={lease.rentDueLines} />
                       </td>
                     </tr>
@@ -572,7 +656,7 @@ export default function TenantHomePage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-white truncate">
-                        Unit {lease.unit.unitNumber} · {lease.unit.property.name}
+                        {lease.unit.unitNumber} · {lease.unit.property.name}
                       </div>
                       <div className="text-xs text-neutral-400 truncate mt-0.5">
                         {lease.unit.property.landlord.fullName}
@@ -587,7 +671,9 @@ export default function TenantHomePage() {
                     <span className="font-medium text-white">
                       {formatCurrency(lease.rentAmount)}
                     </span>
-                    <span className="text-neutral-400">/{lease.rentFrequency}</span>
+                    <span className="text-neutral-400">
+                      {" "}/ {formatRentFrequency(lease.rentFrequency)}
+                    </span>
                     <span className="text-neutral-500 mx-1.5">·</span>
                     <span>
                       {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
