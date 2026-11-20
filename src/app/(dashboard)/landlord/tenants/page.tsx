@@ -30,10 +30,10 @@ interface ProcessedLease {
   endDate: string;
   rentAmount: number;
   rentFrequency: string;
-  leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated";
+  leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" | "pending";
   nextDueDate: string | null;
   unpaidPeriods: number;
-  nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full";
+  nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full" | "pending";
   nextDueText: string;
   renewal?: {
     id: string;
@@ -56,10 +56,10 @@ interface TenantRow {
     moreCount: number;
   };
   propertyDisplay: string;
-  overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated";
+  overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" | "pending";
   isCurrent: boolean;
   nextRentDue: {
-    type: "overdue" | "today" | "upcoming" | "paid_in_full" | "expired";
+    type: "overdue" | "today" | "upcoming" | "paid_in_full" | "expired" | "pending";
     dueDate: string | null;
     unpaidPeriods: number;
     leaseStartDate: string | null;
@@ -69,6 +69,12 @@ interface TenantRow {
 
 function LeaseStatusBadge({ status }: { status: string }) {
   switch (status) {
+    case "pending":
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          Pending
+        </span>
+      );
     case "expired":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">

@@ -5,11 +5,22 @@ export interface LeaseLike {
   startDate: Date | string;
   endDate: Date | string;
   terminatedAt?: Date | string | null;
+  status?: string | null;
+  invitationExpiresAt?: Date | string | null;
   [key: string]: unknown;
 }
 
 /**
- * Among non-terminated leases, returns:
+ * Checks if a lease is active (not terminated and status is active or unassigned for backwards-compat).
+ */
+function isLeaseActive(l: LeaseLike): boolean {
+  if (l.terminatedAt) return false;
+  if (!l.status || l.status === "active") return true;
+  return false;
+}
+
+/**
+ * Among non-terminated, active leases, returns:
  * 1. The one where startDate <= today <= endDate (Africa/Lagos date).
  * 2. If none is running today, the earliest upcoming one (startDate > today, sorted ascending).
  * 3. If none, the most recent past one (endDate < today, sorted descending).
@@ -21,7 +32,7 @@ export function getCurrentLease<T extends LeaseLike>(
   if (!leases || leases.length === 0) return null;
 
   const todayStr = formatLagosYMD(today);
-  const activeLeases = leases.filter((l) => !l.terminatedAt);
+  const activeLeases = leases.filter(isLeaseActive);
   if (activeLeases.length === 0) return null;
 
   // 1. Running today: startDate <= todayStr <= endDate
@@ -54,7 +65,7 @@ export function getCurrentLease<T extends LeaseLike>(
 }
 
 /**
- * Returns the earliest non-terminated lease that starts after the base lease ends.
+ * Returns the earliest non-terminated, active lease that starts after the base lease ends.
  * Can be called with:
  * - getNextLease(leases, today) -> derives base lease as getCurrentLease(leases, today)
  * - getNextLease(leases, today, referenceLease) -> uses referenceLease as the base lease being viewed
@@ -100,7 +111,7 @@ export function getNextLease<T extends LeaseLike>(
   if (!baseLease) return null;
 
   const baseEndStr = formatLagosYMD(baseLease.endDate);
-  const activeLeases = leases.filter((l) => !l.terminatedAt);
+  const activeLeases = leases.filter(isLeaseActive);
 
   // Subsequent leases that start after the base lease ends, excluding the base lease itself
   const subsequent = activeLeases.filter((l) => {
@@ -118,27 +129,41 @@ export function getNextLease<T extends LeaseLike>(
 
 /**
  * Derives unit occupancy status:
- * - "occupied": current lease is running today
- * - "reserved": no lease running today, but an upcoming lease exists
- * - "vacant": no running or upcoming lease
+ * - "occupied": current active lease is running today
+ * - "reserved": no lease running today, but an upcoming active lease exists OR an unexpired pending invitation exists
+ * - "vacant": no running or upcoming active lease and no unexpired pending invitation
  */
 export function getUnitStatus(
   leases: LeaseLike[] | null | undefined,
   today: Date | string = new Date()
 ): "occupied" | "reserved" | "vacant" {
   const current = getCurrentLease(leases, today);
-  if (!current) return "vacant";
-
   const todayStr = formatLagosYMD(today);
-  const startStr = formatLagosYMD(current.startDate);
-  const endStr = formatLagosYMD(current.endDate);
 
-  if (startStr <= todayStr && todayStr <= endStr) {
-    return "occupied";
+  if (current) {
+    const startStr = formatLagosYMD(current.startDate);
+    const endStr = formatLagosYMD(current.endDate);
+
+    if (startStr <= todayStr && todayStr <= endStr) {
+      return "occupied";
+    }
+
+    if (startStr > todayStr) {
+      return "reserved";
+    }
   }
 
-  if (startStr > todayStr) {
-    return "reserved";
+  // Check if there is an unexpired pending invitation for this unit
+  if (leases && leases.length > 0) {
+    const hasUnexpiredPending = leases.some((l) => {
+      if (l.terminatedAt) return false;
+      if (l.status !== "pending") return false;
+      if (!l.invitationExpiresAt) return true;
+      return new Date(l.invitationExpiresAt) >= new Date(today);
+    });
+    if (hasUnexpiredPending) {
+      return "reserved";
+    }
   }
 
   return "vacant";

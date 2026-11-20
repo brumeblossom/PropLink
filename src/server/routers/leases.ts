@@ -8,6 +8,28 @@ import { getLeaseBalance, getDueDateStatus, formatLagosYMD } from "@/lib/billing
 import { getCurrentLease, getNextLease } from "@/lib/leases";
 
 export const leasesRouter = router({
+  lookupTenantEmail: authedProcedure
+    .input(z.object({ email: z.string().trim() }))
+    .query(async ({ input }) => {
+      const email = input.email.toLowerCase().trim();
+      if (!email || !email.includes("@")) {
+        return { exists: false, isLandlord: false, isTenant: false, fullName: null };
+      }
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, role: true, fullName: true },
+      });
+      if (!user) {
+        return { exists: false, isLandlord: false, isTenant: false, fullName: null };
+      }
+      return {
+        exists: true,
+        isLandlord: user.role === "landlord",
+        isTenant: user.role === "tenant",
+        fullName: user.fullName,
+      };
+    }),
+
   create: authedProcedure
     .input(
       z.object({
@@ -47,11 +69,21 @@ export const leasesRouter = router({
         });
       }
 
-      // Check for overlapping active leases for this unit
+      // Check for overlapping active or pending leases for this unit
       const overlap = await prisma.lease.findFirst({
         where: {
           unitId: input.unitId,
           terminatedAt: null,
+          OR: [
+            { status: "active" },
+            {
+              status: "pending",
+              OR: [
+                { invitationExpiresAt: null },
+                { invitationExpiresAt: { gte: new Date() } },
+              ],
+            },
+          ],
           NOT: {
             OR: [{ endDate: { lt: start } }, { startDate: { gt: end } }],
           },
@@ -74,24 +106,32 @@ export const leasesRouter = router({
         });
       }
 
-      // Find or create placeholder tenant user profile
+      const normalizedEmail = input.tenantEmail.toLowerCase().trim();
       let tenant = await prisma.user.findUnique({
-        where: { email: input.tenantEmail },
+        where: { email: normalizedEmail },
       });
-      let isNewTenant = false;
+
+      if (tenant?.role === "landlord") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This email belongs to a landlord account. Use the tenant's personal email.",
+        });
+      }
+
+      const isExistingTenant = Boolean(tenant && tenant.role === "tenant");
 
       if (!tenant) {
         tenant = await prisma.user.create({
           data: {
-            email: input.tenantEmail,
+            email: normalizedEmail,
             fullName: input.tenantName,
             role: "tenant",
           },
         });
-        isNewTenant = true;
       }
 
-      // Create the lease record
+      const now = new Date();
+      // Create the lease record: status pending for existing tenants, active for new placeholder accounts
       const lease = await prisma.lease.create({
         data: {
           unitId: input.unitId,
@@ -102,12 +142,17 @@ export const leasesRouter = router({
           rentFrequency: input.rentFrequency ?? RentFrequency.annually,
           depositAmount: input.depositAmount ?? null,
           renewalWindowDays: input.renewalWindowDays,
+          status: isExistingTenant ? "pending" : "active",
+          invitedAt: isExistingTenant ? now : null,
+          invitationExpiresAt: isExistingTenant
+            ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+            : null,
         },
       });
 
-      // Generate a one-time invite code if this is a newly created placeholder tenant
+      // Generate a one-time invite code only if this is a newly created placeholder tenant
       let inviteCode = null;
-      if (isNewTenant) {
+      if (!isExistingTenant) {
         const code = "PL-" + Math.random().toString(36).substring(2, 8).toUpperCase();
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7); // valid for 7 days
@@ -121,13 +166,13 @@ export const leasesRouter = router({
         });
       }
 
-      if (!isNewTenant) {
+      if (isExistingTenant) {
         try {
           await createNotification({
             recipientId: tenant.id,
-            type: "lease_created",
-            title: "New Lease Agreement",
-            body: `A new lease agreement has been created for you at unit ${unit.unitNumber}.`,
+            type: "lease_invitation",
+            title: "New rental invitation",
+            body: `${ctx.user.fullName || "Landlord"} invited you to rent ${unit.unitNumber} at ${unit.property.name}.`,
             relatedType: "lease",
             relatedId: lease.id,
           });
@@ -194,10 +239,13 @@ export const leasesRouter = router({
       }
 
       const leases = await prisma.lease.findMany({
-        where: { unitId: input.unitId },
+        where: {
+          unitId: input.unitId,
+          status: { notIn: ["declined", "cancelled"] },
+        },
         include: {
           tenant: {
-            select: { fullName: true, email: true, phone: true, avatarUrl: true },
+            select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true },
           },
           inviteCodes: {
             select: {
@@ -214,11 +262,113 @@ export const leasesRouter = router({
       const currentLease = getCurrentLease(leases, today);
       const nextLease = getNextLease(leases, today);
 
+      const rawPending = leases.find(
+        (l) => !l.terminatedAt && (l.status === "pending" || l.status === "expired")
+      );
+      const pendingLease = rawPending
+        ? {
+            ...rawPending,
+            isExpired:
+              rawPending.status === "expired" ||
+              Boolean(
+                rawPending.invitationExpiresAt &&
+                  new Date(rawPending.invitationExpiresAt) < today
+              ),
+          }
+        : null;
+
       return {
         leases,
         currentLease,
         nextLease,
+        pendingLease,
       };
+    }),
+
+  resendInvitation: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { include: { property: true } },
+          tenant: true,
+        },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      if (lease.status !== "pending" && lease.status !== "expired") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only pending or expired invitations can be resent.",
+        });
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+      const updated = await prisma.lease.update({
+        where: { id: lease.id },
+        data: {
+          status: "pending",
+          invitedAt: now,
+          invitationExpiresAt: expiresAt,
+        },
+      });
+
+      try {
+        await createNotification({
+          recipientId: lease.tenantId,
+          type: "lease_invitation",
+          title: "New rental invitation",
+          body: `${ctx.user.fullName || "Landlord"} invited you to rent ${lease.unit.unitNumber} at ${lease.unit.property.name}.`,
+          relatedType: "lease",
+          relatedId: lease.id,
+        });
+      } catch (err) {
+        console.error("Failed to resend lease invitation notification:", err);
+      }
+
+      return updated;
+    }),
+
+  cancelInvitation: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { include: { property: true } },
+        },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      if (lease.status !== "pending" && lease.status !== "expired") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only pending or expired invitations can be cancelled.",
+        });
+      }
+
+      return await prisma.lease.update({
+        where: { id: lease.id },
+        data: {
+          status: "cancelled",
+          respondedAt: new Date(),
+        },
+      });
     }),
 
   delete: authedProcedure
@@ -473,6 +623,176 @@ export const leasesRouter = router({
       };
     }),
 
+  getPendingInvitations: authedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== "tenant") {
+        return [];
+      }
+
+      const now = new Date();
+      return await prisma.lease.findMany({
+        where: {
+          tenantId: ctx.user.id,
+          status: "pending",
+          OR: [
+            { invitationExpiresAt: null },
+            { invitationExpiresAt: { gt: now } },
+          ],
+        },
+        include: {
+          unit: {
+            include: {
+              property: {
+                include: {
+                  landlord: {
+                    select: {
+                      id: true,
+                      fullName: true,
+                      email: true,
+                      phone: true,
+                      avatarUrl: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { invitedAt: "desc" },
+      });
+    }),
+
+  acceptInvitation: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "tenant") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only tenants can accept invitations.",
+        });
+      }
+
+      const lease = await prisma.lease.findFirst({
+        where: {
+          id: input.leaseId,
+          tenantId: ctx.user.id,
+        },
+        include: {
+          unit: {
+            include: {
+              property: true,
+            },
+          },
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invitation not found.",
+        });
+      }
+
+      if (lease.status !== "pending") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `This invitation cannot be accepted (current status: ${lease.status}).`,
+        });
+      }
+
+      if (lease.invitationExpiresAt && new Date(lease.invitationExpiresAt) < new Date()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This invitation has expired.",
+        });
+      }
+
+      await prisma.lease.update({
+        where: { id: lease.id },
+        data: {
+          status: "active",
+          respondedAt: new Date(),
+        },
+      });
+
+      try {
+        await createNotification({
+          recipientId: lease.unit.property.landlordId,
+          type: "lease_invitation_accepted",
+          title: "Invitation accepted",
+          body: `${ctx.user.fullName || "Tenant"} accepted your invitation for ${lease.unit.unitNumber}.`,
+          relatedType: "lease",
+          relatedId: lease.id,
+        });
+      } catch (err) {
+        console.error("Failed to notify landlord of accepted invitation:", err);
+      }
+
+      return { success: true, unitNumber: lease.unit.unitNumber };
+    }),
+
+  declineInvitation: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.role !== "tenant") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only tenants can decline invitations.",
+        });
+      }
+
+      const lease = await prisma.lease.findFirst({
+        where: {
+          id: input.leaseId,
+          tenantId: ctx.user.id,
+        },
+        include: {
+          unit: {
+            include: {
+              property: true,
+            },
+          },
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invitation not found.",
+        });
+      }
+
+      if (lease.status !== "pending") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `This invitation cannot be declined (current status: ${lease.status}).`,
+        });
+      }
+
+      await prisma.lease.update({
+        where: { id: lease.id },
+        data: {
+          status: "declined",
+          respondedAt: new Date(),
+        },
+      });
+
+      try {
+        await createNotification({
+          recipientId: lease.unit.property.landlordId,
+          type: "lease_invitation_declined",
+          title: "Invitation declined",
+          body: `${ctx.user.fullName || "Tenant"} declined your invitation for ${lease.unit.unitNumber}.`,
+          relatedType: "lease",
+          relatedId: lease.id,
+        });
+      } catch (err) {
+        console.error("Failed to notify landlord of declined invitation:", err);
+      }
+
+      return { success: true };
+    }),
+
   getMine: authedProcedure
     .query(async ({ ctx }) => {
       if (ctx.user.role !== "tenant") {
@@ -483,7 +803,7 @@ export const leasesRouter = router({
       }
 
       return await prisma.lease.findMany({
-        where: { tenantId: ctx.user.id },
+        where: { tenantId: ctx.user.id, status: "active" },
         include: {
           payments: {
             select: {
@@ -529,6 +849,7 @@ export const leasesRouter = router({
         where: {
           id: input.leaseId,
           tenantId: ctx.user.id,
+          status: "active",
         },
         include: {
           unit: {
@@ -547,7 +868,7 @@ export const leasesRouter = router({
                 },
               },
               leases: {
-                where: { terminatedAt: null },
+                where: { terminatedAt: null, status: "active" },
                 orderBy: { startDate: "asc" },
                 select: {
                   id: true,
@@ -780,9 +1101,42 @@ export const leasesRouter = router({
           leasesByUnit.set(lease.unitId, list);
         }
 
-        const processedLeases = Array.from(leasesByUnit.values()).map((unitLeases) => {
-          const current = getCurrentLease(unitLeases, today) || unitLeases[0];
-          const next = getNextLease(unitLeases, today);
+        const processedLeases = [];
+        for (const unitLeases of Array.from(leasesByUnit.values())) {
+          // Filter out declined, cancelled, and expired pending leases
+          const validLeases = unitLeases.filter((l) => {
+            if (l.status === "declined" || l.status === "cancelled" || l.status === "expired") return false;
+            if (l.status === "pending" && l.invitationExpiresAt && new Date(l.invitationExpiresAt) < today) {
+              return false;
+            }
+            return true;
+          });
+
+          if (validLeases.length === 0) continue;
+
+          const current = getCurrentLease(validLeases, today) || validLeases[0];
+          const next = getNextLease(validLeases, today);
+
+          if (current.status === "pending") {
+            processedLeases.push({
+              id: current.id,
+              unitId: current.unit.id,
+              unitName: current.unit.unitNumber,
+              propertyId: current.unit.property.id,
+              propertyName: current.unit.property.name,
+              startDate: current.startDate.toISOString(),
+              endDate: current.endDate.toISOString(),
+              rentAmount: Number(current.rentAmount),
+              rentFrequency: current.rentFrequency,
+              leaseStatus: "pending" as const,
+              nextDueDate: null,
+              unpaidPeriods: 0,
+              nextDueStatus: "pending" as const,
+              nextDueText: "Pending invitation",
+              renewal: null,
+            });
+            continue;
+          }
 
           let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" = "active";
           if (current.terminatedAt) {
@@ -824,7 +1178,7 @@ export const leasesRouter = router({
             balance.unpaidPeriods
           );
 
-          return {
+          processedLeases.push({
             id: current.id,
             unitId: current.unit.id,
             unitName: current.unit.unitNumber,
@@ -848,14 +1202,14 @@ export const leasesRouter = router({
                   rentFrequency: next.rentFrequency,
                 }
               : null,
-          };
-        });
+          });
+        }
 
         const isCurrent = processedLeases.some(
-          (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due" || l.leaseStatus === "upcoming"
+          (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due" || l.leaseStatus === "upcoming" || (l.leaseStatus as string) === "pending"
         );
 
-        let overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" = "active";
+        let overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" | "pending" = "active";
         if (processedLeases.some((l) => l.leaseStatus === "expired")) {
           overallStatus = "expired";
         } else if (processedLeases.some((l) => l.leaseStatus === "renewal_due")) {
@@ -864,6 +1218,8 @@ export const leasesRouter = router({
           overallStatus = "active";
         } else if (processedLeases.some((l) => l.leaseStatus === "upcoming")) {
           overallStatus = "upcoming";
+        } else if (processedLeases.some((l) => (l.leaseStatus as string) === "pending")) {
+          overallStatus = "pending";
         } else if (processedLeases.some((l) => l.leaseStatus === "terminated")) {
           overallStatus = "terminated";
         }

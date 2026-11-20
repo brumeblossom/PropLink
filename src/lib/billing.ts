@@ -272,7 +272,7 @@ export function formatTwoLineRentDue({
   startDate?: Date | string | null;
   todayInput?: Date | string;
 }): RentDueLines {
-  if (leaseStatus === "expired" || leaseStatus === "terminated") {
+  if (leaseStatus === "expired" || leaseStatus === "terminated" || leaseStatus === "pending") {
     return { line1: "—", status: "expired" };
   }
 

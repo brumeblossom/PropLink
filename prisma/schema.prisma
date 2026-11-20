@@ -26,6 +26,14 @@ enum RentFrequency {
   annually
 }
 
+enum LeaseStatus {
+  pending
+  active
+  declined
+  cancelled
+  expired
+}
+
 enum PaymentMethod {
   cash
   bank_transfer
@@ -151,6 +159,10 @@ model Lease {
   rentFrequency     RentFrequency @map("rent_frequency")
   depositAmount     Decimal?      @map("deposit_amount") @db.Decimal(12, 2)
   renewalWindowDays Int           @default(60) @map("renewal_window_days")
+  status            LeaseStatus   @default(active)
+  invitedAt         DateTime?     @map("invited_at") @db.Timestamptz
+  respondedAt       DateTime?     @map("responded_at") @db.Timestamptz
+  invitationExpiresAt DateTime?   @map("invitation_expires_at") @db.Timestamptz
   documentUrl       String?       @map("document_url")
   terminatedAt      DateTime?     @map("terminated_at") @db.Timestamptz
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz

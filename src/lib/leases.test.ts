@@ -161,4 +161,59 @@ describe("getCurrentLease and getNextLease", () => {
     expect(getNextLease([])).toBeNull();
     expect(getUnitStatus([])).toBe("vacant");
   });
+
+  it("ignores pending, declined, cancelled, and expired leases in getCurrentLease", () => {
+    const leases = [
+      {
+        id: "lease-pending",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+        status: "pending",
+        terminatedAt: null,
+      },
+      {
+        id: "lease-declined",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+        status: "declined",
+        terminatedAt: null,
+      },
+      {
+        id: "lease-cancelled",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+        status: "cancelled",
+        terminatedAt: null,
+      },
+    ];
+
+    expect(getCurrentLease(leases, today)).toBeNull();
+    expect(getNextLease(leases, today)).toBeNull();
+  });
+
+  it("marks unit reserved when an unexpired pending invitation exists, vacant if expired", () => {
+    const unexpiredPending = [
+      {
+        id: "lease-pending-1",
+        startDate: "2026-12-01",
+        endDate: "2027-12-01",
+        status: "pending",
+        invitationExpiresAt: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 days in future
+        terminatedAt: null,
+      },
+    ];
+    expect(getUnitStatus(unexpiredPending, today)).toBe("reserved");
+
+    const expiredPending = [
+      {
+        id: "lease-pending-2",
+        startDate: "2026-12-01",
+        endDate: "2027-12-01",
+        status: "pending",
+        invitationExpiresAt: new Date(today.getTime() - 24 * 60 * 60 * 1000), // 1 day in past
+        terminatedAt: null,
+      },
+    ];
+    expect(getUnitStatus(expiredPending, today)).toBe("vacant");
+  });
 });

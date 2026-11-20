@@ -151,10 +151,11 @@ export const unitsRouter = router({
           leases: {
             where: {
               terminatedAt: null,
+              status: { notIn: ["declined", "cancelled"] },
             },
             include: {
               tenant: {
-                select: { fullName: true },
+                select: { id: true, fullName: true, email: true, phone: true },
               },
             },
             orderBy: { startDate: "desc" },
@@ -173,6 +174,21 @@ export const unitsRouter = router({
       const nextLease = getNextLease(unit.leases, now);
       const status = getUnitStatus(unit.leases, now);
 
+      const rawPending = unit.leases.find(
+        (l) => l.status === "pending" || l.status === "expired"
+      );
+      const pendingLease = rawPending
+        ? {
+            ...rawPending,
+            isExpired:
+              rawPending.status === "expired" ||
+              Boolean(
+                rawPending.invitationExpiresAt &&
+                  new Date(rawPending.invitationExpiresAt) < now
+              ),
+          }
+        : null;
+
       return {
         status,
         activeLease: currentLease
@@ -186,6 +202,7 @@ export const unitsRouter = router({
           : null,
         currentLease,
         nextLease,
+        pendingLease,
       };
     }),
 

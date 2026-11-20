@@ -7,6 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import {
   formatDateGB,
@@ -130,8 +133,41 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
 
 export default function TenantHomePage() {
   const router = useRouter();
+  const utils = trpc.useUtils();
+  const { toast } = useToast();
   const { data: user, isLoading: isLoadingUser } = trpc.auth.me.useQuery();
   const { data: leases, isLoading: isLoadingLeases } = trpc.leases.getMine.useQuery();
+  const { data: pendingInvitations } = trpc.leases.getPendingInvitations.useQuery();
+
+  type PendingInvitation = NonNullable<typeof pendingInvitations>[number];
+  const [viewingInvitation, setViewingInvitation] = useState<PendingInvitation | null>(null);
+  const [declineConfirmInvitation, setDeclineConfirmInvitation] = useState<PendingInvitation | null>(null);
+
+  const acceptInvitation = trpc.leases.acceptInvitation.useMutation({
+    onSuccess: (data) => {
+      toast(`You've joined ${data.unitNumber}`, "success");
+      utils.leases.getPendingInvitations.invalidate();
+      utils.leases.getMine.invalidate();
+      utils.notifications.listReceived.invalidate();
+      setViewingInvitation(null);
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const declineInvitation = trpc.leases.declineInvitation.useMutation({
+    onSuccess: () => {
+      toast("Invitation declined", "info");
+      utils.leases.getPendingInvitations.invalidate();
+      utils.notifications.listReceived.invalidate();
+      setDeclineConfirmInvitation(null);
+      setViewingInvitation(null);
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -375,6 +411,73 @@ export default function TenantHomePage() {
         </div>
 
         {/* Pending invitations banner(s) slot directly under heading, ABOVE metric cards (Prompt 14) */}
+        {pendingInvitations && pendingInvitations.length > 0 && (
+          <div className="space-y-3">
+            {pendingInvitations.map((inv) => {
+              const landlordName = inv.unit.property.landlord.fullName || "Landlord";
+              const rentText =
+                Number(inv.rentAmount) > 0
+                  ? `${formatCurrency(inv.rentAmount)} / ${formatRentFrequency(inv.rentFrequency)}`
+                  : "Rent TBD";
+              const periodText = `${formatDateGB(inv.startDate)} – ${formatDateGB(inv.endDate)}`;
+
+              let expiryText = "";
+              if (inv.invitationExpiresAt) {
+                const diffMs = new Date(inv.invitationExpiresAt).getTime() - Date.now();
+                const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                if (diffDays > 1) {
+                  expiryText = `expires in ${diffDays} days`;
+                } else if (diffDays === 1) {
+                  expiryText = "expires in 1 day";
+                } else {
+                  expiryText = "expires today";
+                }
+              }
+
+              return (
+                <div
+                  key={inv.id}
+                  className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                >
+                  <div className="space-y-1">
+                    <h3 className="text-sm sm:text-base font-semibold text-white">
+                      {landlordName} invited you to rent {inv.unit.unitNumber} at {inv.unit.property.name}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-neutral-400">
+                      {rentText} · {periodText}{expiryText ? ` · ${expiryText}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewingInvitation(inv)}
+                      className="text-xs h-8 px-3 border-neutral-800 hover:bg-neutral-800"
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeclineConfirmInvitation(inv)}
+                      className="text-xs h-8 px-3 border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800"
+                    >
+                      Decline
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => acceptInvitation.mutate({ leaseId: inv.id })}
+                      disabled={acceptInvitation.isPending}
+                      className="text-xs h-8 px-3 bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                    >
+                      Accept
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -690,6 +793,107 @@ export default function TenantHomePage() {
           </div>
         </div>
       </PageContainer>
+
+      {/* View Terms Dialog */}
+      {viewingInvitation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold tracking-tight text-white">Rental Invitation</h2>
+              <button
+                onClick={() => setViewingInvitation(null)}
+                className="text-neutral-400 hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm divide-y divide-neutral-800/60">
+              <div className="pt-1">
+                <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">Property</span>
+                <span className="font-semibold text-white mt-1 block">{viewingInvitation.unit.property.name}</span>
+                <p className="text-neutral-400 text-xs mt-0.5">
+                  {viewingInvitation.unit.property.address}, {viewingInvitation.unit.property.city}, {viewingInvitation.unit.property.state}
+                </p>
+              </div>
+
+              <div className="pt-3">
+                <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">Unit</span>
+                <span className="font-semibold text-white mt-1 block">{viewingInvitation.unit.unitNumber}</span>
+              </div>
+
+              <div className="pt-3">
+                <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">Landlord</span>
+                <span className="font-semibold text-white mt-1 block">
+                  {viewingInvitation.unit.property.landlord.fullName || "Landlord"}
+                </span>
+                <p className="text-neutral-400 text-xs mt-0.5">{viewingInvitation.unit.property.landlord.email}</p>
+              </div>
+
+              <div className="pt-3">
+                <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">Rental Period</span>
+                <span className="font-semibold text-white mt-1 block">
+                  {formatDateGB(viewingInvitation.startDate)} – {formatDateGB(viewingInvitation.endDate)}
+                </span>
+              </div>
+
+              <div className="pt-3">
+                <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">Rent</span>
+                <span className="font-semibold text-white mt-1 block">
+                  {Number(viewingInvitation.rentAmount) > 0
+                    ? `${formatCurrency(viewingInvitation.rentAmount)} / ${formatRentFrequency(viewingInvitation.rentFrequency)}`
+                    : "TBD"}
+                </span>
+              </div>
+
+              <div className="pt-3">
+                <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">Deposit</span>
+                <span className="font-semibold text-white mt-1 block">
+                  {viewingInvitation.depositAmount ? formatCurrency(viewingInvitation.depositAmount) : "None"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
+              <Button
+                variant="outline"
+                onClick={() => setDeclineConfirmInvitation(viewingInvitation)}
+                className="border-neutral-800 text-neutral-400 hover:text-white"
+              >
+                Decline
+              </Button>
+              <Button
+                onClick={() => acceptInvitation.mutate({ leaseId: viewingInvitation.id })}
+                disabled={acceptInvitation.isPending}
+                className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+              >
+                Accept
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(declineConfirmInvitation)}
+        onClose={() => setDeclineConfirmInvitation(null)}
+        onConfirm={async () => {
+          if (!declineConfirmInvitation) return;
+          await declineInvitation.mutateAsync({ leaseId: declineConfirmInvitation.id });
+        }}
+        title="Decline invitation"
+        description={
+          declineConfirmInvitation
+            ? `Are you sure you want to decline this invitation to rent ${declineConfirmInvitation.unit.unitNumber} at ${declineConfirmInvitation.unit.property.name}?`
+            : "Are you sure you want to decline this invitation?"
+        }
+        confirmText="Decline invitation"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={declineInvitation.isPending}
+      />
     </div>
   );
 }

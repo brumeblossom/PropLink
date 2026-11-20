@@ -172,7 +172,11 @@ export default function TenantNotificationsPage() {
       } else if (n.relatedType === "conversation") {
         chatWidget.open();
       } else if (n.relatedType === "lease") {
-        router.push(`/tenant/rentals/${n.relatedId}`);
+        if (n.type === "lease_invitation") {
+          router.push("/tenant");
+        } else {
+          router.push(`/tenant/rentals/${n.relatedId}`);
+        }
       }
     }
   };

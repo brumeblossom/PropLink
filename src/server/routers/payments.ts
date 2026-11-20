@@ -28,6 +28,13 @@ export const paymentsRouter = router({
         });
       }
 
+      if (lease.status !== "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payments cannot be logged against a pending, declined, or expired lease.",
+        });
+      }
+
       const isLandlord = ctx.user.role === Role.landlord && lease.unit.property.landlordId === ctx.user.id;
       const isTenant = ctx.user.role === Role.tenant && lease.tenantId === ctx.user.id;
 
@@ -78,6 +85,13 @@ export const paymentsRouter = router({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Lease not found.",
+        });
+      }
+
+      if (lease.status !== "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payments cannot be logged against a pending, declined, or expired lease.",
         });
       }
 
@@ -762,6 +776,13 @@ export const paymentsRouter = router({
         });
       }
 
+      if (lease.status !== "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payments cannot be logged against a pending, declined, or expired lease.",
+        });
+      }
+
       const isLandlord = ctx.user.role === Role.landlord && lease.unit.property.landlordId === ctx.user.id;
       const isTenant = ctx.user.role === Role.tenant && lease.tenantId === ctx.user.id;
 
@@ -989,6 +1010,13 @@ export const paymentsRouter = router({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Lease not found.",
+        });
+      }
+
+      if (lease.status !== "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payments cannot be logged against a pending, declined, or expired lease.",
         });
       }
 

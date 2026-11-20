@@ -11,7 +11,7 @@ import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
 import { Select } from "@/components/ui/select";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X, Trash2, Plus, Pencil, Check } from "lucide-react";
+import { X, Trash2, Plus, Pencil, Check, RefreshCw } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
@@ -53,6 +53,33 @@ export default function UnitDetailPage() {
   const currentLease = leaseData?.currentLease ?? getCurrentLease(leases);
   const nextLease = leaseData?.nextLease ?? getNextLease(leases);
   const activeLease = currentLease;
+  const pendingLease = leaseData?.pendingLease ?? unitStatus?.pendingLease;
+
+  const [cancelInvitationConfirmId, setCancelInvitationConfirmId] = useState<string | null>(null);
+
+  const resendInvitation = trpc.leases.resendInvitation.useMutation({
+    onSuccess: () => {
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      toast("Invitation resent", "success");
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const cancelInvitation = trpc.leases.cancelInvitation.useMutation({
+    onSuccess: () => {
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      utils.properties.list.invalidate();
+      toast("Invitation cancelled", "success");
+      setCancelInvitationConfirmId(null);
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
 
   // Timeline query
   const { data: timeline } = trpc.leases.getTimeline.useQuery(
@@ -375,6 +402,19 @@ export default function UnitDetailPage() {
   const [tenantEmail, setTenantEmail] = useState("");
   const [tenantNameError, setTenantNameError] = useState<string | null>(null);
   const [tenantEmailError, setTenantEmailError] = useState<string | null>(null);
+  const [debouncedTenantEmail, setDebouncedTenantEmail] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTenantEmail(tenantEmail.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [tenantEmail]);
+
+  const { data: tenantEmailCheck } = trpc.leases.lookupTenantEmail.useQuery(
+    { email: debouncedTenantEmail },
+    { enabled: debouncedTenantEmail.includes("@") && debouncedTenantEmail.length > 3 }
+  );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [rentAmount, setRentAmount] = useState("");
@@ -588,6 +628,9 @@ export default function UnitDetailPage() {
       hasError = true;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tenantEmail.trim())) {
       setTenantEmailError("Please enter a valid email address.");
+      hasError = true;
+    } else if (tenantEmailCheck?.isLandlord) {
+      setTenantEmailError("This email belongs to a landlord account. Use the tenant's personal email.");
       hasError = true;
     }
 
@@ -927,6 +970,15 @@ export default function UnitDetailPage() {
               <div className="text-xs text-neutral-400 space-y-0.5">
                 <p className="truncate">Email: {activeLease.tenant.email}</p>
                 <p>Phone: {activeLease.tenant.phone || "—"}</p>
+              </div>
+            </div>
+          ) : pendingLease ? (
+            <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
+              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Prospective Tenant</span>
+              <span className="text-sm font-semibold text-white">{pendingLease.tenant.fullName}</span>
+              <div className="text-xs text-neutral-400 space-y-0.5">
+                <p className="truncate">Email: {pendingLease.tenant.email}</p>
+                <p>Phone: {pendingLease.tenant.phone || "—"}</p>
               </div>
             </div>
           ) : (
@@ -1519,6 +1571,36 @@ export default function UnitDetailPage() {
             */}
 
           </div>
+        ) : pendingLease ? (
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  {pendingLease.isExpired
+                    ? "Invitation expired"
+                    : `Waiting for ${pendingLease.tenant.fullName} to accept`}
+                </h3>
+                <p className="text-sm text-neutral-400 mt-1">
+                  Invited {pendingLease.invitedAt ? formatDateGB(pendingLease.invitedAt) : formatDateGB(pendingLease.createdAt)} · {pendingLease.isExpired ? "expired" : "expires"} {pendingLease.invitationExpiresAt ? formatDateGB(pendingLease.invitationExpiresAt) : "—"}
+                </p>
+              </div>
+              <ActionMenu
+                items={[
+                  {
+                    label: "Resend invitation",
+                    icon: <RefreshCw className="w-4 h-4" />,
+                    onClick: () => resendInvitation.mutate({ leaseId: pendingLease.id }),
+                  },
+                  {
+                    label: "Cancel invitation",
+                    icon: <Trash2 className="w-4 h-4" />,
+                    variant: "danger",
+                    onClick: () => setCancelInvitationConfirmId(pendingLease.id),
+                  },
+                ]}
+              />
+            </div>
+          </div>
         ) : (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">
             <h3 className="text-lg font-medium text-white">This unit is vacant</h3>
@@ -1854,7 +1936,7 @@ export default function UnitDetailPage() {
                       }}
                       className={cn(
                         "mt-1 block w-full rounded-lg border bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:ring-1 text-sm",
-                        tenantEmailError
+                        tenantEmailError || tenantEmailCheck?.isLandlord
                           ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                           : "border-neutral-800 focus:border-neutral-700 focus:ring-neutral-700"
                       )}
@@ -1862,6 +1944,16 @@ export default function UnitDetailPage() {
                     />
                     {tenantEmailError && (
                       <p className="mt-1 text-xs text-red-500">{tenantEmailError}</p>
+                    )}
+                    {!tenantEmailError && tenantEmailCheck?.isLandlord && (
+                      <p className="mt-1 text-xs text-red-500">
+                        This email belongs to a landlord account. Use the tenant&apos;s personal email.
+                      </p>
+                    )}
+                    {!tenantEmailError && !tenantEmailCheck?.isLandlord && tenantEmailCheck?.isTenant && (
+                      <p className="mt-1 text-xs text-neutral-400">
+                        This person already uses PropLink. They&apos;ll get an invitation in the app.
+                      </p>
                     )}
                   </div>
                 </div>
@@ -2631,6 +2723,26 @@ export default function UnitDetailPage() {
         cancelText="Cancel"
         variant="danger"
         isLoading={deleteLease.isPending}
+      />
+
+      {/* Cancel Invitation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(cancelInvitationConfirmId)}
+        onClose={() => setCancelInvitationConfirmId(null)}
+        onConfirm={async () => {
+          if (!cancelInvitationConfirmId) return;
+          try {
+            await cancelInvitation.mutateAsync({ leaseId: cancelInvitationConfirmId });
+          } catch {
+            // handled
+          }
+        }}
+        title="Cancel invitation"
+        description="Are you sure you want to cancel this invitation? The unit will return to vacant."
+        confirmText="Cancel invitation"
+        cancelText="Keep invitation"
+        variant="danger"
+        isLoading={cancelInvitation.isPending}
       />
     </div>
   );
