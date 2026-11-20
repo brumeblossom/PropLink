@@ -54,25 +54,60 @@ export function getCurrentLease<T extends LeaseLike>(
 }
 
 /**
- * Returns the earliest non-terminated lease that starts after the current lease ends.
+ * Returns the earliest non-terminated lease that starts after the base lease ends.
+ * Can be called with:
+ * - getNextLease(leases, today) -> derives base lease as getCurrentLease(leases, today)
+ * - getNextLease(leases, today, referenceLease) -> uses referenceLease as the base lease being viewed
+ * - getNextLease(leases, referenceLease) -> uses referenceLease as the base lease being viewed
  */
 export function getNextLease<T extends LeaseLike>(
   leases: T[] | null | undefined,
-  today: Date | string = new Date()
+  todayOrCurrentLease: Date | string | T = new Date(),
+  referenceLeaseOrToday?: T | Date | string | null
 ): T | null {
   if (!leases || leases.length === 0) return null;
 
-  const current = getCurrentLease(leases, today);
-  if (!current) return null;
+  let baseLease: T | null = null;
+  let today: Date | string = new Date();
 
-  const currentEndStr = formatLagosYMD(current.endDate);
+  // Check if 2nd arg is a LeaseLike object
+  if (
+    todayOrCurrentLease &&
+    typeof todayOrCurrentLease === "object" &&
+    !(todayOrCurrentLease instanceof Date) &&
+    "startDate" in todayOrCurrentLease &&
+    "endDate" in todayOrCurrentLease
+  ) {
+    baseLease = todayOrCurrentLease as T;
+    if (referenceLeaseOrToday instanceof Date || typeof referenceLeaseOrToday === "string") {
+      today = referenceLeaseOrToday;
+    }
+  } else {
+    today = (todayOrCurrentLease as Date | string) || new Date();
+    if (
+      referenceLeaseOrToday &&
+      typeof referenceLeaseOrToday === "object" &&
+      !(referenceLeaseOrToday instanceof Date) &&
+      "startDate" in referenceLeaseOrToday &&
+      "endDate" in referenceLeaseOrToday
+    ) {
+      baseLease = referenceLeaseOrToday as T;
+    } else {
+      baseLease = getCurrentLease(leases, today);
+    }
+  }
+
+  if (!baseLease) return null;
+
+  const baseEndStr = formatLagosYMD(baseLease.endDate);
   const activeLeases = leases.filter((l) => !l.terminatedAt);
 
-  // Subsequent leases that start after the current lease ends
+  // Subsequent leases that start after the base lease ends, excluding the base lease itself
   const subsequent = activeLeases.filter((l) => {
-    if (l === current || (l.id && current.id && l.id === current.id)) return false;
+    if (l === baseLease) return false;
+    if (l.id && baseLease?.id && l.id === baseLease.id) return false;
     const startStr = formatLagosYMD(l.startDate);
-    return startStr > currentEndStr;
+    return startStr > baseEndStr;
   });
 
   if (subsequent.length === 0) return null;

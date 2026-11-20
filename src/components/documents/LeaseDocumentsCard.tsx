@@ -203,7 +203,7 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
         }
       }}
       className={cn(
-        "rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 flex flex-col justify-between transition-colors space-y-4",
+        "rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 flex flex-col justify-between transition-colors space-y-4",
         isDragging && "border-emerald-500/50 bg-emerald-950/10 ring-2 ring-emerald-500/20",
         className
       )}
@@ -333,7 +333,8 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
                           {doc.name}
                         </div>
                         <div className="text-[11px] text-neutral-500">
-                          {formatFileSize(doc.sizeBytes)} · {formatDateGB(doc.createdAt)}
+                          {doc.sizeBytes > 0 ? `${formatFileSize(doc.sizeBytes)} · ` : ""}
+                          {formatDateGB(doc.createdAt)}
                         </div>
                       </div>
                     </div>

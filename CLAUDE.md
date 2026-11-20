@@ -272,4 +272,5 @@ A prompt isn't complete until:
 - Every interactive element has hover, focus-visible and active states. Every list or table has a designed empty state and a skeleton loading state.
 - Check every screen at 1440px and 390px wide before pushing. Nothing overlaps, wraps awkwardly or overflows.
 - Never use alert, confirm or prompt. Use the toast and ConfirmDialog.
+- Buttons show the lucide Plus icon (16px) followed by the words, never a typed "+".
 - If an instruction would produce a cluttered or awkward result, say so before building it.

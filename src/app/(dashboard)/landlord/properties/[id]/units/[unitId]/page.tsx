@@ -942,9 +942,9 @@ export default function UnitDetailPage() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold tracking-tight">Active Tenancy</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
               {/* Timeline Display Card */}
-              <div className="md:col-span-2 rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 space-y-6">
+              <div className="lg:col-span-3 rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 space-y-6 h-full flex flex-col justify-between">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center space-x-3">
                     <h3 className="font-bold text-white text-lg">Lease Timeline</h3>
@@ -1093,7 +1093,7 @@ export default function UnitDetailPage() {
               </div>
 
               {/* Documents Card */}
-              <LeaseDocumentsCard leaseId={activeLease.id} mode="landlord" />
+              <LeaseDocumentsCard leaseId={activeLease.id} mode="landlord" className="lg:col-span-2 h-full" />
             </div>
 
             {/* Tenant invitation card for landlords to copy/share */}
@@ -1215,8 +1215,8 @@ export default function UnitDetailPage() {
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1">
-                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Rent due so far</span>
-                      <span className="text-lg font-bold text-white block">
+                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">RENT DUE SO FAR</span>
+                      <span className="text-[22px] font-semibold text-white block leading-tight">
                         {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
                       </span>
                       {billingSummary.isRentSet && (
@@ -1226,21 +1226,21 @@ export default function UnitDetailPage() {
                       )}
                     </div>
                     <div className="space-y-1">
-                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Paid (confirmed)</span>
-                      <span className="text-lg font-bold text-white block">
+                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">PAID (CONFIRMED)</span>
+                      <span className="text-[22px] font-semibold text-white block leading-tight">
                         {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.paidToDate)}
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Outstanding</span>
+                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">OUTSTANDING</span>
                       {!billingSummary.isRentSet ? (
-                        <span className="text-lg font-bold text-neutral-400 block">Rent not set</span>
+                        <span className="text-[22px] font-semibold text-neutral-400 block leading-tight">Rent not set</span>
                       ) : billingSummary.credit > 0 ? (
-                        <span className="text-lg font-bold text-green-400 block">Credit {formatCurrency(billingSummary.credit)}</span>
+                        <span className="text-[22px] font-semibold text-green-400 block leading-tight">Credit {formatCurrency(billingSummary.credit)}</span>
                       ) : billingSummary.outstanding > 0 ? (
-                        <span className="text-lg font-bold text-red-400 block">{formatCurrency(billingSummary.outstanding)}</span>
+                        <span className="text-[22px] font-semibold text-red-400 block leading-tight">{formatCurrency(billingSummary.outstanding)}</span>
                       ) : (
-                        <span className="text-lg font-bold text-green-400 block">₦0</span>
+                        <span className="text-[22px] font-semibold text-green-400 block leading-tight">₦0</span>
                       )}
                     </div>
                   </div>

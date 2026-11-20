@@ -105,6 +105,36 @@ describe("getCurrentLease and getNextLease", () => {
     expect(getUnitStatus(leases, today)).toBe("occupied");
   });
 
+  it("excludes the lease being viewed: when viewing the upcoming renewal lease itself, returns null", () => {
+    const leases = [
+      {
+        id: "lease-current",
+        startDate: "2026-01-08",
+        endDate: "2027-05-04",
+        terminatedAt: null,
+      },
+      {
+        id: "lease-renewal",
+        startDate: "2027-05-05",
+        endDate: "2028-05-05",
+        terminatedAt: null,
+      },
+    ];
+
+    // When viewing the renewal lease itself:
+    const renewalLease = leases[1];
+    const nextWhenViewingRenewal = getNextLease(leases, today, renewalLease);
+    expect(nextWhenViewingRenewal).toBeNull();
+
+    // Passing reference lease as 2nd argument also works
+    expect(getNextLease(leases, renewalLease)).toBeNull();
+
+    // When viewing current lease: returns renewal
+    const currentLease = leases[0];
+    const nextWhenViewingCurrent = getNextLease(leases, today, currentLease);
+    expect(nextWhenViewingCurrent?.id).toBe("lease-renewal");
+  });
+
   it("ignores terminated leases", () => {
     const leases = [
       {

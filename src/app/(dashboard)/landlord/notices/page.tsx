@@ -242,9 +242,10 @@ function NoticesContent() {
               {/* Desktop primary button */}
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="hidden sm:flex bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm items-center shrink-0"
+                className="hidden sm:flex bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm items-center gap-1.5 shrink-0"
               >
-                + Create message
+                <Plus className="w-4 h-4" />
+                Create message
               </Button>
 
               {/* Mobile icon-only button (36px) */}
@@ -380,9 +381,10 @@ function NoticesContent() {
                 <div className="pt-2">
                   <Button
                     onClick={() => setIsCreateOpen(true)}
-                    className="bg-white hover:bg-neutral-200 text-neutral-950 text-sm h-9 px-4 rounded-lg font-semibold"
+                    className="bg-white hover:bg-neutral-200 text-neutral-950 text-sm h-9 px-4 rounded-lg font-semibold flex items-center gap-1.5 mx-auto"
                   >
-                    + Create message
+                    <Plus className="w-4 h-4" />
+                    Create message
                   </Button>
                 </div>
               </div>

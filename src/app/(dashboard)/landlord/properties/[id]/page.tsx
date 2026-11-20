@@ -1459,9 +1459,10 @@ export default function PropertyDetailPage() {
                     onClick={() => {
                       setManualRows([...manualRows, { unitNumber: "", unitType: defaultUnitType, roomsCount: "" }]);
                     }}
-                    className="w-full border-neutral-800 text-neutral-400 hover:text-white text-xs h-8"
+                    className="w-full border-neutral-800 text-neutral-400 hover:text-white text-xs h-8 flex items-center justify-center gap-1.5"
                   >
-                    + Add Another Row
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another row
                   </Button>
                 </div>
               )}

@@ -250,7 +250,7 @@ export default function TenantRentalDetailsPage({
 
   const nextLease = useMemo(() => {
     if (!lease?.unit?.leases) return null;
-    return getNextLease(lease.unit.leases, today);
+    return getNextLease(lease.unit.leases, today, lease);
   }, [lease, today]);
 
   const daysUntilNext = useMemo(() => {
@@ -450,7 +450,8 @@ export default function TenantRentalDetailsPage({
           backHref="/tenant"
           backLabel="Home"
           phonePrimaryAction={{
-            label: "+ Add payment",
+            label: "Add payment",
+            icon: <Plus className="w-4 h-4" />,
             onClick: handleOpenAddPayment,
             disabled: isPaidInFull,
             title: isPaidInFull ? "This lease is fully paid." : undefined,
@@ -488,48 +489,50 @@ export default function TenantRentalDetailsPage({
         </div>
 
         {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
           {/* Lease Details Card (3fr) */}
-          <div className="lg:col-span-3 rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 space-y-4">
+          <div className="lg:col-span-3 rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 space-y-4 h-full flex flex-col justify-between">
             <div>
-              <h3 className="font-bold text-white text-lg">Lease</h3>
-              <p className="text-neutral-500 text-xs mt-0.5">
-                Tenancy terms and duration.
-              </p>
-            </div>
+              <div>
+                <h3 className="font-bold text-white text-lg">Lease</h3>
+                <p className="text-neutral-500 text-xs mt-0.5">
+                  Tenancy terms and duration.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2 text-xs">
-              <div>
-                <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
-                  Period
-                </span>
-                <span className="text-neutral-200 font-medium block mt-1">
-                  {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
-                </span>
-              </div>
-              <div>
-                <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
-                  Rent
-                </span>
-                <span className="text-white font-semibold block mt-1">
-                  {formatCurrency(lease.rentAmount)} / {formatRentFrequency(lease.rentFrequency)}
-                </span>
-              </div>
-              <div>
-                <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
-                  Deposit
-                </span>
-                <span className="text-neutral-200 font-medium block mt-1">
-                  {lease.depositAmount ? formatCurrency(lease.depositAmount) : "—"}
-                </span>
-              </div>
-              <div>
-                <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
-                  Unit type
-                </span>
-                <span className="text-neutral-200 font-medium block mt-1">
-                  {formatUnitType(unit.unitType)}
-                </span>
+              <div className="grid grid-cols-2 gap-4 pt-2 text-xs">
+                <div>
+                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                    Period
+                  </span>
+                  <span className="text-neutral-200 font-medium block mt-1">
+                    {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                    Rent
+                  </span>
+                  <span className="text-white font-semibold block mt-1">
+                    {formatCurrency(lease.rentAmount)} / {formatRentFrequency(lease.rentFrequency)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                    Deposit
+                  </span>
+                  <span className="text-neutral-200 font-medium block mt-1">
+                    {lease.depositAmount ? formatCurrency(lease.depositAmount) : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                    Unit type
+                  </span>
+                  <span className="text-neutral-200 font-medium block mt-1">
+                    {formatUnitType(unit.unitType)}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -564,49 +567,51 @@ export default function TenantRentalDetailsPage({
           </div>
 
           {/* Documents Card (2fr) */}
-          <div className="lg:col-span-2">
-            <LeaseDocumentsCard leaseId={lease.id} mode="tenant" />
-          </div>
+          <LeaseDocumentsCard leaseId={lease.id} mode="tenant" className="lg:col-span-2 h-full" />
         </div>
 
         {/* Billing Summary Card */}
         {billingSummary && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 space-y-4">
-            <h3 className="font-bold text-white text-lg">Billing summary</h3>
-
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 rounded-xl border border-neutral-800/60 bg-neutral-900/40 space-y-1">
-                <span className="text-xs text-neutral-400">Rent due so far</span>
-                <div className="text-xl font-bold text-white">
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                  RENT DUE SO FAR
+                </span>
+                <span className="text-[22px] font-semibold text-white block leading-tight">
                   {formatCurrency(billingSummary.rentDueToDate)}
-                </div>
+                </span>
+                <span className="block text-xs text-neutral-400">
+                  {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} since {formatDateGB(lease.startDate)}
+                </span>
               </div>
 
-              <div className="p-4 rounded-xl border border-neutral-800/60 bg-neutral-900/40 space-y-1">
-                <span className="text-xs text-neutral-400">Paid (confirmed)</span>
-                <div className="text-xl font-bold text-emerald-400">
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                  PAID (CONFIRMED)
+                </span>
+                <span className="text-[22px] font-semibold text-white block leading-tight">
                   {formatCurrency(billingSummary.paidToDate)}
-                </div>
+                </span>
               </div>
 
-              <div className="p-4 rounded-xl border border-neutral-800/60 bg-neutral-900/40 space-y-1">
-                <span className="text-xs text-neutral-400">Outstanding</span>
-                <div
-                  className={cn(
-                    "text-xl font-bold",
-                    billingSummary.credit > 0
-                      ? "text-emerald-400"
-                      : billingSummary.outstanding > 0
-                      ? "text-red-400"
-                      : "text-white"
-                  )}
-                >
-                  {billingSummary.credit > 0
-                    ? `Credit ${formatCurrency(billingSummary.credit)}`
-                    : billingSummary.outstanding > 0
-                    ? formatCurrency(billingSummary.outstanding)
-                    : "₦0"}
-                </div>
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                  OUTSTANDING
+                </span>
+                {billingSummary.credit > 0 ? (
+                  <span className="text-[22px] font-semibold text-emerald-400 block leading-tight">
+                    Credit {formatCurrency(billingSummary.credit)}
+                  </span>
+                ) : billingSummary.outstanding > 0 ? (
+                  <span className="text-[22px] font-semibold text-red-400 block leading-tight">
+                    {formatCurrency(billingSummary.outstanding)}
+                  </span>
+                ) : (
+                  <span className="text-[22px] font-semibold text-emerald-400 block leading-tight">
+                    ₦0
+                  </span>
+                )}
               </div>
             </div>
 
@@ -658,15 +663,15 @@ export default function TenantRentalDetailsPage({
                 </div>
               )}
 
-              {/* On web (>=640px) the + Add payment primary button sits on the right */}
+              {/* On web (>=640px) the Add payment primary button sits on the right */}
               <div className="relative group hidden sm:inline-block">
                 <Button
                   onClick={handleOpenAddPayment}
                   disabled={isPaidInFull}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-8 px-3 flex items-center disabled:opacity-50 disabled:pointer-events-none"
+                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-8 px-3 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  + Add payment
+                  <Plus className="w-4 h-4" />
+                  Add payment
                 </Button>
                 {isPaidInFull && (
                   <div
