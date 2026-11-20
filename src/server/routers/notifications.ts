@@ -4,11 +4,129 @@ import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 
 export const notificationsRouter = router({
-  // List received system notifications (both roles)
+  // List received system notifications (both roles), enriched with unit/property info
   listReceived: authedProcedure.query(async ({ ctx }) => {
-    return await prisma.notification.findMany({
+    const notifications = await prisma.notification.findMany({
       where: { recipientId: ctx.user.id },
       orderBy: { createdAt: "desc" },
+    });
+
+    const paymentIds: string[] = [];
+    const leaseIds: string[] = [];
+    const unitIds: string[] = [];
+    const conversationIds: string[] = [];
+
+    notifications.forEach((n) => {
+      if (!n.relatedId) return;
+      if (n.relatedType === "payment") paymentIds.push(n.relatedId);
+      else if (n.relatedType === "lease") leaseIds.push(n.relatedId);
+      else if (n.relatedType === "unit") unitIds.push(n.relatedId);
+      else if (n.relatedType === "conversation") conversationIds.push(n.relatedId);
+    });
+
+    const [payments, leases, units, conversations] = await Promise.all([
+      paymentIds.length > 0
+        ? prisma.payment.findMany({
+            where: { id: { in: paymentIds } },
+            select: {
+              id: true,
+              disputeReason: true,
+              lease: {
+                select: {
+                  unit: {
+                    select: {
+                      unitNumber: true,
+                      property: { select: { name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : [],
+      leaseIds.length > 0
+        ? prisma.lease.findMany({
+            where: { id: { in: leaseIds } },
+            select: {
+              id: true,
+              unit: {
+                select: {
+                  unitNumber: true,
+                  property: { select: { name: true } },
+                },
+              },
+            },
+          })
+        : [],
+      unitIds.length > 0
+        ? prisma.unit.findMany({
+            where: { id: { in: unitIds } },
+            select: {
+              id: true,
+              unitNumber: true,
+              property: { select: { name: true } },
+            },
+          })
+        : [],
+      conversationIds.length > 0
+        ? prisma.conversation.findMany({
+            where: { id: { in: conversationIds } },
+            select: {
+              id: true,
+              unit: {
+                select: {
+                  unitNumber: true,
+                  property: { select: { name: true } },
+                },
+              },
+            },
+          })
+        : [],
+    ]);
+
+    const paymentMap = new Map(payments.map((p) => [p.id, p]));
+    const leaseMap = new Map(leases.map((l) => [l.id, l]));
+    const unitMap = new Map(units.map((u) => [u.id, u]));
+    const conversationMap = new Map(conversations.map((c) => [c.id, c]));
+
+    return notifications.map((n) => {
+      let unitNumber: string | null = null;
+      let propertyName: string | null = null;
+      let quote: string | null = null;
+
+      if (n.relatedType === "payment" && n.relatedId) {
+        const p = paymentMap.get(n.relatedId);
+        if (p) {
+          unitNumber = p.lease.unit.unitNumber;
+          propertyName = p.lease.unit.property.name;
+          if (p.disputeReason) quote = p.disputeReason;
+        }
+      } else if (n.relatedType === "lease" && n.relatedId) {
+        const l = leaseMap.get(n.relatedId);
+        if (l) {
+          unitNumber = l.unit.unitNumber;
+          propertyName = l.unit.property.name;
+        }
+      } else if (n.relatedType === "unit" && n.relatedId) {
+        const u = unitMap.get(n.relatedId);
+        if (u) {
+          unitNumber = u.unitNumber;
+          propertyName = u.property.name;
+        }
+      } else if (n.relatedType === "conversation" && n.relatedId) {
+        const c = conversationMap.get(n.relatedId);
+        if (c) {
+          unitNumber = c.unit.unitNumber;
+          propertyName = c.unit.property.name;
+        }
+      }
+
+      return {
+        ...n,
+        unitNumber,
+        propertyName,
+        quote,
+      };
     });
   }),
 

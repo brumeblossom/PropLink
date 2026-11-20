@@ -288,4 +288,15 @@ export const unitsRouter = router({
         data: { deletedAt: now },
       });
     }),
+
+  // Get redirect routing information for a unit
+  getRedirectInfo: authedProcedure
+    .input(z.object({ unitId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const unit = await prisma.unit.findUnique({
+        where: { id: input.unitId },
+        select: { id: true, propertyId: true },
+      });
+      return unit ? { unitId: unit.id, propertyId: unit.propertyId } : null;
+    }),
 });

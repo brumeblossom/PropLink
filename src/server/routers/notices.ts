@@ -2,11 +2,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
-import { NoticeType, NotificationChannel, Role, Lease, RelatedType, DeliveryStatus } from "@prisma/client";
-import { dispatchNotification } from "../services/notificationDispatcher";
+import { NoticeType, NotificationChannel, Role, Lease, Prisma } from "@prisma/client";
 
 export const noticesRouter = router({
-  // Send a notice (Landlord only)
+  // Send a notice (Landlord only) - in-app only for now
   send: authedProcedure
     .input(
       z.object({
@@ -15,7 +14,7 @@ export const noticesRouter = router({
         title: z.string().min(1),
         body: z.string().min(1),
         type: z.nativeEnum(NoticeType),
-        channels: z.array(z.nativeEnum(NotificationChannel)).min(1),
+        channels: z.array(z.nativeEnum(NotificationChannel)).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -89,6 +88,15 @@ export const noticesRouter = router({
         });
       }
 
+      // Decision: announcements are in-app only for now.
+      // Email (Resend) only reaches the account owner's address until a domain is verified,
+      // and WhatsApp was never enabled.
+      // WHERE TO TURN EMAIL BACK ON:
+      // To re-enable email dispatching for announcements once a domain is verified,
+      // change `channels` to include `NotificationChannel.email`, and restore the
+      // `dispatchNotification` call loop below.
+      const channels = [NotificationChannel.in_app];
+
       // Create the parent Notice record
       const notice = await prisma.notice.create({
         data: {
@@ -98,7 +106,7 @@ export const noticesRouter = router({
           title: input.title,
           body: input.body,
           type: input.type,
-          channels: input.channels,
+          channels,
         },
       });
 
@@ -110,59 +118,16 @@ export const noticesRouter = router({
           noticeId: notice.id,
           tenantId,
           inAppDeliveredAt: new Date(),
-          emailStatus: input.channels.includes(NotificationChannel.email) ? ("pending" as const) : null,
-          whatsappStatus: input.channels.includes(NotificationChannel.whatsapp) ? ("pending" as const) : null,
+          emailStatus: null,
+          whatsappStatus: null,
         }));
 
         await prisma.noticeRecipient.createMany({
           data: recipientsData,
         });
 
-        // Dispatch email (via Resend) and WhatsApp (stubbed as pending) notifications
-        for (const tenantId of tenantIds) {
-          for (const channel of input.channels) {
-            if (channel === NotificationChannel.in_app) continue;
-
-            try {
-              const log = await dispatchNotification({
-                recipientId: tenantId,
-                channel,
-                relatedType: RelatedType.notice,
-                relatedId: notice.id,
-                title: input.title,
-                body: input.body,
-              });
-
-              // Map NotificationStatus to DeliveryStatus
-              const deliveryStatus =
-                log.status === "sent" || log.status === "delivered"
-                  ? "sent"
-                  : log.status === "pending"
-                  ? "pending"
-                  : "failed";
-
-              const updateData: {
-                emailStatus?: DeliveryStatus;
-                whatsappStatus?: DeliveryStatus;
-              } = {};
-              if (channel === NotificationChannel.email) {
-                updateData.emailStatus = deliveryStatus;
-              } else if (channel === NotificationChannel.whatsapp) {
-                updateData.whatsappStatus = deliveryStatus;
-              }
-
-              await prisma.noticeRecipient.updateMany({
-                where: {
-                  noticeId: notice.id,
-                  tenantId,
-                },
-                data: updateData,
-              });
-            } catch (err) {
-              console.error(`[notices.send] Failed to dispatch ${channel} notice for tenant ${tenantId}:`, err);
-            }
-          }
-        }
+        // NOTE: Email and WhatsApp dispatch for notices is currently paused (in-app only).
+        // To turn email back on, restore the dispatchNotification loop with NotificationChannel.email here.
       }
 
       return {
@@ -171,29 +136,84 @@ export const noticesRouter = router({
       };
     }),
 
-  // List sent notices (Landlord only)
-  listSent: authedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== Role.landlord) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Only landlords can view sent notices.",
-      });
-    }
+  // List sent notices (Landlord only) with search, filter, and pagination
+  listSent: authedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        propertyId: z.string().uuid().optional(),
+        category: z.nativeEnum(NoticeType).optional(),
+        page: z.number().int().min(1).optional().default(1),
+        pageSize: z.number().int().min(1).max(100).optional().default(20),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== Role.landlord) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only landlords can view sent notices.",
+        });
+      }
 
-    return await prisma.notice.findMany({
-      where: { landlordId: ctx.user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        property: { select: { name: true } },
-        unit: { select: { unitNumber: true } },
-        recipients: {
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 20;
+      const searchTrimmed = input?.search?.trim();
+
+      const where: Prisma.NoticeWhereInput = {
+        landlordId: ctx.user.id,
+        ...(input?.category ? { type: input.category } : {}),
+        ...(input?.propertyId
+          ? {
+              OR: [
+                { propertyId: input.propertyId },
+                { unit: { propertyId: input.propertyId } },
+              ],
+            }
+          : {}),
+        ...(searchTrimmed
+          ? {
+              OR: [
+                { title: { contains: searchTrimmed, mode: "insensitive" } },
+                { body: { contains: searchTrimmed, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+
+      const [total, notices, totalLandlordProperties] = await Promise.all([
+        prisma.notice.count({ where }),
+        prisma.notice.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
           include: {
-            tenant: { select: { fullName: true, email: true } },
+            property: { select: { id: true, name: true } },
+            unit: {
+              select: {
+                id: true,
+                unitNumber: true,
+                property: { select: { id: true, name: true } },
+              },
+            },
+            recipients: {
+              select: {
+                id: true,
+                readAt: true,
+                tenant: { select: { id: true, fullName: true, email: true } },
+              },
+            },
           },
-        },
-      },
-    });
-  }),
+        }),
+        prisma.property.count({ where: { landlordId: ctx.user.id } }),
+      ]);
+
+      return {
+        rows: notices,
+        total,
+        totalProperties: totalLandlordProperties,
+      };
+    }),
 
   // List received notices (Tenant only)
   listReceived: authedProcedure.query(async ({ ctx }) => {
