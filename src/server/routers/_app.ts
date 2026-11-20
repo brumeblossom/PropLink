@@ -10,6 +10,7 @@ import { conversationsRouter } from "./conversations";
 import { notificationsRouter } from "./notifications";
 import { internalRouter } from "./internal";
 import { dashboardRouter } from "./dashboard";
+import { documentsRouter } from "./documents";
 
 export const appRouter = router({
   auth: authRouter,
@@ -22,6 +23,7 @@ export const appRouter = router({
   conversations: conversationsRouter,
   notifications: notificationsRouter,
   internal: internalRouter,
+  documents: documentsRouter,
   hello: publicProcedure
     .input(
       z.object({

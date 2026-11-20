@@ -94,6 +94,7 @@ model User {
   messagesSent             Message[]          @relation("SenderMessages")
   notificationsReceived    NotificationLog[]  @relation("RecipientNotifications")
   notificationsReceivedList Notification[]    @relation("RecipientNotificationsList")
+  uploadedLeaseDocuments   LeaseDocument[]    @relation("UploadedLeaseDocuments")
 
   @@map("users")
 }
@@ -156,10 +157,11 @@ model Lease {
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  tenant      User         @relation("TenantLeases", fields: [tenantId], references: [id], onDelete: Cascade)
+  unit        Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant      User            @relation("TenantLeases", fields: [tenantId], references: [id], onDelete: Cascade)
   payments    Payment[]
   inviteCodes InviteCode[]
+  documents   LeaseDocument[]
 
   // unitId alone — for joins and active-lease detection per unit
   @@index([unitId])
@@ -172,6 +174,24 @@ model Lease {
   // Without this index, Postgres falls back to a seq scan on all non-terminated leases.
   @@index([startDate, endDate])
   @@map("leases")
+}
+
+model LeaseDocument {
+  id           String   @id @default(uuid()) @db.Uuid
+  leaseId      String   @map("lease_id") @db.Uuid
+  name         String
+  path         String
+  sizeBytes    Int      @map("size_bytes")
+  mimeType     String   @map("mime_type")
+  uploadedById String   @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  lease      Lease @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation("UploadedLeaseDocuments", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([leaseId])
+  @@map("lease_documents")
 }
 
 model Payment {

@@ -267,6 +267,7 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invite_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lease_documents ENABLE ROW LEVEL SECURITY;
 
 
 -- ==========================================
@@ -318,6 +319,41 @@ DROP POLICY IF EXISTS tenant_read_leases_policy ON leases;
 CREATE POLICY tenant_read_leases_policy ON leases
   FOR SELECT
   USING (tenant_id = auth.uid());
+
+
+-- LEASE_DOCUMENTS Table
+DROP POLICY IF EXISTS landlord_lease_documents_policy ON lease_documents;
+CREATE POLICY landlord_lease_documents_policy ON lease_documents
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM leases l
+      JOIN units u ON u.id = l.unit_id
+      JOIN properties p ON p.id = u.property_id
+      WHERE l.id = lease_documents.lease_id
+        AND p.landlord_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM leases l
+      JOIN units u ON u.id = l.unit_id
+      JOIN properties p ON p.id = u.property_id
+      WHERE l.id = lease_documents.lease_id
+        AND p.landlord_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS tenant_read_lease_documents_policy ON lease_documents;
+CREATE POLICY tenant_read_lease_documents_policy ON lease_documents
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM leases l
+      WHERE l.id = lease_documents.lease_id
+        AND l.tenant_id = auth.uid()
+    )
+  );
 
 
 -- PAYMENTS Table

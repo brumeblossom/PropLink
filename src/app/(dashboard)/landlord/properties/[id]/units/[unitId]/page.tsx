@@ -20,6 +20,7 @@ import { getDueDateStatus, formatDateGB } from "@/lib/billing";
 import { getCurrentLease, getNextLease } from "@/lib/leases";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -88,8 +89,6 @@ export default function UnitDetailPage() {
       setRenewError(err.message);
     },
   });
-
-  const uploadDocMutation = trpc.leases.uploadDocument.useMutation();
 
   const [isEditLeaseOpen, setIsEditLeaseOpen] = useState(false);
   const [editRentAmount, setEditRentAmount] = useState("");
@@ -313,17 +312,6 @@ export default function UnitDetailPage() {
     },
   });
 
-  const deleteLeaseDocMutation = trpc.leases.deleteDocument.useMutation({
-    onSuccess: () => {
-      toast("Document deleted", "success");
-      utils.leases.getForUnit.invalidate({ unitId });
-      setIsDeleteDocConfirmOpen(false);
-    },
-    onError: (err) => {
-      toast(err.message, "error");
-    },
-  });
-
   const deletePaymentProofMutation = trpc.payments.deleteProof.useMutation({
     onSuccess: () => {
       toast("Payment proof removed", "success");
@@ -394,10 +382,7 @@ export default function UnitDetailPage() {
   const [depositAmount, setDepositAmount] = useState("");
   const [leaseError, setLeaseError] = useState<string | null>(null);
 
-  // File Upload State
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [isDeleteDocConfirmOpen, setIsDeleteDocConfirmOpen] = useState(false);
+  // Payment Proof File Upload State
   const [isDeletePaymentProofConfirmOpen, setIsDeletePaymentProofConfirmOpen] = useState(false);
   const [uploadingPaymentProof, setUploadingPaymentProof] = useState(false);
 
@@ -697,75 +682,6 @@ export default function UnitDetailPage() {
       window.open(signedUrl, "_blank");
     } catch {
       toast("Could not open payment proof", "error");
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputEl = e.target;
-    const file = inputEl.files?.[0];
-    setUploadError(null);
-    if (!file || !activeLease) return;
-
-    // 10MB limit
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("File size exceeds 10MB limit.");
-      inputEl.value = "";
-      return;
-    }
-
-    // PDF/Image only
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError("Only PDF and image files are allowed.");
-      inputEl.value = "";
-      return;
-    }
-
-    setUploading(true);
-
-    try {
-      // 1. Get signed upload URL from server
-      const { signedUrl } = await uploadDocMutation.mutateAsync({
-        leaseId: activeLease.id,
-        fileName: file.name,
-      });
-
-      // 2. Upload file directly to Supabase Storage via signed URL
-      const response = await fetch(signedUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to upload file to storage.");
-      }
-
-      // 3. Refresh lease details to reflect documentUrl in UI
-      utils.leases.getForUnit.invalidate({ unitId });
-      inputEl.value = "";
-      setUploadError(null);
-      toast("Document uploaded", "success");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "An error occurred during file upload.";
-      setUploadError(message);
-      inputEl.value = "";
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleViewDocument = async () => {
-    if (!activeLease) return;
-    try {
-      const { signedUrl } = await utils.client.leases.getDocumentUrl.query({
-        leaseId: activeLease.id,
-      });
-      window.open(signedUrl, "_blank");
-    } catch {
-      toast("Could not open document", "error");
     }
   };
 
@@ -1153,67 +1069,8 @@ export default function UnitDetailPage() {
                 })()}
               </div>
 
-              {/* Signed Document Wallet Card */}
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 flex flex-col justify-between space-y-4">
-                <div>
-                  <h3 className="font-bold text-white text-lg">Digital Wallet</h3>
-                  <p className="text-neutral-500 text-xs mt-1">
-                    Store and view lease agreements. Accepts PDF and image files, max 10MB.
-                  </p>
-
-                  {uploadError && (
-                    <div className="mt-3 rounded bg-red-950/20 border border-red-900/30 p-2.5 text-xs text-red-400">
-                      {uploadError}
-                    </div>
-                  )}
-
-                  {activeLease.documentUrl ? (
-                    <div className="mt-4 p-3 rounded-lg border border-neutral-800 bg-neutral-900/40 flex items-center justify-between">
-                      <div className="flex items-center space-x-2 truncate">
-                        <span className="text-xs font-semibold text-neutral-300 truncate">Lease_Agreement.pdf</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          onClick={handleViewDocument}
-                          variant="outline"
-                          className="border-neutral-800 text-xs h-7 px-2.5 text-white hover:bg-neutral-900"
-                        >
-                          View File
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={() => setIsDeleteDocConfirmOpen(true)}
-                          className="p-1.5 text-red-500 hover:text-red-400 hover:bg-red-950/20 rounded border border-neutral-800 transition-colors"
-                          title="Delete lease document"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-sm text-neutral-500 mt-4 italic text-center">No documents uploaded yet.</p>
-                      <div className="pt-4 border-t border-neutral-800/40 mt-4">
-                        <label className="block">
-                          <span className="sr-only">Upload lease agreement</span>
-                          <input
-                            type="file"
-                            accept=".pdf, image/*"
-                            onClick={(e) => {
-                              setUploadError(null);
-                              (e.target as HTMLInputElement).value = "";
-                            }}
-                            onChange={handleFileUpload}
-                            disabled={uploading}
-                            className="block w-full text-xs text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white file:text-neutral-950 hover:file:bg-neutral-200 file:cursor-pointer disabled:opacity-50"
-                          />
-                        </label>
-                        {uploading && <p className="text-xs text-neutral-400 mt-2">Uploading file to storage...</p>}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Documents Card */}
+              <LeaseDocumentsCard leaseId={activeLease.id} mode="landlord" />
             </div>
 
             {/* Tenant invitation card for landlords to copy/share */}
@@ -2671,22 +2528,6 @@ export default function UnitDetailPage() {
           </div>
         </div>
       )}
-
-      {/* Delete Lease Document Dialog */}
-      <ConfirmDialog
-        isOpen={isDeleteDocConfirmOpen}
-        onClose={() => setIsDeleteDocConfirmOpen(false)}
-        onConfirm={async () => {
-          if (activeLease) {
-            await deleteLeaseDocMutation.mutateAsync({ leaseId: activeLease.id });
-          }
-        }}
-        title="Delete lease document?"
-        description="Tenants will no longer be able to view it."
-        confirmText="Delete"
-        variant="danger"
-        isLoading={deleteLeaseDocMutation.isPending}
-      />
 
       {/* Remove Payment Proof Dialog */}
       <ConfirmDialog

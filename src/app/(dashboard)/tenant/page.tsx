@@ -2,13 +2,12 @@
 
 import { useMemo } from "react";
 import { trpc } from "@/utils/trpc";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { getCurrentLease, getNextLease } from "@/lib/leases";
+import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { Home } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers/_app";
@@ -138,22 +137,10 @@ function TenantLeaseSection({
   lease: LeaseElement;
   nextLease?: LeaseElement | null;
 }) {
-  const utils = trpc.useUtils();
-  const { toast } = useToast();
-
   const { data: billingSummary } = trpc.payments.getBillingSummary.useQuery(
     { leaseId: lease.id },
     { enabled: !!lease.id }
   );
-
-  const handleDownloadAgreement = async (leaseId: string) => {
-    try {
-      const { signedUrl } = await utils.client.leases.getDocumentUrl.query({ leaseId });
-      window.open(signedUrl, "_blank");
-    } catch {
-      toast("Could not open lease document", "error");
-    }
-  };
 
   // Compute lease status for display badge
   let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" = "active";
@@ -297,39 +284,8 @@ function TenantLeaseSection({
           </div>
         </div>
 
-        {/* Document Wallet */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 flex flex-col justify-between space-y-6">
-          <div>
-            <h3 className="font-bold text-white text-lg">Documents Wallet</h3>
-            <p className="text-neutral-500 text-xs mt-1">
-              Access your official lease documents.
-            </p>
-
-            {lease.documentUrl ? (
-              <div className="mt-4 p-3 rounded-lg border border-neutral-800 bg-neutral-900/40 flex items-center justify-between">
-                <span className="text-xs font-semibold text-neutral-300 truncate max-w-[150px]">
-                  Lease_Agreement.pdf
-                </span>
-                <Button
-                  onClick={() => handleDownloadAgreement(lease.id)}
-                  variant="outline"
-                  className="border-neutral-800 text-xs h-7 px-2.5 text-white hover:bg-neutral-900 transition-colors"
-                >
-                  Download PDF
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-neutral-500 mt-6 italic text-center">
-                Your landlord has not uploaded a copy of the lease agreement yet.
-              </p>
-            )}
-          </div>
-
-          <div className="pt-4 border-t border-neutral-800/40 text-xs text-neutral-500 leading-normal">
-            Need support with payments or maintenance? Landlord details and contact operations
-            will be enabled in future releases.
-          </div>
-        </div>
+        {/* Documents Card */}
+        <LeaseDocumentsCard leaseId={lease.id} mode="tenant" />
       </div>
 
       {/* Mini Billing Summary */}
