@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from "react";
+import React from "react";
 import { BackButton } from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { ActionMenu } from "@/components/ui/action-menu";
 import { cn } from "@/lib/utils";
 
 export interface DetailAction {
@@ -27,8 +27,6 @@ export function DetailActionRow({
   actions,
   className,
 }: DetailActionRowProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <div
       className={cn(
@@ -64,46 +62,18 @@ export function DetailActionRow({
       </div>
 
       {/* Mobile ⋯ dropdown (< 640px) */}
-      <div className="sm:hidden relative flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="h-9 w-9 flex items-center justify-center rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-850 transition-colors"
-          aria-label="More actions"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-
-        {menuOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setMenuOpen(false)}
-            />
-            <div className="absolute right-0 mt-1.5 w-44 rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-              {actions.map((action, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    action.onClick();
-                  }}
-                  disabled={action.disabled}
-                  className={cn(
-                    "w-full px-3 py-2 text-left text-xs rounded-lg flex items-center space-x-2 transition-colors",
-                    action.variant === "danger"
-                      ? "text-rose-400 hover:bg-rose-950/40 hover:text-rose-300"
-                      : "text-neutral-300 hover:bg-neutral-900 hover:text-white"
-                  )}
-                >
-                  {action.icon && <span className="flex-shrink-0">{action.icon}</span>}
-                  <span>{action.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+      <div className="sm:hidden flex-shrink-0">
+        <ActionMenu
+          items={actions.map((action) => ({
+            label: action.label,
+            onClick: action.onClick,
+            icon: action.icon,
+            variant: action.variant === "danger" ? "danger" : "default",
+            disabled: action.disabled,
+          }))}
+          label="More actions"
+          triggerClassName="h-9 w-9 bg-neutral-900 border border-neutral-800"
+        />
       </div>
     </div>
   );

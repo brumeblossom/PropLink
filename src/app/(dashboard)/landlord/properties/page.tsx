@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PageTitleRow } from "@/components/layout/PageTitleRow";
+import { ActionMenu } from "@/components/ui/action-menu";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
-import { Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export default function PropertiesPage() {
   const router = useRouter();
@@ -24,7 +25,6 @@ export default function PropertiesPage() {
   const [createdPropertyInfo, setCreatedPropertyInfo] = useState<{ id: string; name: string } | null>(null);
 
   // Card menu & modals state
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [propertyToEdit, setPropertyToEdit] = useState<{
@@ -261,57 +261,22 @@ export default function PropertiesPage() {
                       </span>
 
                       {/* ⋯ Menu */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId(openMenuId === property.id ? null : property.id);
-                          }}
-                          className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/80 transition-colors"
-                          aria-label="Property options"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-
-                        {openMenuId === property.id && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-30"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                              }}
-                            />
-                            <div className="absolute right-0 mt-1 w-40 rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl z-40 animate-in fade-in-0 zoom-in-95 duration-100">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  handleOpenEdit(property);
-                                }}
-                                className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                                <span>Edit property</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenuId(null);
-                                  setPropertyToDelete({ id: property.id, name: property.name });
-                                }}
-                                className="w-full px-3 py-2 text-left text-xs rounded-lg text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center space-x-2 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete property</span>
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <ActionMenu
+                        items={[
+                          {
+                            label: "Edit property",
+                            icon: <Pencil className="w-3.5 h-3.5" />,
+                            onClick: () => handleOpenEdit(property),
+                          },
+                          {
+                            label: "Delete property",
+                            icon: <Trash2 className="w-3.5 h-3.5" />,
+                            variant: "danger",
+                            onClick: () => setPropertyToDelete({ id: property.id, name: property.name }),
+                          },
+                        ]}
+                        label="Property options"
+                      />
                     </div>
                   </div>
 

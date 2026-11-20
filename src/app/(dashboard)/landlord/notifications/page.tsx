@@ -176,99 +176,99 @@ export default function LandlordNotificationsPage() {
           }
         />
 
-      {/* List */}
-      {isLoading ? (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="flex items-start space-x-4 p-4 rounded-2xl border border-neutral-900 bg-neutral-900/20"
-            >
-              <Skeleton className="w-9 h-9 rounded-xl flex-shrink-0" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-4 w-16 rounded-full" />
-                  </div>
-                  <Skeleton className="h-3 w-16" />
-                </div>
-                <Skeleton className="h-3 w-3/4" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : displayed.length === 0 ? (
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/10 p-16 text-center text-neutral-500 space-y-3">
-          <Inbox className="w-12 h-12 mx-auto opacity-40 text-neutral-400" />
-          <p className="text-base font-semibold text-neutral-300">
-            {filter === "unread" ? "No unread notifications" : "No notifications yet"}
-          </p>
-          <p className="text-xs max-w-xs mx-auto">
-            {filter === "unread"
-              ? "You are all caught up."
-              : "Tenant activity like payments and lease events will appear here."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {displayed.map((n) => {
-            const c = cfg(n.type);
-            const isUnread = !n.readAt;
-            const formattedDate = new Date(n.createdAt).toLocaleString(undefined, {
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            });
-
-            return (
+        {/* List */}
+        {isLoading ? (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
               <div
-                key={n.id}
-                onClick={() => handleClick(n)}
-                className={cn(
-                  "group flex items-start space-x-4 p-4 rounded-2xl border cursor-pointer transition-all",
-                  isUnread
-                    ? "bg-neutral-900/30 border-neutral-800/60 hover:border-neutral-700"
-                    : "bg-neutral-950/20 border-neutral-900 hover:border-neutral-800 opacity-70 hover:opacity-100"
-                )}
+                key={i}
+                className="flex items-start space-x-4 p-4 rounded-2xl border border-neutral-900 bg-neutral-900/20"
               >
-                {/* Icon */}
-                <div className={cn("flex-shrink-0 p-2 rounded-xl border text-sm", c.color)}>
-                  {c.icon}
-                </div>
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      <p className={cn("text-sm text-white truncate", isUnread ? "font-semibold" : "font-normal")}>
-                        {n.title}
-                      </p>
-                      <span className={cn("flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold border", c.color)}>
-                        {c.label}
-                      </span>
+                <Skeleton className="w-9 h-9 rounded-xl flex-shrink-0" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-4 w-16 rounded-full" />
                     </div>
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                      {isUnread && (
-                        <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                      )}
-                      <span className="text-[11px] text-neutral-500 font-sans whitespace-nowrap">{formattedDate}</span>
-                    </div>
+                    <Skeleton className="h-3 w-16" />
                   </div>
-                  <p className="text-xs text-neutral-400 mt-1 line-clamp-2">{n.body}</p>
+                  <Skeleton className="h-3 w-3/4" />
                 </div>
-
-                {/* Arrow hint */}
-                {n.relatedId && (
-                  <ExternalLink className="w-4 h-4 text-neutral-600 group-hover:text-neutral-400 flex-shrink-0 mt-0.5 transition-colors" />
-                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : displayed.length === 0 ? (
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/10 p-16 text-center text-neutral-500 space-y-3">
+            <Inbox className="w-12 h-12 mx-auto opacity-40 text-neutral-400" />
+            <p className="text-base font-semibold text-neutral-300">
+              {filter === "unread" ? "No unread notifications" : "No notifications yet"}
+            </p>
+            <p className="text-xs max-w-xs mx-auto">
+              {filter === "unread"
+                ? "You are all caught up."
+                : "Tenant activity like payments and lease events will appear here."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {displayed.map((n) => {
+              const c = cfg(n.type);
+              const isUnread = !n.readAt;
+              const formattedDate = new Date(n.createdAt).toLocaleString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => handleClick(n)}
+                  className={cn(
+                    "group flex items-start space-x-4 p-4 rounded-2xl border cursor-pointer transition-all",
+                    isUnread
+                      ? "bg-neutral-900/30 border-neutral-800/60 hover:border-neutral-700"
+                      : "bg-neutral-950/20 border-neutral-900 hover:border-neutral-800 opacity-70 hover:opacity-100"
+                  )}
+                >
+                  {/* Icon */}
+                  <div className={cn("flex-shrink-0 p-2 rounded-xl border text-sm", c.color)}>
+                    {c.icon}
+                  </div>
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <p className={cn("text-sm text-white truncate", isUnread ? "font-semibold" : "font-normal")}>
+                          {n.title}
+                        </p>
+                        <span className={cn("flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold border", c.color)}>
+                          {c.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        {isUnread && (
+                          <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                        )}
+                        <span className="text-[11px] text-neutral-500 font-sans whitespace-nowrap">{formattedDate}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-neutral-400 mt-1 line-clamp-2">{n.body}</p>
+                  </div>
+
+                  {/* Arrow hint */}
+                  {n.relatedId && (
+                    <ExternalLink className="w-4 h-4 text-neutral-600 group-hover:text-neutral-400 flex-shrink-0 mt-0.5 transition-colors" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </PageContainer>
-  </div>
+    </div>
   );
 }

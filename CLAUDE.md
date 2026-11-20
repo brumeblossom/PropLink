@@ -264,6 +264,7 @@ A prompt isn't complete until:
 
 - Follow established product UI conventions (Linear, Stripe Dashboard, Vercel, Notion level of polish). If a choice would look out of place in those products, don't make it.
 - The sticky PageHeader holds only the menu button (phones), the page title, and the notification bell. No buttons, actions, or filters in the header, on any page. Top-level page actions live in PageTitleRow with heading and description; detail page actions live in DetailActionRow.
+- All dropdowns, menus and tooltips use the shared Radix-based components (portalled). Never hand-build absolute-positioned menus.
 - Never repeat information already visible on the screen. No helper text beside buttons explaining a state the page already shows.
 - Disabled buttons look disabled and explain themselves only through a tooltip on hover.
 - One spacing scale (4/8/12/16/24/32px), one radius (8px inputs and buttons, 12px cards and modals), one icon set (lucide) at 16px in buttons and 20px in headers.

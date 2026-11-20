@@ -7,11 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Select } from "@/components/ui/select";
 import { PaymentMethod } from "@prisma/client";
-import { X, CreditCard, ChevronLeft, Building2, Home, Plus, Check, AlertTriangle, Pencil, FileText, MoreHorizontal } from "lucide-react";
+import { X, CreditCard, ChevronLeft, Building2, Home, Plus, Check, AlertTriangle, Pencil, FileText } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/routers/_app";
 
@@ -218,7 +219,6 @@ function LeasePaymentLedger({
   // Payment details modal
   const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isPaymentDetailsOpen, setIsPaymentDetailsOpen] = useState(false);
-  const [openPaymentMenuId, setOpenPaymentMenuId] = useState<string | null>(null);
 
   // Year filter
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -548,306 +548,283 @@ function LeasePaymentLedger({
         </div>
       )}
 
-      {/* Payment Ledger Table */}
-      <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
-        <table className="min-w-full divide-y divide-neutral-800">
-          <thead className="bg-neutral-900/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Date Logged
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Amount
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Method
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800/60">
-            {isLoadingPayments ? (
-              [...Array(3)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                  <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
-                  <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
-                  <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                  <td className="px-6 py-4 text-center"><Skeleton className="h-8 w-8 rounded-lg mx-auto" /></td>
-                </tr>
-              ))
-            ) : filteredPayments.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
+      {/* Payment Ledger Section */}
+      {(() => {
+        const getTenantPaymentMenuItems = (p: NonNullable<typeof payments>[number]): ActionMenuItem[] => {
+          const isLandlordLogged = p.recordedByRole === "landlord";
+          const items: ActionMenuItem[] = [];
+
+          if (isLandlordLogged) {
+            // Acknowledge
+            if (p.counterVerifiedAt) {
+              items.push({
+                label: "Acknowledge",
+                icon: <Check className="w-4 h-4" />,
+                disabled: true,
+                disabledTooltip: "Already acknowledged",
+              });
+            } else if (p.disputedByTenant && !p.disputedByResolvedAt) {
+              items.push({
+                label: "Acknowledge",
+                icon: <Check className="w-4 h-4" />,
+                disabled: true,
+                disabledTooltip: "Already flagged",
+              });
+            } else {
+              items.push({
+                label: "Acknowledge",
+                icon: <Check className="w-4 h-4" />,
+                onClick: () => acknowledgePayment.mutate({ paymentId: p.id }),
+                disabled: acknowledgePayment.isPending,
+              });
+            }
+
+            // Flag incorrect
+            if (p.disputedByTenant && !p.disputedByResolvedAt) {
+              items.push({
+                label: "Flag incorrect",
+                icon: <AlertTriangle className="w-4 h-4" />,
+                variant: "danger",
+                disabled: true,
+                disabledTooltip: "Already flagged",
+              });
+            } else if (p.counterVerifiedAt) {
+              items.push({
+                label: "Flag incorrect",
+                icon: <AlertTriangle className="w-4 h-4" />,
+                variant: "danger",
+                disabled: true,
+                disabledTooltip: "Already acknowledged",
+              });
+            } else {
+              items.push({
+                label: "Flag incorrect",
+                icon: <AlertTriangle className="w-4 h-4" />,
+                variant: "danger",
+                onClick: () => {
+                  setFlagPaymentId(p.id);
+                  setFlagReason("");
+                  setIsFlagOpen(true);
+                },
+              });
+            }
+          } else if (p.recordedBy === user?.id) {
+            // Tenant's own entry
+            if (p.status === "pending") {
+              items.push({
+                label: "Edit payment",
+                icon: <Pencil className="w-4 h-4" />,
+                onClick: () => {
+                  setEditingPaymentId(p.id);
+                  setPaymentAmount(formatInputNumber(String(p.amount)));
+                  setPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
+                  setPaymentMethod(p.method);
+                  setPaymentNotes(p.notes || "");
+                  setProofUrl(p.proofUrl || null);
+                  setPaymentError(null);
+                  setUploadError(null);
+                  setIsLogPaymentOpen(true);
+                },
+              });
+            } else {
+              items.push({
+                label: "Edit payment",
+                icon: <Pencil className="w-4 h-4" />,
+                disabled: true,
+                disabledTooltip: p.status === "confirmed" ? "Already confirmed" : "Already rejected",
+              });
+            }
+          }
+
+          // Divider + View Details
+          items.push({
+            label: "View details",
+            icon: <FileText className="w-4 h-4" />,
+            separatorBefore: true,
+            onClick: () => {
+              setSelectedPayment(p);
+              setIsPaymentDetailsOpen(true);
+            },
+          });
+
+          return items;
+        };
+
+        return (
+          <>
+            {/* Desktop Table (>= 640px) */}
+            <div className="hidden sm:block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
+              <table className="min-w-full divide-y divide-neutral-800">
+                <thead className="bg-neutral-900/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      Date Logged
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      Method
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {isLoadingPayments ? (
+                    [...Array(3)].map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                        <td className="px-6 py-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                        <td className="px-6 py-4 text-center"><Skeleton className="h-8 w-8 rounded-lg mx-auto" /></td>
+                      </tr>
+                    ))
+                  ) : filteredPayments.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
+                        {!payments || payments.length === 0
+                          ? "No payments logged yet."
+                          : `No payments recorded for ${selectedYear}.`}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPayments.map((p) => (
+                      <tr
+                        key={p.id}
+                        onClick={() => { setSelectedPayment(p); setIsPaymentDetailsOpen(true); }}
+                        className="hover:bg-neutral-900/20 transition-colors cursor-pointer"
+                      >
+                        <td className="px-6 py-4 text-sm text-neutral-300">
+                          {new Date(p.paymentDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-white">
+                          {formatCurrency(p.amount)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
+                          {p.method.replace("_", " ")}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex flex-col space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <span
+                                className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border w-fit ${
+                                  p.status === "confirmed"
+                                    ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                    : p.status === "disputed"
+                                    ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                    : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                }`}
+                              >
+                                {paymentStatusLabel[p.status] ?? p.status}
+                              </span>
+                              {p.disputedByTenant && !p.disputedByResolvedAt && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
+                                  Flagged
+                                </span>
+                              )}
+                            </div>
+                            {p.counterVerifiedAt && (
+                              <span className="text-[11px] text-green-500 font-medium">✓ You Acknowledged</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center">
+                            <ActionMenu
+                              items={getTenantPaymentMenuItems(p)}
+                              label="Payment actions"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stacked Cards (< 640px) */}
+            <div className="sm:hidden space-y-2">
+              {isLoadingPayments ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-4 space-y-2 animate-pulse">
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                    </div>
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </div>
+                ))
+              ) : filteredPayments.length === 0 ? (
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-8 text-center text-sm text-neutral-500 italic">
                   {!payments || payments.length === 0
                     ? "No payments logged yet."
                     : `No payments recorded for ${selectedYear}.`}
-                </td>
-              </tr>
-            ) : (
-              filteredPayments.map((p) => {
-                const isLandlordLogged = p.recordedByRole === "landlord";
-                return (
-                  <tr
+                </div>
+              ) : (
+                filteredPayments.map((p) => (
+                  <div
                     key={p.id}
-                    onClick={() => { setSelectedPayment(p); setIsPaymentDetailsOpen(true); }}
-                    className="hover:bg-neutral-900/20 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedPayment(p);
+                      setIsPaymentDetailsOpen(true);
+                    }}
+                    className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-4 space-y-2 cursor-pointer hover:bg-neutral-900/40 hover:border-neutral-700 transition-colors"
                   >
-                    <td className="px-6 py-4 text-sm text-neutral-300">
-                      {new Date(p.paymentDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-white">
-                      {formatCurrency(p.amount)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
-                      {p.method.replace("_", " ")}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex flex-col space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border w-fit ${
-                              p.status === "confirmed"
-                                ? "bg-green-950/30 text-green-400 border-green-900/30"
-                                : p.status === "disputed"
-                                ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                            }`}
-                          >
-                            {paymentStatusLabel[p.status] ?? p.status}
-                          </span>
-                          {p.disputedByTenant && !p.disputedByResolvedAt && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
-                              Flagged
-                            </span>
-                          )}
-                        </div>
-                        {p.counterVerifiedAt && (
-                          <span className="text-[11px] text-green-500 font-medium">✓ You Acknowledged</span>
-                        )}
+                    {/* Top line: amount on left, ActionMenu ⋯ on right */}
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-white text-base">
+                        {formatCurrency(p.amount)}
+                      </span>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ActionMenu
+                          items={getTenantPaymentMenuItems(p)}
+                          label="Payment actions"
+                        />
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center">
-                        <div className="relative group/action-btn">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenPaymentMenuId(openPaymentMenuId === p.id ? null : p.id);
-                            }}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-                            aria-label="Payment actions"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                    </div>
 
-                          {/* Button tooltip when menu closed */}
-                          {openPaymentMenuId !== p.id && (
-                            <div
-                              role="tooltip"
-                              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/action-btn:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
-                            >
-                              Actions
-                            </div>
-                          )}
+                    {/* Second line: date and method, muted */}
+                    <div className="text-xs text-neutral-400 capitalize">
+                      {new Date(p.paymentDate).toLocaleDateString()} · {p.method.replace('_', ' ')}
+                    </div>
 
-                          {/* Menu dropdown, right-aligned to the icon */}
-                          {openPaymentMenuId === p.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-30"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenPaymentMenuId(null);
-                                }}
-                              />
-                              <div className="absolute right-0 mt-1 w-44 rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl z-40 animate-in fade-in-0 zoom-in-95 duration-100 text-left">
-                                {isLandlordLogged ? (
-                                  <>
-                                    {/* Acknowledge */}
-                                    {p.counterVerifiedAt ? (
-                                      <div className="relative group/tip w-full">
-                                        <button
-                                          type="button"
-                                          disabled
-                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
-                                        >
-                                          <Check className="w-3.5 h-3.5 text-neutral-600" />
-                                          <span>Acknowledge</span>
-                                        </button>
-                                        <div
-                                          role="tooltip"
-                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
-                                        >
-                                          Already acknowledged
-                                        </div>
-                                      </div>
-                                    ) : p.disputedByTenant && !p.disputedByResolvedAt ? (
-                                      <div className="relative group/tip w-full">
-                                        <button
-                                          type="button"
-                                          disabled
-                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
-                                        >
-                                          <Check className="w-3.5 h-3.5 text-neutral-600" />
-                                          <span>Acknowledge</span>
-                                        </button>
-                                        <div
-                                          role="tooltip"
-                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
-                                        >
-                                          Already flagged
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenPaymentMenuId(null);
-                                          acknowledgePayment.mutate({ paymentId: p.id });
-                                        }}
-                                        disabled={acknowledgePayment.isPending}
-                                        className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
-                                      >
-                                        <Check className="w-3.5 h-3.5" />
-                                        <span>Acknowledge</span>
-                                      </button>
-                                    )}
-
-                                    {/* Flag incorrect */}
-                                    {p.disputedByTenant && !p.disputedByResolvedAt ? (
-                                      <div className="relative group/tip w-full">
-                                        <button
-                                          type="button"
-                                          disabled
-                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
-                                        >
-                                          <AlertTriangle className="w-3.5 h-3.5 text-neutral-600" />
-                                          <span>Flag incorrect</span>
-                                        </button>
-                                        <div
-                                          role="tooltip"
-                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
-                                        >
-                                          Already flagged
-                                        </div>
-                                      </div>
-                                    ) : p.counterVerifiedAt ? (
-                                      <div className="relative group/tip w-full">
-                                        <button
-                                          type="button"
-                                          disabled
-                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
-                                        >
-                                          <AlertTriangle className="w-3.5 h-3.5 text-neutral-600" />
-                                          <span>Flag incorrect</span>
-                                        </button>
-                                        <div
-                                          role="tooltip"
-                                          className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
-                                        >
-                                          Already acknowledged
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenPaymentMenuId(null);
-                                          setFlagPaymentId(p.id);
-                                          setFlagReason("");
-                                          setIsFlagOpen(true);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-xs rounded-lg text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center space-x-2 transition-colors"
-                                      >
-                                        <AlertTriangle className="w-3.5 h-3.5" />
-                                        <span>Flag incorrect</span>
-                                      </button>
-                                    )}
-                                  </>
-                                ) : (
-                                  <>
-                                    {/* Tenant's own entry */}
-                                    {p.recordedBy === user?.id && (
-                                      p.status === "pending" ? (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenPaymentMenuId(null);
-                                            setEditingPaymentId(p.id);
-                                            setPaymentAmount(formatInputNumber(String(p.amount)));
-                                            setPaymentDate(new Date(p.paymentDate).toISOString().split("T")[0]);
-                                            setPaymentMethod(p.method);
-                                            setPaymentNotes(p.notes || "");
-                                            setProofUrl(p.proofUrl || null);
-                                            setPaymentError(null);
-                                            setUploadError(null);
-                                            setIsLogPaymentOpen(true);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
-                                        >
-                                          <Pencil className="w-3.5 h-3.5" />
-                                          <span>Edit payment</span>
-                                        </button>
-                                      ) : (
-                                        <div className="relative group/tip w-full">
-                                          <button
-                                            type="button"
-                                            disabled
-                                            className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-600 cursor-not-allowed flex items-center space-x-2"
-                                          >
-                                            <Pencil className="w-3.5 h-3.5 text-neutral-600" />
-                                            <span>Edit payment</span>
-                                          </button>
-                                          <div
-                                            role="tooltip"
-                                            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/tip:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl"
-                                          >
-                                            {p.status === "confirmed" ? "Already confirmed" : "Already rejected"}
-                                          </div>
-                                        </div>
-                                      )
-                                    )}
-                                  </>
-                                )}
-
-                                {/* Divider + View Details */}
-                                <div className="my-1 border-t border-neutral-800" />
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenPaymentMenuId(null);
-                                    setSelectedPayment(p);
-                                    setIsPaymentDetailsOpen(true);
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-xs rounded-lg text-neutral-300 hover:bg-neutral-900 hover:text-white flex items-center space-x-2 transition-colors"
-                                >
-                                  <FileText className="w-3.5 h-3.5" />
-                                  <span>View details</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                    {/* Bottom: status pill + Flagged pill */}
+                    <div className="flex items-center space-x-2 pt-1 border-t border-neutral-800/40">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                        p.status === "confirmed"
+                          ? "bg-green-950/30 text-green-400 border-green-900/30"
+                          : p.status === "disputed"
+                          ? "bg-red-950/30 text-red-400 border-red-900/30"
+                          : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                      }`}>
+                        {paymentStatusLabel[p.status] ?? p.status}
+                      </span>
+                      {p.disputedByTenant && !p.disputedByResolvedAt && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
+                          Flagged
+                        </span>
+                      )}
+                      {p.counterVerifiedAt && (
+                        <span className="text-[11px] text-green-500 font-medium">
+                          ✓ You Acknowledged
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Log / Edit Payment Modal ── */}
       {isLogPaymentOpen && (
@@ -1051,8 +1028,8 @@ function LeasePaymentLedger({
 
       {/* ── Payment Details Modal ── */}
       {isPaymentDetailsOpen && selectedPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-6 flex flex-col my-auto">
             <div className="flex justify-between items-center pb-4 border-b border-neutral-800">
               <h2 className="text-xl font-bold text-white font-sans">Payment Details</h2>
               <button
