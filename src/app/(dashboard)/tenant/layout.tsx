@@ -5,8 +5,8 @@ import Link from "next/link";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import {
-  LayoutDashboard,
-  CreditCard,
+  Home,
+  Bell,
   Settings,
   X,
   LogOut,
@@ -39,6 +39,11 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
   const { data: user } = trpc.auth.me.useQuery();
   const logoutMutation = trpc.auth.logout.useMutation();
 
+  const { data: notifications } = trpc.notifications.listReceived.useQuery(undefined, {
+    staleTime: 30_000,
+  });
+  const unreadCount = notifications?.filter((n) => !n.readAt).length ?? 0;
+
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
@@ -49,20 +54,20 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const regularNavItems = [
+  const navItems = [
     {
-      name: "Dashboard",
+      name: "Home",
       href: "/tenant",
-      icon: LayoutDashboard,
-      active: pathname === "/tenant",
+      icon: Home,
+      active: pathname === "/tenant" || pathname.startsWith("/tenant/rentals"),
       badge: 0,
     },
     {
-      name: "Payments",
-      href: "/tenant/payments",
-      icon: CreditCard,
-      active: pathname.startsWith("/tenant/payments"),
-      badge: 0,
+      name: "Notifications",
+      href: "/tenant/notifications",
+      icon: Bell,
+      active: pathname.startsWith("/tenant/notifications"),
+      badge: unreadCount,
     },
     {
       name: "Settings",
@@ -100,7 +105,7 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto" aria-label="Tenant portal navigation">
-        {regularNavItems.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <Link
@@ -125,7 +130,7 @@ function TenantLayoutContent({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* Sidebar Footer (Settings / Logout - avatar removed) */}
+      {/* Sidebar Footer */}
       <div className="p-4 border-t border-neutral-800 bg-neutral-900/50 backdrop-blur-md">
         <div className="flex flex-col space-y-3">
           {user && (

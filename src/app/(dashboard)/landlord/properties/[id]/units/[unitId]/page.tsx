@@ -854,6 +854,29 @@ export default function UnitDetailPage() {
         <DetailActionRow
           backHref={`/landlord/properties/${propertyId}`}
           backLabel="Back to Property"
+          phonePrimaryAction={
+            activeLease
+              ? {
+                  label: "Add payment",
+                  icon: <Plus className="w-4 h-4" />,
+                  disabled: !billingSummary || (billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0),
+                  title:
+                    billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0
+                      ? "This lease is fully paid."
+                      : undefined,
+                  onClick: () => {
+                    setIsLogPaymentOpen(true);
+                    setSelectedPaymentLeaseId(currentLease?.id || activeLease.id);
+                    setPaymentAmount(
+                      billingSummary && billingSummary.outstanding > 0
+                        ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                        : ""
+                    );
+                    setPaymentError(null);
+                  },
+                }
+              : undefined
+          }
           actions={[
             {
               label: "Edit Unit",
@@ -1155,7 +1178,7 @@ export default function UnitDetailPage() {
                   {(() => {
                     const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
                     return (
-                      <div className={`relative inline-block ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
+                      <div className={`relative hidden sm:inline-block ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
                         <Button
                           onClick={() => {
                             setIsLogPaymentOpen(true);
@@ -2166,7 +2189,7 @@ export default function UnitDetailPage() {
                   disabled={createPayment.isPending}
                   className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
                 >
-                  {createPayment.isPending ? "Adding..." : "Add Payment"}
+                  {createPayment.isPending ? "Saving..." : "Save"}
                 </Button>
               </div>
             </form>

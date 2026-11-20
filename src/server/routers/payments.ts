@@ -1037,6 +1037,12 @@ export const paymentsRouter = router({
           }
         }
       });
-      return payment ? { unitId: payment.lease.unit.id, propertyId: payment.lease.unit.propertyId } : null;
+      return payment
+        ? {
+            unitId: payment.lease.unit.id,
+            propertyId: payment.lease.unit.propertyId,
+            leaseId: payment.lease.id,
+          }
+        : null;
     }),
 });

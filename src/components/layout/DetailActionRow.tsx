@@ -14,10 +14,19 @@ export interface DetailAction {
   disabled?: boolean;
 }
 
+export interface PhonePrimaryAction {
+  label: string;
+  onClick: () => void;
+  icon?: React.ReactNode;
+  disabled?: boolean;
+  title?: string;
+}
+
 interface DetailActionRowProps {
   backHref: string;
   backLabel: string;
   actions: DetailAction[];
+  phonePrimaryAction?: PhonePrimaryAction;
   className?: string;
 }
 
@@ -25,6 +34,7 @@ export function DetailActionRow({
   backHref,
   backLabel,
   actions,
+  phonePrimaryAction,
   className,
 }: DetailActionRowProps) {
   return (
@@ -61,19 +71,43 @@ export function DetailActionRow({
         ))}
       </div>
 
-      {/* Mobile ⋯ dropdown (< 640px) */}
-      <div className="sm:hidden flex-shrink-0">
-        <ActionMenu
-          items={actions.map((action) => ({
-            label: action.label,
-            onClick: action.onClick,
-            icon: action.icon,
-            variant: action.variant === "danger" ? "danger" : "default",
-            disabled: action.disabled,
-          }))}
-          label="More actions"
-          triggerClassName="h-9 w-9 bg-neutral-900 border border-neutral-800"
-        />
+      {/* Mobile action group (< 640px) */}
+      <div className="sm:hidden flex items-center gap-2 flex-shrink-0">
+        {phonePrimaryAction && (
+          <div className="relative group">
+            <Button
+              type="button"
+              onClick={phonePrimaryAction.onClick}
+              disabled={phonePrimaryAction.disabled}
+              className="h-9 px-3 text-xs font-semibold bg-white text-neutral-950 hover:bg-neutral-200 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {phonePrimaryAction.icon}
+              <span>{phonePrimaryAction.label}</span>
+            </Button>
+            {phonePrimaryAction.title && phonePrimaryAction.disabled && (
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full right-0 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+              >
+                {phonePrimaryAction.title}
+              </div>
+            )}
+          </div>
+        )}
+
+        {actions.length > 0 && (
+          <ActionMenu
+            items={actions.map((action) => ({
+              label: action.label,
+              onClick: action.onClick,
+              icon: action.icon,
+              variant: action.variant === "danger" ? "danger" : "default",
+              disabled: action.disabled,
+            }))}
+            label="More actions"
+            triggerClassName="h-9 w-9 bg-neutral-900 border border-neutral-800"
+          />
+        )}
       </div>
     </div>
   );

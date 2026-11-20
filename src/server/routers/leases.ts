@@ -485,12 +485,21 @@ export const leasesRouter = router({
       return await prisma.lease.findMany({
         where: { tenantId: ctx.user.id },
         include: {
+          payments: {
+            select: {
+              id: true,
+              amount: true,
+              status: true,
+              paymentDate: true,
+            },
+          },
           unit: {
             include: {
               property: {
                 include: {
                   landlord: {
                     select: {
+                      id: true,
                       fullName: true,
                       email: true,
                       phone: true,
@@ -504,6 +513,72 @@ export const leasesRouter = router({
         },
         orderBy: { startDate: "desc" },
       });
+    }),
+
+  getTenantRental: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.user.role !== "tenant") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only tenants can view rental details.",
+        });
+      }
+
+      const lease = await prisma.lease.findFirst({
+        where: {
+          id: input.leaseId,
+          tenantId: ctx.user.id,
+        },
+        include: {
+          unit: {
+            include: {
+              property: {
+                include: {
+                  landlord: {
+                    select: {
+                      id: true,
+                      fullName: true,
+                      email: true,
+                      phone: true,
+                      avatarUrl: true,
+                    },
+                  },
+                },
+              },
+              leases: {
+                where: { terminatedAt: null },
+                orderBy: { startDate: "asc" },
+                select: {
+                  id: true,
+                  startDate: true,
+                  endDate: true,
+                  rentAmount: true,
+                  rentFrequency: true,
+                  depositAmount: true,
+                  terminatedAt: true,
+                  renewalWindowDays: true,
+                },
+              },
+            },
+          },
+          documents: {
+            orderBy: { createdAt: "desc" },
+          },
+          payments: {
+            orderBy: { paymentDate: "desc" },
+          },
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Rental not found.",
+        });
+      }
+
+      return lease;
     }),
 
   renew: authedProcedure
