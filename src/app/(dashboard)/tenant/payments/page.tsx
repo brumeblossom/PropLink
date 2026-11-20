@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Select } from "@/components/ui/select";
+import { BackButton } from "@/components/ui/back-button";
 import { PaymentMethod } from "@prisma/client";
-import { X, CreditCard, ChevronLeft, Building2, Home, Plus, Check, AlertTriangle, Pencil, FileText } from "lucide-react";
+import { X, CreditCard, Building2, Home, Plus, Check, AlertTriangle, Pencil, FileText } from "lucide-react";
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { useToast } from "@/components/ui/toast";
@@ -145,11 +146,12 @@ function LeasePaymentLedger({
     onError: (err) => setPaymentError(err.message),
   });
 
+  const { toast } = useToast();
   const getUploadUrlMutation = trpc.payments.getUploadUrl.useMutation();
 
   const acknowledgePayment = trpc.payments.acknowledge.useMutation({
     onSuccess: () => utils.payments.list.invalidate({ leaseId: lease.id }),
-    onError: (err) => alert(err.message),
+    onError: () => toast("Could not acknowledge payment", "error"),
   });
 
   const flagPayment = trpc.payments.flag.useMutation({
@@ -159,10 +161,9 @@ function LeasePaymentLedger({
       setFlagReason("");
       setFlagPaymentId("");
     },
-    onError: (err) => alert(err.message),
+    onError: () => toast("Could not dispute payment", "error"),
   });
 
-  const { toast } = useToast();
   const [isDeleteProofConfirmOpen, setIsDeleteProofConfirmOpen] = useState(false);
   const [uploadingDetailProof, setUploadingDetailProof] = useState(false);
 
@@ -339,9 +340,8 @@ function LeasePaymentLedger({
     try {
       const { signedUrl } = await utils.client.payments.getDownloadUrl.query({ path });
       window.open(signedUrl, "_blank");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch proof file URL.";
-      alert(message);
+    } catch {
+      toast("Could not open payment proof", "error");
     }
   };
 
@@ -398,36 +398,31 @@ function LeasePaymentLedger({
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Payments" />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {showBackButton && (
+          <div>
+            <BackButton onClick={onBack} />
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-start gap-3">
-            {showBackButton && (
-              <button
-                onClick={onBack}
-                className="mt-1 text-neutral-400 hover:text-white transition-colors shrink-0"
-                title="Back to lease selector"
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Payment history</h1>
+            <p className="text-neutral-400 text-sm mt-0.5 flex items-center gap-1.5">
+              <Home className="w-3.5 h-3.5 shrink-0" />
+              {lease.unit.property.name} · Unit {lease.unit.unitNumber}
+              <span
+                className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                  leaseStatus === "active"
+                    ? "bg-green-950/30 text-green-400 border-green-900/30"
+                    : leaseStatus === "renewal_due"
+                    ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                    : "bg-neutral-900 text-neutral-400 border-neutral-800"
+                }`}
               >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Payment history</h1>
-              <p className="text-neutral-400 text-sm mt-0.5 flex items-center gap-1.5">
-                <Home className="w-3.5 h-3.5 shrink-0" />
-                {lease.unit.property.name} · Unit {lease.unit.unitNumber}
-                <span
-                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                    leaseStatus === "active"
-                      ? "bg-green-950/30 text-green-400 border-green-900/30"
-                      : leaseStatus === "renewal_due"
-                      ? "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                      : "bg-neutral-900 text-neutral-400 border-neutral-800"
-                  }`}
-                >
-                  {leaseStatus.replace("_", " ")}
-                </span>
-              </p>
-            </div>
+                {leaseStatus.replace("_", " ")}
+              </span>
+            </p>
           </div>
 
           <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -985,7 +980,7 @@ function LeasePaymentLedger({
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (!flagReason.trim()) { alert("Reason is required."); return; }
+                if (!flagReason.trim()) { toast("Reason is required", "error"); return; }
                 await flagPayment.mutateAsync({ paymentId: flagPaymentId, reason: flagReason });
               }}
               className="space-y-4"

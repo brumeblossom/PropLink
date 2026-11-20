@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { Send, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
   );
 
   const { data: currentUser } = trpc.auth.me.useQuery();
+  const { toast } = useToast();
 
   // Mutations
   const sendMessageMutation = trpc.conversations.sendMessage.useMutation({
@@ -36,8 +38,8 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
       setSending(false);
       refetch();
     },
-    onError: (err) => {
-      alert(err.message);
+    onError: () => {
+      toast("Could not send message", "error");
       setSending(false);
     },
   });

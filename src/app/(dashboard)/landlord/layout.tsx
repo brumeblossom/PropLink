@@ -106,9 +106,14 @@ function LandlordLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-full bg-neutral-950 border-r border-neutral-800 text-white">
       {/* Sidebar Header - exact h-16 to line up with PageHeader */}
       <div className="h-16 flex items-center px-6 border-b border-neutral-800 bg-neutral-950/80 sticky top-0 z-10 justify-between">
-        <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90 font-sans">
-          PropLink
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link href="/landlord" className="text-xl font-bold tracking-tight text-white hover:opacity-90 font-sans">
+            PropLink
+          </Link>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-900 border border-neutral-800 text-neutral-400 leading-none">
+            Landlord
+          </span>
+        </div>
         <button
           type="button"
           onClick={closeSidebar}

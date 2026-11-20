@@ -647,7 +647,7 @@ export default function UnitDetailPage() {
     e.preventDefault();
     const amount = parseFloat(editAmount.replace(/,/g, ""));
     if (editAction === "edit" && (isNaN(amount) || amount <= 0)) {
-      alert("Amount must be a positive number.");
+      toast("Amount must be a positive number", "error");
       return;
     }
 
@@ -659,9 +659,8 @@ export default function UnitDetailPage() {
         paymentDate: editAction === "edit" ? new Date(editPaymentDate).toISOString() : undefined,
         method: editAction === "edit" ? editMethod : undefined,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to resolve payment.";
-      alert(message);
+    } catch {
+      toast("Could not update payment", "error");
     }
   };
 
@@ -669,9 +668,8 @@ export default function UnitDetailPage() {
     try {
       const { signedUrl } = await utils.client.payments.getDownloadUrl.query({ path });
       window.open(signedUrl, "_blank");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch proof file URL.";
-      alert(message);
+    } catch {
+      toast("Could not open payment proof", "error");
     }
   };
 
@@ -722,7 +720,7 @@ export default function UnitDetailPage() {
       utils.leases.getForUnit.invalidate({ unitId });
       inputEl.value = "";
       setUploadError(null);
-      alert("Lease agreement uploaded successfully!");
+      toast("Document uploaded", "success");
     } catch (err) {
       const message = err instanceof Error ? err.message : "An error occurred during file upload.";
       setUploadError(message);
@@ -739,9 +737,8 @@ export default function UnitDetailPage() {
         leaseId: activeLease.id,
       });
       window.open(signedUrl, "_blank");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch document link.";
-      alert(message);
+    } catch {
+      toast("Could not open document", "error");
     }
   };
 
@@ -2236,7 +2233,7 @@ export default function UnitDetailPage() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!rejectReason.trim()) {
-                  alert("Reason is required.");
+                  toast("Reason is required", "error");
                   return;
                 }
                 await rejectPayment.mutateAsync({

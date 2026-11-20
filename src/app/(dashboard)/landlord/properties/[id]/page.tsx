@@ -194,7 +194,7 @@ export default function PropertyDetailPage() {
 
   // Form states for Bulk Add
   const [bulkMode, setBulkMode] = useState<"range" | "manual">("range");
-  const [rangePrefix, setRangePrefix] = useState("Flat ");
+  const [rangePrefix, setRangePrefix] = useState("Flat");
   const [rangeStart, setRangeStart] = useState("1");
   const [rangeEnd, setRangeEnd] = useState("10");
   const [rangeType, setRangeType] = useState(defaultUnitType);
@@ -208,7 +208,7 @@ export default function PropertyDetailPage() {
 
   const resetBulkForm = () => {
     setBulkMode("range");
-    setRangePrefix("Flat ");
+    setRangePrefix("Flat");
     setRangeStart("1");
     setRangeEnd("10");
     setRangeType(defaultUnitType);
@@ -262,9 +262,10 @@ export default function PropertyDetailPage() {
       const isResidential = isResidentialUnitType(rangeType);
       const parsedRooms = isResidential && rangeRoomsCount ? parseInt(rangeRoomsCount, 10) : null;
 
+      const trimmedPrefix = rangePrefix.trim();
       for (let i = start; i <= end; i++) {
         unitsToCreate.push({
-          unitNumber: `${rangePrefix}${i}`.trim(),
+          unitNumber: trimmedPrefix ? `${trimmedPrefix} ${i}` : `${i}`,
           unitType: rangeType,
           roomsCount: parsedRooms,
         });
@@ -1312,7 +1313,7 @@ export default function PropertyDetailPage() {
                         type="text"
                         value={rangePrefix}
                         onChange={(e) => setRangePrefix(e.target.value)}
-                        placeholder="e.g. Flat "
+                        placeholder="e.g. Flat"
                         className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-white text-sm"
                       />
                     </div>
@@ -1384,7 +1385,7 @@ export default function PropertyDetailPage() {
                     <span className="text-white font-semibold">
                       {Math.max(0, (parseInt(rangeEnd, 10) || 0) - (parseInt(rangeStart, 10) || 0) + 1)}
                     </span>{" "}
-                    units: {rangePrefix}{rangeStart} to {rangePrefix}{rangeEnd}
+                    units: {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeStart}` : rangeStart} to {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeEnd}` : rangeEnd}
                   </div>
                 </div>
               ) : (

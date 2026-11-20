@@ -4,6 +4,7 @@ import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useToast } from "@/components/ui/toast";
 import { formatCurrency } from "@/lib/utils";
 import { getDueDateStatus } from "@/lib/billing";
 import { Home } from "lucide-react";
@@ -115,6 +116,7 @@ export default function TenantDashboard() {
 
 function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
   const utils = trpc.useUtils();
+  const { toast } = useToast();
 
   const { data: billingSummary } = trpc.payments.getBillingSummary.useQuery(
     { leaseId: lease.id },
@@ -125,9 +127,8 @@ function TenantLeaseSection({ lease }: { lease: LeaseElement }) {
     try {
       const { signedUrl } = await utils.client.leases.getDocumentUrl.query({ leaseId });
       window.open(signedUrl, "_blank");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch document download link.";
-      alert(message);
+    } catch {
+      toast("Could not open lease document", "error");
     }
   };
 
