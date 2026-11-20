@@ -5,6 +5,7 @@ import {
   getRentPeriodForDate,
   getLeaseBalance,
   getDueDateStatus,
+  formatTwoLineRentDue,
   formatLagosYMD,
   PaymentLike,
 } from "./billing";
@@ -230,5 +231,92 @@ describe("Billing & Running Balance", () => {
     // Before start date maps to first period
     const pEarly = getRentPeriodForDate(lease, "2025-12-25");
     expect(formatLagosYMD(pEarly.periodStart)).toBe("2026-01-01");
+  });
+
+  describe("formatTwoLineRentDue", () => {
+    const today = new Date("2026-11-20T12:00:00.000Z");
+
+    it("expired lease returns —", () => {
+      const result = formatTwoLineRentDue({
+        leaseStatus: "expired",
+        nextDueDate: null,
+        todayInput: today,
+      });
+      expect(result.status).toBe("expired");
+      expect(result.line1).toBe("—");
+      expect(result.line2).toBeUndefined();
+    });
+
+    it("paid to end of lease returns Paid to end of lease", () => {
+      const result = formatTwoLineRentDue({
+        leaseStatus: "active",
+        nextDueDate: null,
+        todayInput: today,
+      });
+      expect(result.status).toBe("paid_in_full");
+      expect(result.line1).toBe("Paid to end of lease");
+      expect(result.line2).toBeUndefined();
+    });
+
+    it("overdue returns Overdue · N periods and since DD/MM/YYYY", () => {
+      const result = formatTwoLineRentDue({
+        leaseStatus: "active",
+        nextDueDate: "2026-06-29",
+        unpaidPeriods: 5,
+        todayInput: today,
+      });
+      expect(result.status).toBe("overdue");
+      expect(result.line1).toBe("Overdue · 5 periods");
+      expect(result.line2).toBe("since 29/06/2026");
+
+      const singleResult = formatTwoLineRentDue({
+        leaseStatus: "active",
+        nextDueDate: "2026-10-20",
+        unpaidPeriods: 1,
+        todayInput: today,
+      });
+      expect(singleResult.line1).toBe("Overdue · 1 period");
+      expect(singleResult.line2).toBe("since 20/10/2026");
+    });
+
+    it("upcoming due date returns date and in N days / today / tomorrow", () => {
+      // 97 days from 20/11/2026 is 25/02/2027
+      const result = formatTwoLineRentDue({
+        leaseStatus: "active",
+        nextDueDate: "2027-02-25",
+        todayInput: today,
+      });
+      expect(result.status).toBe("upcoming");
+      expect(result.line1).toBe("25/02/2027");
+      expect(result.line2).toBe("in 97 days");
+
+      const todayResult = formatTwoLineRentDue({
+        leaseStatus: "active",
+        nextDueDate: "2026-11-20",
+        todayInput: today,
+      });
+      expect(todayResult.line1).toBe("20/11/2026");
+      expect(todayResult.line2).toBe("today");
+
+      const tomorrowResult = formatTwoLineRentDue({
+        leaseStatus: "active",
+        nextDueDate: "2026-11-21",
+        todayInput: today,
+      });
+      expect(tomorrowResult.line1).toBe("21/11/2026");
+      expect(tomorrowResult.line2).toBe("tomorrow");
+    });
+
+    it("upcoming lease with different start date returns Lease starts DD/MM/YYYY", () => {
+      const result = formatTwoLineRentDue({
+        leaseStatus: "upcoming",
+        nextDueDate: "2027-01-01",
+        startDate: "2027-02-01",
+        todayInput: today,
+      });
+      expect(result.status).toBe("upcoming");
+      expect(result.line1).toBe("01/01/2027");
+      expect(result.line2).toBe("Lease starts 01/02/2027");
+    });
   });
 });

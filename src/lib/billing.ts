@@ -250,6 +250,86 @@ export function getDueDateStatus(
   }
 }
 
+export interface RentDueLines {
+  line1: string;
+  line2?: string | null;
+  status: "overdue" | "upcoming" | "paid_in_full" | "expired";
+}
+
+/**
+ * Formats next rent due into two compact lines for table cells and card layouts.
+ */
+export function formatTwoLineRentDue({
+  leaseStatus,
+  nextDueDate,
+  unpaidPeriods = 0,
+  startDate,
+  todayInput = new Date(),
+}: {
+  leaseStatus: string;
+  nextDueDate: Date | string | null;
+  unpaidPeriods?: number;
+  startDate?: Date | string | null;
+  todayInput?: Date | string;
+}): RentDueLines {
+  if (leaseStatus === "expired" || leaseStatus === "terminated") {
+    return { line1: "—", status: "expired" };
+  }
+
+  if (!nextDueDate) {
+    return { line1: "Paid to end of lease", status: "paid_in_full" };
+  }
+
+  const todayStr = formatLagosYMD(todayInput);
+  const dueStr = formatLagosYMD(nextDueDate);
+
+  if (dueStr < todayStr) {
+    const periodsCount = Math.max(1, unpaidPeriods);
+    const periodWord = periodsCount === 1 ? "1 period" : `${periodsCount} periods`;
+    return {
+      line1: `Overdue · ${periodWord}`,
+      line2: `since ${formatDateGB(nextDueDate)}`,
+      status: "overdue",
+    };
+  }
+
+  const dueDateFormatted = formatDateGB(nextDueDate);
+
+  // Check if upcoming lease with different start date
+  if (leaseStatus === "upcoming" && startDate) {
+    const startFormatted = formatDateGB(startDate);
+    if (startFormatted !== dueDateFormatted) {
+      return {
+        line1: dueDateFormatted,
+        line2: `Lease starts ${startFormatted}`,
+        status: "upcoming",
+      };
+    }
+  }
+
+  // Calculate days difference
+  const target = getLagosYMD(nextDueDate);
+  const current = getLagosYMD(todayInput);
+  const d1 = Date.UTC(target.year, target.month - 1, target.day);
+  const d2 = Date.UTC(current.year, current.month - 1, current.day);
+  const days = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+
+  let relativeText = "";
+  if (days <= 0) {
+    relativeText = "today";
+  } else if (days === 1) {
+    relativeText = "tomorrow";
+  } else {
+    relativeText = `in ${days} days`;
+  }
+
+  return {
+    line1: dueDateFormatted,
+    line2: relativeText,
+    status: "upcoming",
+  };
+}
+
 /**
  * Computes the running balance for a lease given its confirmed payments, pending payments, and current date.
  */

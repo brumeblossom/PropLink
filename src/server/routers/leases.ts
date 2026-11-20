@@ -719,6 +719,7 @@ export const leasesRouter = router({
             rentFrequency: lease.rentFrequency,
             leaseStatus,
             nextDueDate: balance.nextDueDate ? balance.nextDueDate.toISOString() : null,
+            unpaidPeriods: balance.unpaidPeriods,
             nextDueStatus: dueStatus.status,
             nextDueText: dueStatus.text,
           };
@@ -757,24 +758,30 @@ export const leasesRouter = router({
         );
 
         let nextRentDue: {
-          text: string;
-          status: "overdue" | "today" | "upcoming" | "paid_in_full" | "past";
-          date: string | null;
+          type: "overdue" | "today" | "upcoming" | "paid_in_full" | "expired";
+          dueDate: string | null;
+          unpaidPeriods: number;
+          leaseStartDate: string | null;
+          isUpcomingLease: boolean;
         };
 
         if (activeLeases.length === 0) {
           nextRentDue = {
-            text: "—",
-            status: "past",
-            date: null,
+            type: "expired",
+            dueDate: null,
+            unpaidPeriods: 0,
+            leaseStartDate: null,
+            isUpcomingLease: false,
           };
         } else {
           const leasesWithDue = activeLeases.filter((l) => l.nextDueDate !== null);
           if (leasesWithDue.length === 0) {
             nextRentDue = {
-              text: "Paid to end of lease",
-              status: "paid_in_full",
-              date: null,
+              type: "paid_in_full",
+              dueDate: null,
+              unpaidPeriods: 0,
+              leaseStartDate: null,
+              isUpcomingLease: false,
             };
           } else {
             leasesWithDue.sort(
@@ -782,9 +789,11 @@ export const leasesRouter = router({
             );
             const earliest = leasesWithDue[0];
             nextRentDue = {
-              text: earliest.nextDueText,
-              status: earliest.nextDueStatus as "overdue" | "today" | "upcoming",
-              date: earliest.nextDueDate,
+              type: earliest.nextDueStatus as "overdue" | "today" | "upcoming",
+              dueDate: earliest.nextDueDate,
+              unpaidPeriods: earliest.unpaidPeriods,
+              leaseStartDate: earliest.startDate,
+              isUpcomingLease: earliest.leaseStatus === "upcoming",
             };
           }
         }

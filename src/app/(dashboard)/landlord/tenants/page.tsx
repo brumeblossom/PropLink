@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { trpc } from "@/utils/trpc";
+import * as Dialog from "@radix-ui/react-dialog";
 import { 
   Users, 
   Search, 
-  Building2, 
   Mail, 
   Phone, 
-  Calendar, 
-  ArrowUpRight,
   X,
   ChevronLeft,
   ChevronRight
@@ -20,7 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency, cn } from "@/lib/utils";
-import { formatDateGB } from "@/lib/billing";
+import { formatDateGB, formatTwoLineRentDue, type RentDueLines } from "@/lib/billing";
 
 interface ProcessedLease {
   id: string;
@@ -34,6 +32,7 @@ interface ProcessedLease {
   rentFrequency: string;
   leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated";
   nextDueDate: string | null;
+  unpaidPeriods: number;
   nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full";
   nextDueText: string;
 }
@@ -53,9 +52,11 @@ interface TenantRow {
   overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated";
   isCurrent: boolean;
   nextRentDue: {
-    text: string;
-    status: "overdue" | "today" | "upcoming" | "paid_in_full" | "past";
-    date: string | null;
+    type: "overdue" | "today" | "upcoming" | "paid_in_full" | "expired";
+    dueDate: string | null;
+    unpaidPeriods: number;
+    leaseStartDate: string | null;
+    isUpcomingLease: boolean;
   };
 }
 
@@ -96,133 +97,41 @@ function LeaseStatusBadge({ status }: { status: string }) {
   }
 }
 
-function NextRentDueDisplay({
-  nextRentDue,
-}: {
-  nextRentDue: {
-    text: string;
-    status: "overdue" | "today" | "upcoming" | "paid_in_full" | "past";
-    date: string | null;
-  };
-}) {
-  let colorClass = "text-neutral-300";
-  if (nextRentDue.status === "overdue") {
-    colorClass = "text-red-400 font-medium";
-  } else if (nextRentDue.status === "today") {
-    colorClass = "text-amber-400 font-medium";
-  } else if (nextRentDue.status === "paid_in_full") {
-    colorClass = "text-emerald-400 font-medium";
-  } else if (nextRentDue.status === "past") {
-    colorClass = "text-neutral-500";
+function TwoLineRentDue({ data }: { data: RentDueLines }) {
+  if (data.status === "expired") {
+    return <span className="text-neutral-500 text-sm">—</span>;
   }
-
-  return <span className={cn("text-sm", colorClass)}>{nextRentDue.text}</span>;
-}
-
-function TenantDetailContent({ tenant, onClose }: { tenant: TenantRow; onClose: () => void }) {
+  if (data.status === "paid_in_full") {
+    return (
+      <span className="text-emerald-400 font-medium text-sm block truncate" title={data.line1}>
+        {data.line1}
+      </span>
+    );
+  }
+  if (data.status === "overdue") {
+    return (
+      <div className="leading-tight">
+        <div className="text-red-400 font-medium text-sm truncate" title={data.line1}>
+          {data.line1}
+        </div>
+        {data.line2 && (
+          <div className="text-neutral-400 text-xs mt-0.5 truncate" title={data.line2}>
+            {data.line2}
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-white">{tenant.fullName}</h2>
-            <LeaseStatusBadge status={tenant.overallStatus} />
-          </div>
-          <div className="space-y-1 text-sm text-neutral-400 pt-1">
-            <div className="flex items-center gap-2">
-              <Mail className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-              <a href={`mailto:${tenant.email}`} className="hover:text-neutral-200 transition-colors truncate">
-                {tenant.email}
-              </a>
-            </div>
-            {tenant.phone ? (
-              <div className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                <a href={`tel:${tenant.phone}`} className="hover:text-neutral-200 transition-colors">
-                  {tenant.phone}
-                </a>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-neutral-500">
-                <Phone className="w-3.5 h-3.5 shrink-0" />
-                <span>No phone number</span>
-              </div>
-            )}
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors shrink-0"
-          aria-label="Close panel"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <div className="leading-tight">
+      <div className="text-neutral-200 font-medium text-sm truncate" title={data.line1}>
+        {data.line1}
       </div>
-
-      <div className="h-px bg-neutral-800/80" />
-
-      {/* Leases Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-            Leases ({tenant.leases.length})
-          </h3>
+      {data.line2 && (
+        <div className="text-neutral-400 text-xs mt-0.5 truncate" title={data.line2}>
+          {data.line2}
         </div>
-
-        <div className="space-y-3">
-          {tenant.leases.map((lease) => (
-            <div
-              key={lease.id}
-              className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-sm text-white">Unit {lease.unitName}</span>
-                <LeaseStatusBadge status={lease.leaseStatus} />
-              </div>
-
-              <div className="space-y-1.5 text-xs text-neutral-400">
-                <div className="flex items-center gap-1.5 text-neutral-300">
-                  <Building2 className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                  <span className="truncate">{lease.propertyName}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                  <span>
-                    {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
-                  </span>
-                </div>
-                <div className="pt-1 flex items-baseline justify-between text-neutral-300">
-                  <span>Rent:</span>
-                  <span className="font-medium text-white">
-                    {formatCurrency(lease.rentAmount)} / {lease.rentFrequency}
-                  </span>
-                </div>
-                <div className="pt-1 border-t border-neutral-800/60 flex items-center justify-between">
-                  <span className="text-neutral-500">Rent due:</span>
-                  <NextRentDueDisplay
-                    nextRentDue={{
-                      text: lease.nextDueText,
-                      status: lease.nextDueStatus,
-                      date: lease.nextDueDate,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-neutral-800/60">
-                <Link
-                  href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}`}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
-                >
-                  View unit
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -244,17 +153,6 @@ export default function LandlordTenantsPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  // Escape key closes side panel / sheet
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setSelectedTenant(null);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   const { data: properties } = trpc.properties.list.useQuery();
 
@@ -291,22 +189,20 @@ export default function LandlordTenantsPage() {
     <div className="min-h-screen bg-neutral-950 text-white">
       <PageHeader title="Tenant List" />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
-        {/* Header row: Title + Count */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Tenant List</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-900 border border-neutral-800 text-neutral-400">
-              {total} {total === 1 ? "tenant" : "tenants"}
-            </span>
-          </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {/* Title row: Heading "Your tenants" with count as small muted pill ("7"), 32px gap under */}
+        <div className="flex items-center gap-2.5 mb-8">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Your tenants</h1>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 text-neutral-400">
+            {total}
+          </span>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 bg-neutral-900/30 p-3 sm:p-4 rounded-xl border border-neutral-800">
-          {/* Search Box */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+        {/* Toolbar: directly under heading, no box or border, same style as units table toolbar */}
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+          {/* Search Input: full width on mobile, 280px on desktop */}
+          <div className="relative w-full md:w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
             <input
               type="text"
               value={searchInput}
@@ -325,60 +221,63 @@ export default function LandlordTenantsPage() {
             )}
           </div>
 
-          {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:flex md:items-center">
+          {/* Filters: two per row on mobile, inline on desktop */}
+          <div className="grid grid-cols-2 md:flex md:items-center gap-2.5 flex-1">
             {/* Property Filter */}
-            <Select
-              value={propertyId}
-              onChange={(e) => {
-                setPropertyId(e.target.value);
-                setPage(1);
-              }}
-              wrapperClassName="w-full md:w-48"
-              aria-label="Filter by property"
-            >
-              <option value="">All properties</option>
-              {properties?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
+            <div className="col-span-1 md:w-48">
+              <Select
+                value={propertyId}
+                onChange={(e) => {
+                  setPropertyId(e.target.value);
+                  setPage(1);
+                }}
+                aria-label="Filter by property"
+              >
+                <option value="">All properties</option>
+                {properties?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
             {/* Active / Past Filter */}
-            <Select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as "all" | "active" | "past");
-                setPage(1);
-              }}
-              wrapperClassName="w-full md:w-36"
-              aria-label="Filter by tenant status"
-            >
-              <option value="all">All tenants</option>
-              <option value="active">Active tenants</option>
-              <option value="past">Past tenants</option>
-            </Select>
+            <div className="col-span-1 md:w-36">
+              <Select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value as "all" | "active" | "past");
+                  setPage(1);
+                }}
+                aria-label="Filter by tenant status"
+              >
+                <option value="all">All tenants</option>
+                <option value="active">Active tenants</option>
+                <option value="past">Past tenants</option>
+              </Select>
+            </div>
 
             {/* Lease Status Filter */}
-            <Select
-              value={leaseStatusFilter}
-              onChange={(e) => {
-                setLeaseStatusFilter(e.target.value as "" | "active" | "renewal_due" | "expired");
-                setPage(1);
-              }}
-              wrapperClassName="w-full md:w-40"
-              aria-label="Filter by lease status"
-            >
-              <option value="">All lease statuses</option>
-              <option value="active">Active</option>
-              <option value="renewal_due">Renewal due</option>
-              <option value="expired">Expired</option>
-            </Select>
+            <div className="col-span-2 sm:col-span-1 md:w-40">
+              <Select
+                value={leaseStatusFilter}
+                onChange={(e) => {
+                  setLeaseStatusFilter(e.target.value as "" | "active" | "renewal_due" | "expired");
+                  setPage(1);
+                }}
+                aria-label="Filter by lease status"
+              >
+                <option value="">All lease statuses</option>
+                <option value="active">Active</option>
+                <option value="renewal_due">Renewal due</option>
+                <option value="expired">Expired</option>
+              </Select>
+            </div>
           </div>
         </div>
 
-        {/* Main Content Area: Table / Cards + Right Drawer */}
+        {/* Content Section */}
         {isLoading ? (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 space-y-4">
             {[...Array(6)].map((_, i) => (
@@ -428,168 +327,363 @@ export default function LandlordTenantsPage() {
             )}
           </div>
         ) : (
-          <div className="flex items-start gap-6">
-            {/* Desktop Table & Mobile Cards */}
-            <div className="flex-1 min-w-0 space-y-4">
-              {/* Desktop Table (>= 768px) */}
-              <div className="hidden md:block overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900/40">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-neutral-800 bg-neutral-900/70 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                    <tr>
-                      <th scope="col" className="px-5 py-3.5">Tenant</th>
-                      <th scope="col" className="px-5 py-3.5">Phone</th>
-                      <th scope="col" className="px-5 py-3.5">Unit(s)</th>
-                      <th scope="col" className="px-5 py-3.5">Property</th>
-                      <th scope="col" className="px-5 py-3.5">Lease status</th>
-                      <th scope="col" className="px-5 py-3.5">Next rent due</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-800/60">
-                    {tenants.map((tenant) => {
-                      const isSelected = selectedTenant?.id === tenant.id;
-                      return (
-                        <tr
-                          key={tenant.id}
-                          onClick={() => setSelectedTenant(isSelected ? null : tenant)}
-                          className={cn(
-                            "cursor-pointer transition-colors hover:bg-neutral-850/60",
-                            isSelected && "bg-neutral-800/50"
-                          )}
-                        >
-                          {/* Tenant: Name + Email */}
-                          <td className="px-5 py-4 whitespace-nowrap">
-                            <div className="font-semibold text-white">{tenant.fullName}</div>
-                            <div className="text-xs text-neutral-400 mt-0.5">{tenant.email}</div>
-                          </td>
+          <div className="space-y-4">
+            {/* Desktop Table: table-layout: fixed, set column widths, no sideways scroll at 1024px+ */}
+            <div className="hidden md:block rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+              <table className="w-full table-fixed text-left text-sm">
+                <colgroup>
+                  <col className="w-[28%] xl:w-[24%]" />
+                  <col className="hidden xl:table-column xl:w-[13%]" />
+                  <col className="w-[15%] xl:w-[13%]" />
+                  <col className="w-[21%] xl:w-[18%]" />
+                  <col className="w-[15%] xl:w-[13%]" />
+                  <col className="w-[21%] xl:w-[19%]" />
+                </colgroup>
+                <thead className="border-b border-neutral-800 bg-neutral-900/70 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                  <tr>
+                    <th scope="col" className="px-5 py-3.5">Tenant</th>
+                    <th scope="col" className="hidden xl:table-cell px-5 py-3.5">Phone</th>
+                    <th scope="col" className="px-5 py-3.5">Unit(s)</th>
+                    <th scope="col" className="px-5 py-3.5">Property</th>
+                    <th scope="col" className="px-5 py-3.5">Lease status</th>
+                    <th scope="col" className="px-5 py-3.5">Next rent due</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {tenants.map((tenant) => {
+                    const isSelected = selectedTenant?.id === tenant.id;
+                    const rentDueLines = formatTwoLineRentDue({
+                      leaseStatus: tenant.overallStatus,
+                      nextDueDate: tenant.nextRentDue.dueDate,
+                      unpaidPeriods: tenant.nextRentDue.unpaidPeriods,
+                      startDate: tenant.nextRentDue.leaseStartDate,
+                    });
 
-                          {/* Phone */}
-                          <td className="px-5 py-4 whitespace-nowrap text-neutral-300">
+                    return (
+                      <tr
+                        key={tenant.id}
+                        onClick={() => setSelectedTenant(isSelected ? null : tenant)}
+                        className={cn(
+                          "cursor-pointer transition-colors hover:bg-neutral-850/60",
+                          isSelected && "bg-neutral-800/50"
+                        )}
+                      >
+                        {/* Tenant: Name + Email (truncated) */}
+                        <td className="px-5 py-4">
+                          <div className="font-semibold text-white truncate" title={tenant.fullName}>
+                            {tenant.fullName}
+                          </div>
+                          <div className="text-xs text-neutral-400 mt-0.5 truncate" title={tenant.email}>
+                            {tenant.email}
+                          </div>
+                        </td>
+
+                        {/* Phone: hidden 768-1279px, shows xl */}
+                        <td className="hidden xl:table-cell px-5 py-4 text-neutral-300">
+                          <div className="truncate" title={tenant.phone || undefined}>
                             {tenant.phone || "—"}
-                          </td>
+                          </div>
+                        </td>
 
-                          {/* Unit(s) */}
-                          <td className="px-5 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <span className="font-medium text-white">{tenant.unitDisplay.primaryUnit}</span>
-                              {tenant.unitDisplay.moreCount > 0 && (
-                                <span className="ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700/60">
-                                  +{tenant.unitDisplay.moreCount} more
-                                </span>
-                              )}
-                            </div>
-                          </td>
+                        {/* Unit(s) */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center min-w-0">
+                            <span className="font-medium text-white truncate" title={tenant.unitDisplay.primaryUnit}>
+                              {tenant.unitDisplay.primaryUnit}
+                            </span>
+                            {tenant.unitDisplay.moreCount > 0 && (
+                              <span className="shrink-0 ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700/60">
+                                +{tenant.unitDisplay.moreCount} more
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                          {/* Property */}
-                          <td className="px-5 py-4 whitespace-nowrap text-neutral-300">
+                        {/* Property */}
+                        <td className="px-5 py-4 text-neutral-300">
+                          <div className="truncate" title={tenant.propertyDisplay}>
                             {tenant.propertyDisplay}
-                          </td>
+                          </div>
+                        </td>
 
-                          {/* Lease Status */}
-                          <td className="px-5 py-4 whitespace-nowrap">
-                            <LeaseStatusBadge status={tenant.overallStatus} />
-                          </td>
+                        {/* Lease Status */}
+                        <td className="px-5 py-4">
+                          <LeaseStatusBadge status={tenant.overallStatus} />
+                        </td>
 
-                          {/* Next Rent Due */}
-                          <td className="px-5 py-4 whitespace-nowrap">
-                            <NextRentDueDisplay nextRentDue={tenant.nextRentDue} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        {/* Next Rent Due: Two short lines, column title not repeated */}
+                        <td className="px-5 py-4">
+                          <TwoLineRentDue data={rentDueLines} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-              {/* Mobile Cards (< 768px) */}
-              <div className="md:hidden space-y-3">
-                {tenants.map((tenant) => (
+            {/* Mobile Cards (< 768px): one card per tenant */}
+            <div className="md:hidden space-y-3">
+              {tenants.map((tenant) => {
+                const rentDueLines = formatTwoLineRentDue({
+                  leaseStatus: tenant.overallStatus,
+                  nextDueDate: tenant.nextRentDue.dueDate,
+                  unpaidPeriods: tenant.nextRentDue.unpaidPeriods,
+                  startDate: tenant.nextRentDue.leaseStartDate,
+                });
+
+                return (
                   <div
                     key={tenant.id}
                     onClick={() => setSelectedTenant(tenant)}
-                    className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-2.5 cursor-pointer active:bg-neutral-850 transition-colors"
+                    className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3 cursor-pointer active:bg-neutral-850 hover:border-neutral-700/80 transition-colors"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-base text-white truncate">{tenant.fullName}</span>
-                      <LeaseStatusBadge status={tenant.overallStatus} />
+                    {/* Name, email, status pill top right */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="font-semibold text-base text-white truncate" title={tenant.fullName}>
+                          {tenant.fullName}
+                        </div>
+                        <div className="text-xs text-neutral-400 truncate" title={tenant.email}>
+                          {tenant.email}
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        <LeaseStatusBadge status={tenant.overallStatus} />
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-sm text-neutral-300">
-                      <span>{tenant.unitDisplay.primaryUnit}</span>
+                    {/* Unit(s) · Property */}
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-300 min-w-0">
+                      <span className="font-medium text-neutral-200 shrink-0">
+                        {tenant.unitDisplay.primaryUnit}
+                      </span>
                       {tenant.unitDisplay.moreCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700/60">
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700/60">
                           +{tenant.unitDisplay.moreCount} more
                         </span>
                       )}
-                      <span className="text-neutral-500">·</span>
-                      <span className="text-xs text-neutral-400 truncate">{tenant.propertyDisplay}</span>
+                      <span className="text-neutral-500 shrink-0">·</span>
+                      <span className="text-neutral-400 truncate" title={tenant.propertyDisplay}>
+                        {tenant.propertyDisplay}
+                      </span>
                     </div>
 
-                    <div className="pt-2 border-t border-neutral-800/60 flex items-center justify-between text-xs">
-                      <span className="text-neutral-500">Next due:</span>
-                      <NextRentDueDisplay nextRentDue={tenant.nextRentDue} />
+                    {/* Divider */}
+                    <div className="h-px bg-neutral-800/60" />
+
+                    {/* Next rent due label left with two-line value right */}
+                    <div className="flex items-start justify-between gap-3 text-xs">
+                      <span className="text-neutral-500 shrink-0 pt-0.5">Next rent due</span>
+                      <div className="text-right">
+                        <TwoLineRentDue data={rentDueLines} />
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Pagination Controls */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-800/80">
-                <div className="text-sm text-neutral-400">
-                  {total === 0 ? "0 of 0" : `${fromRecord}–${toRecord} of ${total}`}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                    className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={page >= totalPages}
-                    className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+                );
+              })}
             </div>
 
-            {/* Desktop Slide-over / Side Panel (~360px) */}
-            {selectedTenant && (
-              <aside className="hidden md:block w-[360px] shrink-0 sticky top-24 rounded-xl border border-neutral-800 bg-neutral-900/95 backdrop-blur-md p-5 shadow-2xl">
-                <TenantDetailContent
-                  tenant={selectedTenant}
-                  onClose={() => setSelectedTenant(null)}
-                />
-              </aside>
-            )}
-          </div>
-        )}
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-800/80">
+              <div className="text-sm text-neutral-400">
+                {total === 0 ? "0 of 0" : `${fromRecord}–${toRecord} of ${total}`}
+              </div>
 
-        {/* Mobile Bottom Sheet (< 768px) */}
-        {selectedTenant && (
-          <div className="md:hidden">
-            {/* Dimmed backdrop */}
-            <div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
-              onClick={() => setSelectedTenant(null)}
-            />
-            {/* Bottom Sheet */}
-            <div className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-neutral-800 bg-neutral-900 p-6 pb-8 shadow-2xl animate-in slide-in-from-bottom duration-200">
-              {/* Drag Handle */}
-              <div className="w-12 h-1.5 rounded-full bg-neutral-700 mx-auto mb-4" />
-              <TenantDetailContent
-                tenant={selectedTenant}
-                onClose={() => setSelectedTenant(null)}
-              />
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <Button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= totalPages}
+                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
+
+        {/* Tenant Details Dialog (Side Panel on Desktop >=768px, Bottom Sheet on Mobile <768px) */}
+        <Dialog.Root
+          open={Boolean(selectedTenant)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedTenant(null);
+          }}
+        >
+          <Dialog.Portal>
+            {/* Overlay: fixed inset-0, black at 60%, click closes */}
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+
+            {/* Content: slides over without pushing or resizing page */}
+            <Dialog.Content
+              className={cn(
+                "fixed z-50 flex flex-col bg-neutral-900 text-white shadow-2xl focus:outline-none transition-transform duration-200",
+                // Mobile bottom sheet (<768px)
+                "bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-2xl border-t border-neutral-800",
+                "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+                // Desktop side panel (>=768px)
+                "md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[480px] md:max-w-[100vw] md:h-[100dvh] md:max-h-none md:rounded-none md:border-t-0 md:border-l md:border-neutral-800",
+                "md:data-[state=closed]:slide-out-to-right md:data-[state=open]:slide-in-from-right"
+              )}
+            >
+              {selectedTenant && (
+                <>
+                  {/* Drag handle for mobile */}
+                  <div className="md:hidden pt-3 pb-1 shrink-0">
+                    <div className="w-12 h-1.5 rounded-full bg-neutral-700 mx-auto" />
+                  </div>
+
+                  {/* Panel Header: flex-shrink-0 and always visible */}
+                  <div className="shrink-0 px-6 pt-5 pb-5 border-b border-neutral-800 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <Dialog.Title className="text-lg font-bold text-white truncate">
+                            {selectedTenant.fullName}
+                          </Dialog.Title>
+                          <LeaseStatusBadge status={selectedTenant.overallStatus} />
+                        </div>
+                        <Dialog.Description className="sr-only">
+                          Tenant details and lease list
+                        </Dialog.Description>
+                      </div>
+
+                      <Dialog.Close asChild>
+                        <button
+                          className="p-1.5 -mr-1.5 -mt-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-700"
+                          aria-label="Close"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </Dialog.Close>
+                    </div>
+
+                    {/* Email and Phone */}
+                    <div className="space-y-1.5 text-xs text-neutral-400">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                        <a
+                          href={`mailto:${selectedTenant.email}`}
+                          className="hover:text-neutral-200 transition-colors truncate"
+                        >
+                          {selectedTenant.email}
+                        </a>
+                      </div>
+                      {selectedTenant.phone ? (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                          <a
+                            href={`tel:${selectedTenant.phone}`}
+                            className="hover:text-neutral-200 transition-colors"
+                          >
+                            {selectedTenant.phone}
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-neutral-500">
+                          <Phone className="w-3.5 h-3.5 shrink-0" />
+                          <span>No phone number</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Body: flex-1 min-h-0 overflow-y-auto overscroll-contain */}
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6 space-y-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                        Leases ({selectedTenant.leases.length})
+                      </h3>
+                    </div>
+
+                    <div className="space-y-3">
+                      {selectedTenant.leases.map((lease) => {
+                        const leaseDue = formatTwoLineRentDue({
+                          leaseStatus: lease.leaseStatus,
+                          nextDueDate: lease.nextDueDate,
+                          unpaidPeriods: lease.unpaidPeriods,
+                          startDate: lease.startDate,
+                        });
+
+                        return (
+                          <div
+                            key={lease.id}
+                            className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3.5"
+                          >
+                            {/* Card Header: Unit Flat3 + status pill */}
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-sm text-white">
+                                Unit {lease.unitName}
+                              </span>
+                              <LeaseStatusBadge status={lease.leaseStatus} />
+                            </div>
+
+                            {/* 2-column grid: Property, Lease, Rent, Next rent due */}
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              {/* Property */}
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="text-neutral-500">Property</div>
+                                <div
+                                  className="font-medium text-neutral-200 truncate"
+                                  title={lease.propertyName}
+                                >
+                                  {lease.propertyName}
+                                </div>
+                              </div>
+
+                              {/* Lease */}
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="text-neutral-500">Lease</div>
+                                <div className="font-medium text-neutral-200 whitespace-nowrap">
+                                  {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                                </div>
+                              </div>
+
+                              {/* Rent */}
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="text-neutral-500">Rent</div>
+                                <div className="font-medium text-neutral-200 truncate">
+                                  {formatCurrency(lease.rentAmount)} / {lease.rentFrequency}
+                                </div>
+                              </div>
+
+                              {/* Next rent due: same two-line format */}
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="text-neutral-500">Next rent due</div>
+                                <div>
+                                  <TwoLineRentDue data={leaseDue} />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Footer link: View unit ↗ */}
+                            <div className="pt-2 border-t border-neutral-800/60">
+                              <Link
+                                href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}`}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+                              >
+                                View unit ↗
+                              </Link>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
       </main>
     </div>
   );
