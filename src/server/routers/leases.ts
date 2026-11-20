@@ -4,6 +4,7 @@ import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { RentFrequency, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
+import { getLeaseBalance, getDueDateStatus, formatLagosYMD } from "@/lib/billing";
 
 export const leasesRouter = router({
   create: authedProcedure
@@ -572,34 +573,262 @@ export const leasesRouter = router({
     }),
 
   getLandlordTenants: authedProcedure
-    .query(async ({ ctx }) => {
-      return await prisma.lease.findMany({
+    .input(
+      z.object({
+        search: z.string().optional(),
+        propertyId: z.string().uuid().optional(),
+        status: z.enum(["active", "past", "all"]).optional().default("all"),
+        leaseStatus: z.enum(["active", "renewal_due", "expired"]).optional(),
+        page: z.number().int().min(1).optional().default(1),
+        pageSize: z.number().int().min(1).max(100).optional().default(25),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const landlordProperties = await prisma.property.findMany({
+        where: { landlordId: ctx.user.id },
+        select: { id: true, name: true },
+      });
+      const propertyIds = landlordProperties.map((p) => p.id);
+      if (propertyIds.length === 0) {
+        return { rows: [], total: 0 };
+      }
+
+      if (input?.propertyId && !propertyIds.includes(input.propertyId)) {
+        return { rows: [], total: 0 };
+      }
+
+      const activePropertyFilter = input?.propertyId
+        ? input.propertyId
+        : { in: propertyIds };
+
+      const searchTrimmed = input?.search?.trim();
+
+      const users = await prisma.user.findMany({
         where: {
-          unit: {
-            property: {
-              landlordId: ctx.user.id
-            }
-          }
-        },
-        include: {
-          tenant: {
-            select: {
-              fullName: true,
-              email: true,
-              phone: true,
-              avatarUrl: true
-            }
+          leasesAsTenant: {
+            some: {
+              unit: {
+                propertyId: activePropertyFilter,
+              },
+            },
           },
-          unit: {
+          ...(searchTrimmed
+            ? {
+                OR: [
+                  { fullName: { contains: searchTrimmed, mode: "insensitive" } },
+                  { email: { contains: searchTrimmed, mode: "insensitive" } },
+                  { phone: { contains: searchTrimmed, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          avatarUrl: true,
+          leasesAsTenant: {
+            where: {
+              unit: {
+                propertyId: activePropertyFilter,
+              },
+            },
             include: {
-              property: true
-            }
-          }
+              unit: {
+                include: {
+                  property: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+              payments: {
+                select: {
+                  amount: true,
+                  status: true,
+                },
+              },
+            },
+            orderBy: {
+              startDate: "desc",
+            },
+          },
         },
         orderBy: {
-          startDate: "desc"
-        }
+          fullName: "asc",
+        },
       });
+
+      const today = new Date();
+      const todayStr = formatLagosYMD(today);
+
+      const computedTenants = users.map((user) => {
+        const processedLeases = user.leasesAsTenant.map((lease) => {
+          let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" = "active";
+          if (lease.terminatedAt) {
+            leaseStatus = "terminated";
+          } else {
+            const startStr = formatLagosYMD(lease.startDate);
+            const endStr = formatLagosYMD(lease.endDate);
+            if (todayStr < startStr) {
+              leaseStatus = "upcoming";
+            } else if (todayStr > endStr) {
+              leaseStatus = "expired";
+            } else {
+              const renewalDate = new Date(lease.endDate);
+              renewalDate.setDate(renewalDate.getDate() - (lease.renewalWindowDays ?? 60));
+              const renewalStr = formatLagosYMD(renewalDate);
+              if (todayStr >= renewalStr) {
+                leaseStatus = "renewal_due";
+              } else {
+                leaseStatus = "active";
+              }
+            }
+          }
+
+          const balance = getLeaseBalance(
+            {
+              startDate: lease.startDate,
+              endDate: lease.endDate,
+              rentAmount: lease.rentAmount,
+              rentFrequency: lease.rentFrequency,
+            },
+            lease.payments,
+            today
+          );
+
+          const dueStatus = getDueDateStatus(
+            balance.nextDueDate,
+            lease.endDate,
+            today,
+            balance.unpaidPeriods
+          );
+
+          return {
+            id: lease.id,
+            unitId: lease.unit.id,
+            unitName: lease.unit.unitNumber,
+            propertyId: lease.unit.property.id,
+            propertyName: lease.unit.property.name,
+            startDate: lease.startDate.toISOString(),
+            endDate: lease.endDate.toISOString(),
+            rentAmount: Number(lease.rentAmount),
+            rentFrequency: lease.rentFrequency,
+            leaseStatus,
+            nextDueDate: balance.nextDueDate ? balance.nextDueDate.toISOString() : null,
+            nextDueStatus: dueStatus.status,
+            nextDueText: dueStatus.text,
+          };
+        });
+
+        const isCurrent = processedLeases.some(
+          (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due" || l.leaseStatus === "upcoming"
+        );
+
+        let overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" = "active";
+        if (processedLeases.some((l) => l.leaseStatus === "expired")) {
+          overallStatus = "expired";
+        } else if (processedLeases.some((l) => l.leaseStatus === "renewal_due")) {
+          overallStatus = "renewal_due";
+        } else if (processedLeases.some((l) => l.leaseStatus === "active")) {
+          overallStatus = "active";
+        } else if (processedLeases.some((l) => l.leaseStatus === "upcoming")) {
+          overallStatus = "upcoming";
+        } else if (processedLeases.some((l) => l.leaseStatus === "terminated")) {
+          overallStatus = "terminated";
+        }
+
+        const primaryUnit = processedLeases[0]?.unitName ?? "—";
+        const moreCount = Math.max(0, processedLeases.length - 1);
+
+        const uniqueProperties = Array.from(new Set(processedLeases.map((l) => l.propertyName)));
+        const propertyDisplay =
+          uniqueProperties.length === 1
+            ? uniqueProperties[0]
+            : uniqueProperties.length > 1
+            ? `${uniqueProperties.length} properties`
+            : "—";
+
+        const activeLeases = processedLeases.filter(
+          (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due" || l.leaseStatus === "upcoming"
+        );
+
+        let nextRentDue: {
+          text: string;
+          status: "overdue" | "today" | "upcoming" | "paid_in_full" | "past";
+          date: string | null;
+        };
+
+        if (activeLeases.length === 0) {
+          nextRentDue = {
+            text: "—",
+            status: "past",
+            date: null,
+          };
+        } else {
+          const leasesWithDue = activeLeases.filter((l) => l.nextDueDate !== null);
+          if (leasesWithDue.length === 0) {
+            nextRentDue = {
+              text: "Paid to end of lease",
+              status: "paid_in_full",
+              date: null,
+            };
+          } else {
+            leasesWithDue.sort(
+              (a, b) => new Date(a.nextDueDate!).getTime() - new Date(b.nextDueDate!).getTime()
+            );
+            const earliest = leasesWithDue[0];
+            nextRentDue = {
+              text: earliest.nextDueText,
+              status: earliest.nextDueStatus as "overdue" | "today" | "upcoming",
+              date: earliest.nextDueDate,
+            };
+          }
+        }
+
+        return {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          avatarUrl: user.avatarUrl,
+          leases: processedLeases,
+          unitDisplay: {
+            primaryUnit,
+            moreCount,
+          },
+          propertyDisplay,
+          overallStatus,
+          isCurrent,
+          nextRentDue,
+        };
+      });
+
+      const filteredTenants = computedTenants.filter((tenant) => {
+        if (input?.status === "active" && !tenant.isCurrent) return false;
+        if (input?.status === "past" && tenant.isCurrent) return false;
+
+        if (input?.leaseStatus) {
+          const matchesOverall = tenant.overallStatus === input.leaseStatus;
+          const matchesAnyLease = tenant.leases.some((l) => l.leaseStatus === input.leaseStatus);
+          if (!matchesOverall && !matchesAnyLease) return false;
+        }
+
+        return true;
+      });
+
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 25;
+      const total = filteredTenants.length;
+      const rows = filteredTenants.slice((page - 1) * pageSize, page * pageSize);
+
+      return {
+        rows,
+        total,
+      };
     }),
 });
 
