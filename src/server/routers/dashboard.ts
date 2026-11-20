@@ -36,6 +36,12 @@ export const dashboardRouter = router({
                       fullName: true,
                     },
                   },
+                  inviteCodes: {
+                    select: {
+                      redeemedAt: true,
+                      expiresAt: true,
+                    },
+                  },
                 },
                 orderBy: { startDate: "desc" },
               },

@@ -216,4 +216,31 @@ describe("getCurrentLease and getNextLease", () => {
     ];
     expect(getUnitStatus(expiredPending, today)).toBe("vacant");
   });
+
+  it("marks unit reserved when an active lease has an unredeemed invite code", () => {
+    const unredeemedCodeLease = [
+      {
+        id: "lease-code-1",
+        startDate: "2026-07-01",
+        endDate: "2027-07-01",
+        status: "active",
+        inviteCodes: [{ code: "PL-TEST1", redeemedAt: null, expiresAt: new Date("2026-12-01") }],
+        terminatedAt: null,
+      },
+    ];
+    expect(getUnitStatus(unredeemedCodeLease, today)).toBe("reserved");
+
+    const redeemedCodeLease = [
+      {
+        id: "lease-code-2",
+        startDate: "2026-07-01",
+        endDate: "2027-07-01",
+        status: "active",
+        inviteCodes: [{ code: "PL-TEST1", redeemedAt: new Date("2026-07-02"), expiresAt: new Date("2026-12-01") }],
+        terminatedAt: null,
+      },
+    ];
+    // Today is 2026-11-20, so 2026-07-01 to 2027-07-01 is running -> occupied
+    expect(getUnitStatus(redeemedCodeLease, today)).toBe("occupied");
+  });
 });

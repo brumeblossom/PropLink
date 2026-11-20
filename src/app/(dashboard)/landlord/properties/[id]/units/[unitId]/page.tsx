@@ -11,7 +11,7 @@ import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
 import { Select } from "@/components/ui/select";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X, Trash2, Plus, Pencil, Check, RefreshCw } from "lucide-react";
+import { X, Trash2, Plus, Pencil, Check } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
@@ -22,6 +22,7 @@ import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
+import { InviteCard } from "@/components/leases/InviteCard";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -81,6 +82,52 @@ export default function UnitDetailPage() {
       toast(err.message, "error");
     },
   });
+
+  const [isCancelCodeInviteOpen, setIsCancelCodeInviteOpen] = useState(false);
+  const [isEditTenantOpen, setIsEditTenantOpen] = useState(false);
+  const [editTenantFullName, setEditTenantFullName] = useState("");
+  const [editTenantEmail, setEditTenantEmail] = useState("");
+  const [editTenantError, setEditTenantError] = useState<string | null>(null);
+
+  const regenerateInviteCodeMutation = trpc.leases.regenerateInviteCode.useMutation({
+    onSuccess: (data) => {
+      toast(`New code ready. Share it with ${data.tenantName}.`, "success");
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const updatePlaceholderTenantMutation = trpc.leases.updatePlaceholderTenant.useMutation({
+    onSuccess: () => {
+      toast("Tenant details updated", "success");
+      setIsEditTenantOpen(false);
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+    },
+    onError: (err) => {
+      setEditTenantError(err.message);
+    },
+  });
+
+  const cancelCodeInviteMutation = trpc.leases.cancelCodeInvite.useMutation({
+    onSuccess: () => {
+      toast("Invite cancelled", "success");
+      setIsCancelCodeInviteOpen(false);
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      utils.properties.list.invalidate();
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const codeInvite = activeLease?.inviteCodes?.[0];
+  const hasUnredeemedCode = Boolean(codeInvite && !codeInvite.redeemedAt);
+  const isCodeExpired = Boolean(hasUnredeemedCode && new Date(codeInvite!.expiresAt) <= new Date());
 
   // Timeline query
   const { data: timeline } = trpc.leases.getTimeline.useQuery(
@@ -429,10 +476,6 @@ export default function UnitDetailPage() {
   const [isDeletePaymentProofConfirmOpen, setIsDeletePaymentProofConfirmOpen] = useState(false);
   const [uploadingPaymentProof, setUploadingPaymentProof] = useState(false);
 
-  // Copy Invitation States
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
-
   // Landlord payment detail modal
   const [selectedLandlordPayment, setSelectedLandlordPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
   const [isLandlordPaymentDetailOpen, setIsLandlordPaymentDetailOpen] = useState(false);
@@ -473,19 +516,6 @@ export default function UnitDetailPage() {
     confirmed: "Confirmed",
     pending: "Pending",
     disputed: "Rejected",
-  };
-
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
-  const handleCopyLink = (code: string) => {
-    const signupLink = `${window.location.origin}/signup?code=${code}`;
-    navigator.clipboard.writeText(signupLink);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const handleStartDateChange = (val: string) => {
@@ -1026,15 +1056,28 @@ export default function UnitDetailPage() {
                       </Button>
                     )}
                   </div>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                      timeline.status === "renewal_due"
-                        ? "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30 animate-pulse"
-                        : "bg-green-950/30 text-green-400 border border-green-900/30"
-                    }`}
-                  >
-                    {timeline.status.replace("_", " ")}
-                  </span>
+                  {hasUnredeemedCode ? (
+                    <span
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                        isCodeExpired
+                          ? "bg-red-950/30 text-red-400 border border-red-900/30"
+                          : "bg-amber-950/30 text-amber-400 border border-amber-900/30"
+                      )}
+                    >
+                      {isCodeExpired ? "Invite expired" : "Invite sent"}
+                    </span>
+                  ) : (
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
+                        timeline.status === "renewal_due"
+                          ? "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30 animate-pulse"
+                          : "bg-green-950/30 text-green-400 border border-green-900/30"
+                      }`}
+                    >
+                      {timeline.status.replace("_", " ")}
+                    </span>
+                  )}
                 </div>
 
                 {/* Progress Visual Tracker */}
@@ -1079,24 +1122,24 @@ export default function UnitDetailPage() {
                   </div>
                   <div>
                     <span className="block text-neutral-500 text-xs">Invite Status</span>
-                    <span className="font-semibold text-white mt-0.5 block">
-                      {activeLease.inviteCodes.length > 0 ? (
-                        activeLease.inviteCodes[0].redeemedAt ? (
-                          <span className="text-green-400">
-                            Claimed by {activeLease.tenant.fullName}
+                    <span className="mt-1 block">
+                      {codeInvite ? (
+                        codeInvite.redeemedAt ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Joined
                           </span>
-                        ) : new Date() > new Date(activeLease.inviteCodes[0].expiresAt) ? (
-                          <span className="text-red-400 font-mono">
-                            Invite Code: {activeLease.inviteCodes[0].code} (Expired)
+                        ) : isCodeExpired ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                            Expired
                           </span>
                         ) : (
-                          <span className="text-yellow-500 font-mono">
-                            Invite Code: {activeLease.inviteCodes[0].code} (Awaiting Tenant)
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            Awaiting tenant
                           </span>
                         )
                       ) : (
-                        <span className="text-neutral-400">
-                          Linked to existing tenant account
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          Joined
                         </span>
                       )}
                     </span>
@@ -1156,63 +1199,26 @@ export default function UnitDetailPage() {
             </div>
 
             {/* Tenant invitation card for landlords to copy/share */}
-            {(() => {
-              const invite = activeLease.inviteCodes?.[0];
-              if (!invite || invite.redeemedAt) return null;
-              const isExpired = new Date(invite.expiresAt) <= new Date();
-              if (isExpired) {
-                return (
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3 text-sm text-neutral-400">
-                    Invite expired
-                  </div>
-                );
-              }
-              return (
-                <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/5 p-6 backdrop-blur-sm space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <span className="text-xl">✉️</span>
-                    <div>
-                      <h3 className="text-lg font-bold text-yellow-550">Tenant Invitation Pending</h3>
-                      <p className="text-neutral-400 text-sm mt-1">
-                        This lease has been created, but the tenant hasn&apos;t joined PropLink yet. Share the code or the direct signup link below so they can claim their lease.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <div className="rounded-lg bg-neutral-900 border border-neutral-800/60 p-4 flex items-center justify-between">
-                      <div>
-                        <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Invite Code</span>
-                        <span className="font-mono text-lg font-bold text-white block mt-1 tracking-wider">{invite.code}</span>
-                      </div>
-                      <Button
-                        onClick={() => handleCopyCode(invite.code)}
-                        variant="outline"
-                        className="border-neutral-800 text-xs h-9 px-3 hover:bg-neutral-800 hover:text-white transition-colors"
-                      >
-                        {copiedCode ? "Copied! ✓" : "Copy Code"}
-                      </Button>
-                    </div>
-
-                    <div className="rounded-lg bg-neutral-900 border border-neutral-800/60 p-4 flex items-center justify-between">
-                      <div>
-                        <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Direct Signup Link</span>
-                        <span className="text-neutral-400 text-xs truncate max-w-[200px] sm:max-w-xs block mt-1">
-                          {`${typeof window !== "undefined" ? window.location.origin : ""}/signup?code=${invite.code}`}
-                        </span>
-                      </div>
-                      <Button
-                        onClick={() => handleCopyLink(invite.code)}
-                        variant="outline"
-                        className="border-neutral-800 text-xs h-9 px-3 hover:bg-neutral-800 hover:text-white transition-colors"
-                      >
-                        {copiedLink ? "Link Copied! ✓" : "Copy Link"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            {hasUnredeemedCode && codeInvite && (
+              <InviteCard
+                type="code"
+                tenantName={activeLease.tenant.fullName}
+                tenantEmail={activeLease.tenant.email}
+                expiresAt={codeInvite.expiresAt}
+                isExpired={isCodeExpired}
+                code={codeInvite.code}
+                hasPayments={Boolean(activeLease.payments && activeLease.payments.length > 0)}
+                onNewCode={() => regenerateInviteCodeMutation.mutate({ leaseId: activeLease.id })}
+                onEditTenant={() => {
+                  setEditTenantFullName(activeLease.tenant.fullName);
+                  setEditTenantEmail(activeLease.tenant.email);
+                  setEditTenantError(null);
+                  setIsEditTenantOpen(true);
+                }}
+                onCancelInvite={() => setIsCancelCodeInviteOpen(true)}
+                isLoading={regenerateInviteCodeMutation.isPending}
+              />
+            )}
 
             {/* Payment Ledger Section */}
             <div className="pt-6 border-t border-neutral-800 space-y-6">
@@ -1579,35 +1585,16 @@ export default function UnitDetailPage() {
 
           </div>
         ) : pendingLease ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  {pendingLease.isExpired
-                    ? "Invitation expired"
-                    : `Waiting for ${pendingLease.tenant.fullName} to accept`}
-                </h3>
-                <p className="text-sm text-neutral-400 mt-1">
-                  Invited {pendingLease.invitedAt ? formatDateGB(pendingLease.invitedAt) : formatDateGB(pendingLease.createdAt)} · {pendingLease.isExpired ? "expired" : "expires"} {pendingLease.invitationExpiresAt ? formatDateGB(pendingLease.invitationExpiresAt) : "—"}
-                </p>
-              </div>
-              <ActionMenu
-                items={[
-                  {
-                    label: "Resend invitation",
-                    icon: <RefreshCw className="w-4 h-4" />,
-                    onClick: () => resendInvitation.mutate({ leaseId: pendingLease.id }),
-                  },
-                  {
-                    label: "Cancel invitation",
-                    icon: <Trash2 className="w-4 h-4" />,
-                    variant: "danger",
-                    onClick: () => setCancelInvitationConfirmId(pendingLease.id),
-                  },
-                ]}
-              />
-            </div>
-          </div>
+          <InviteCard
+            type="in_app"
+            tenantName={pendingLease.tenant.fullName}
+            tenantEmail={pendingLease.tenant.email}
+            expiresAt={pendingLease.invitationExpiresAt || pendingLease.createdAt}
+            isExpired={Boolean(pendingLease.isExpired)}
+            onResendInvite={() => resendInvitation.mutate({ leaseId: pendingLease.id })}
+            onCancelInvite={() => setCancelInvitationConfirmId(pendingLease.id)}
+            isLoading={resendInvitation.isPending}
+          />
         ) : (
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">
             <h3 className="text-lg font-medium text-white">This unit is vacant</h3>
@@ -2787,6 +2774,135 @@ export default function UnitDetailPage() {
         variant="danger"
         isLoading={cancelInvitation.isPending}
       />
+
+      {/* Cancel Code Invite Dialog */}
+      <ConfirmDialog
+        isOpen={isCancelCodeInviteOpen}
+        onClose={() => setIsCancelCodeInviteOpen(false)}
+        onConfirm={async () => {
+          if (!activeLease) return;
+          try {
+            await cancelCodeInviteMutation.mutateAsync({ leaseId: activeLease.id });
+          } catch {
+            // handled
+          }
+        }}
+        title={`Cancel invite for ${activeLease?.tenant?.fullName || "tenant"}?`}
+        description={`The code stops working and ${unit?.unitNumber ? `Unit ${unit.unitNumber}` : "this unit"} becomes vacant.`}
+        confirmText="Cancel invite"
+        cancelText="Keep invite"
+        variant="danger"
+        isLoading={cancelCodeInviteMutation.isPending}
+      />
+
+      {/* Edit Placeholder Tenant Modal */}
+      {isEditTenantOpen && activeLease && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold tracking-tight text-white">Edit Tenant Details</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditTenantOpen(false);
+                  setEditTenantError(null);
+                }}
+                className="text-neutral-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const name = editTenantFullName.trim();
+                const email = editTenantEmail.trim();
+                if (!name) {
+                  setEditTenantError("Enter the tenant's full name");
+                  return;
+                }
+                if (!email) {
+                  setEditTenantError("Enter the tenant's email address");
+                  return;
+                }
+                setEditTenantError(null);
+                updatePlaceholderTenantMutation.mutate({
+                  leaseId: activeLease.id,
+                  fullName: name,
+                  email: email,
+                });
+              }}
+              className="space-y-4"
+            >
+              {editTenantError && (
+                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                  {editTenantError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label htmlFor="editTenantFullName" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="editTenantFullName"
+                    type="text"
+                    required
+                    value={editTenantFullName}
+                    onChange={(e) => {
+                      setEditTenantFullName(e.target.value);
+                      if (editTenantError) setEditTenantError(null);
+                    }}
+                    className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="editTenantEmail" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="editTenantEmail"
+                    type="email"
+                    required
+                    value={editTenantEmail}
+                    onChange={(e) => {
+                      setEditTenantEmail(e.target.value);
+                      if (editTenantError) setEditTenantError(null);
+                    }}
+                    className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                    placeholder="e.g. john@example.com"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditTenantOpen(false);
+                    setEditTenantError(null);
+                  }}
+                  className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatePlaceholderTenantMutation.isPending}
+                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                >
+                  {updatePlaceholderTenantMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -157,7 +157,7 @@ export const leasesRouter = router({
       if (!isExistingTenant) {
         const code = "PL-" + Math.random().toString(36).substring(2, 8).toUpperCase();
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7); // valid for 7 days
+        expiresAt.setDate(expiresAt.getDate() + 14); // valid for 14 days
 
         inviteCode = await prisma.inviteCode.create({
           data: {
@@ -255,6 +255,9 @@ export const leasesRouter = router({
               redeemedAt: true,
               expiresAt: true,
             },
+          },
+          payments: {
+            select: { id: true },
           },
         },
         orderBy: { startDate: "desc" },
@@ -383,6 +386,202 @@ export const leasesRouter = router({
       return updated;
     }),
 
+  regenerateInviteCode: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { include: { property: true } },
+          inviteCodes: true,
+          tenant: true,
+        },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      const isRedeemed = lease.inviteCodes.some((c) => c.redeemedAt !== null);
+      if (isRedeemed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot regenerate code for an already redeemed invite.",
+        });
+      }
+
+      // Delete unredeemed codes
+      await prisma.inviteCode.deleteMany({
+        where: { leaseId: lease.id, redeemedAt: null },
+      });
+
+      const code = "PL-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 14);
+
+      const newInvite = await prisma.inviteCode.create({
+        data: {
+          leaseId: lease.id,
+          code,
+          expiresAt,
+        },
+      });
+
+      return {
+        code: newInvite.code,
+        expiresAt: newInvite.expiresAt,
+        tenantName: lease.tenant.fullName,
+      };
+    }),
+
+  updatePlaceholderTenant: authedProcedure
+    .input(
+      z.object({
+        leaseId: z.string().uuid(),
+        fullName: z.string().trim().min(1, "Tenant full name is required"),
+        email: z.string().trim().email("Please enter a valid email address"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { include: { property: true } },
+          inviteCodes: true,
+          tenant: true,
+        },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      const isRedeemed = lease.inviteCodes.some((c) => c.redeemedAt !== null);
+      if (isRedeemed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot edit tenant details after the invite has been redeemed.",
+        });
+      }
+
+      const normalizedEmail = input.email.toLowerCase().trim();
+      if (normalizedEmail !== lease.tenant.email.toLowerCase()) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+        });
+        if (existingUser && existingUser.id !== lease.tenantId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This email already has a PropLink account. Cancel this invite and invite them again.",
+          });
+        }
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: lease.tenantId },
+        data: {
+          fullName: input.fullName.trim(),
+          email: normalizedEmail,
+        },
+      });
+
+      return {
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+      };
+    }),
+
+  cancelCodeInvite: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { include: { property: true } },
+          inviteCodes: true,
+          tenant: true,
+          documents: true,
+          payments: { select: { id: true } },
+        },
+      });
+
+      if (!lease || lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      if (lease.payments.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This lease has payments. Delete them first.",
+        });
+      }
+
+      const isRedeemed = lease.inviteCodes.some((c) => c.redeemedAt !== null);
+      if (isRedeemed) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot cancel an invite that has already been redeemed.",
+        });
+      }
+
+      // Remove files from storage
+      const filePaths: string[] = [];
+      if (lease.documentUrl) filePaths.push(lease.documentUrl);
+      lease.documents.forEach((d) => {
+        if (d.path) filePaths.push(d.path);
+      });
+
+      if (filePaths.length > 0) {
+        try {
+          await ctx.supabase.storage.from("leases").remove(filePaths);
+        } catch (err) {
+          console.error("Failed to remove lease documents from storage:", err);
+        }
+      }
+
+      const tenantId = lease.tenantId;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.notification.deleteMany({
+          where: { relatedType: "lease", relatedId: lease.id },
+        });
+        await tx.leaseDocument.deleteMany({
+          where: { leaseId: lease.id },
+        });
+        await tx.inviteCode.deleteMany({
+          where: { leaseId: lease.id },
+        });
+        await tx.lease.delete({
+          where: { id: lease.id },
+        });
+
+        const otherLeases = await tx.lease.count({
+          where: { tenantId },
+        });
+        if (otherLeases === 0) {
+          const paymentCount = await tx.payment.count({
+            where: { lease: { tenantId } },
+          });
+          if (paymentCount === 0) {
+            await tx.user.delete({
+              where: { id: tenantId },
+            });
+          }
+        }
+      });
+
+      return { success: true };
+    }),
+
   delete: authedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
@@ -421,6 +620,9 @@ export const leasesRouter = router({
           },
           tenant: {
             select: { fullName: true, email: true },
+          },
+          inviteCodes: {
+            select: { code: true, redeemedAt: true, expiresAt: true },
           },
         },
       });
@@ -483,6 +685,7 @@ export const leasesRouter = router({
         terminatedAt: lease.terminatedAt,
         status,
         today,
+        inviteCodes: lease.inviteCodes,
       };
     }),
 
@@ -1105,6 +1308,13 @@ export const leasesRouter = router({
                   status: true,
                 },
               },
+              inviteCodes: {
+                select: {
+                  code: true,
+                  redeemedAt: true,
+                  expiresAt: true,
+                },
+              },
             },
             orderBy: {
               startDate: "desc",
@@ -1130,12 +1340,9 @@ export const leasesRouter = router({
 
         const processedLeases = [];
         for (const unitLeases of Array.from(leasesByUnit.values())) {
-          // Filter out declined, cancelled, and expired pending leases
+          // Filter out declined and cancelled leases
           const validLeases = unitLeases.filter((l) => {
-            if (l.status === "declined" || l.status === "cancelled" || l.status === "expired") return false;
-            if (l.status === "pending" && l.invitationExpiresAt && new Date(l.invitationExpiresAt) < today) {
-              return false;
-            }
+            if (l.status === "declined" || l.status === "cancelled") return false;
             return true;
           });
 
@@ -1144,29 +1351,18 @@ export const leasesRouter = router({
           const current = getCurrentLease(validLeases, today) || validLeases[0];
           const next = getNextLease(validLeases, today);
 
-          if (current.status === "pending") {
-            processedLeases.push({
-              id: current.id,
-              unitId: current.unit.id,
-              unitName: current.unit.unitNumber,
-              propertyId: current.unit.property.id,
-              propertyName: current.unit.property.name,
-              startDate: current.startDate.toISOString(),
-              endDate: current.endDate.toISOString(),
-              rentAmount: Number(current.rentAmount),
-              rentFrequency: current.rentFrequency,
-              leaseStatus: "pending" as const,
-              nextDueDate: null,
-              unpaidPeriods: 0,
-              nextDueStatus: "pending" as const,
-              nextDueText: "Pending invitation",
-              renewal: null,
-            });
-            continue;
-          }
+          const unredeemedCode = current.inviteCodes?.find((c) => !c.redeemedAt);
+          const isPendingInApp = current.status === "pending";
 
-          let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" = "active";
-          if (current.terminatedAt) {
+          let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" | "invite_sent" | "invite_expired" = "active";
+
+          if (unredeemedCode) {
+            const isExpired = new Date(unredeemedCode.expiresAt) <= today;
+            leaseStatus = isExpired ? "invite_expired" : "invite_sent";
+          } else if (isPendingInApp) {
+            const isExpired = Boolean(current.invitationExpiresAt && new Date(current.invitationExpiresAt) <= today);
+            leaseStatus = isExpired ? "invite_expired" : "invite_sent";
+          } else if (current.terminatedAt) {
             leaseStatus = "terminated";
           } else {
             const startStr = formatLagosYMD(current.startDate);
@@ -1185,6 +1381,35 @@ export const leasesRouter = router({
                 leaseStatus = "active";
               }
             }
+          }
+
+          if (leaseStatus === "invite_sent" || leaseStatus === "invite_expired") {
+            processedLeases.push({
+              id: current.id,
+              unitId: current.unit.id,
+              unitName: current.unit.unitNumber,
+              propertyId: current.unit.property.id,
+              propertyName: current.unit.property.name,
+              startDate: current.startDate.toISOString(),
+              endDate: current.endDate.toISOString(),
+              rentAmount: Number(current.rentAmount),
+              rentFrequency: current.rentFrequency,
+              leaseStatus,
+              nextDueDate: null,
+              unpaidPeriods: 0,
+              nextDueStatus: "pending" as const,
+              nextDueText: "—",
+              renewal: null,
+              inviteCode: unredeemedCode?.code ?? null,
+              inviteExpiresAt: unredeemedCode
+                ? unredeemedCode.expiresAt.toISOString()
+                : current.invitationExpiresAt
+                ? current.invitationExpiresAt.toISOString()
+                : null,
+              isCodeInvite: Boolean(unredeemedCode),
+              hasPayments: current.payments.length > 0,
+            });
+            continue;
           }
 
           const balance = getLeaseBalance(
@@ -1229,14 +1454,30 @@ export const leasesRouter = router({
                   rentFrequency: next.rentFrequency,
                 }
               : null,
+            inviteCode: null,
+            inviteExpiresAt: null,
+            isCodeInvite: false,
+            hasPayments: current.payments.length > 0,
           });
         }
 
         const isCurrent = processedLeases.some(
-          (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due" || l.leaseStatus === "upcoming" || (l.leaseStatus as string) === "pending"
+          (l) =>
+            l.leaseStatus === "active" ||
+            l.leaseStatus === "renewal_due" ||
+            l.leaseStatus === "upcoming" ||
+            l.leaseStatus === "invite_sent" ||
+            l.leaseStatus === "invite_expired"
         );
 
-        let overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" | "pending" = "active";
+        let overallStatus:
+          | "expired"
+          | "renewal_due"
+          | "active"
+          | "upcoming"
+          | "terminated"
+          | "invite_sent"
+          | "invite_expired" = "active";
         if (processedLeases.some((l) => l.leaseStatus === "expired")) {
           overallStatus = "expired";
         } else if (processedLeases.some((l) => l.leaseStatus === "renewal_due")) {
@@ -1245,8 +1486,10 @@ export const leasesRouter = router({
           overallStatus = "active";
         } else if (processedLeases.some((l) => l.leaseStatus === "upcoming")) {
           overallStatus = "upcoming";
-        } else if (processedLeases.some((l) => (l.leaseStatus as string) === "pending")) {
-          overallStatus = "pending";
+        } else if (processedLeases.some((l) => l.leaseStatus === "invite_expired")) {
+          overallStatus = "invite_expired";
+        } else if (processedLeases.some((l) => l.leaseStatus === "invite_sent")) {
+          overallStatus = "invite_sent";
         } else if (processedLeases.some((l) => l.leaseStatus === "terminated")) {
           overallStatus = "terminated";
         }

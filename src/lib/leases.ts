@@ -7,6 +7,11 @@ export interface LeaseLike {
   terminatedAt?: Date | string | null;
   status?: string | null;
   invitationExpiresAt?: Date | string | null;
+  inviteCodes?: Array<{
+    code?: string;
+    redeemedAt?: Date | string | null;
+    expiresAt?: Date | string | null;
+  }> | null;
   [key: string]: unknown;
 }
 
@@ -127,11 +132,21 @@ export function getNextLease<T extends LeaseLike>(
   return subsequent[0];
 }
 
+function hasUnredeemedInvite(l: LeaseLike): boolean {
+  if (l.terminatedAt) return false;
+  if (l.status === "declined" || l.status === "cancelled") return false;
+  if (l.status === "pending") return true;
+  if (l.inviteCodes && l.inviteCodes.length > 0) {
+    return l.inviteCodes.some((c) => !c.redeemedAt);
+  }
+  return false;
+}
+
 /**
  * Derives unit occupancy status:
- * - "occupied": current active lease is running today
- * - "reserved": no lease running today, but an upcoming active lease exists OR an unexpired pending invitation exists
- * - "vacant": no running or upcoming active lease and no unexpired pending invitation
+ * - "occupied": current active lease is running today and not awaiting invite redemption
+ * - "reserved": no lease running today, but an upcoming active lease exists OR an unredeemed invite (code or pending) exists
+ * - "vacant": no running or upcoming active lease and no unredeemed invite
  */
 export function getUnitStatus(
   leases: LeaseLike[] | null | undefined,
@@ -141,6 +156,10 @@ export function getUnitStatus(
   const todayStr = formatLagosYMD(today);
 
   if (current) {
+    if (hasUnredeemedInvite(current)) {
+      return "reserved";
+    }
+
     const startStr = formatLagosYMD(current.startDate);
     const endStr = formatLagosYMD(current.endDate);
 
@@ -153,15 +172,18 @@ export function getUnitStatus(
     }
   }
 
-  // Check if there is an unexpired pending invitation for this unit
+  // Check if there is an unredeemed code invite or an unexpired pending invitation for this unit
   if (leases && leases.length > 0) {
-    const hasUnexpiredPending = leases.some((l) => {
+    const hasUnexpiredPendingOrCode = leases.some((l) => {
       if (l.terminatedAt) return false;
+      if (l.inviteCodes && l.inviteCodes.length > 0) {
+        return l.inviteCodes.some((c) => !c.redeemedAt);
+      }
       if (l.status !== "pending") return false;
       if (!l.invitationExpiresAt) return true;
       return new Date(l.invitationExpiresAt) >= new Date(today);
     });
-    if (hasUnexpiredPending) {
+    if (hasUnexpiredPendingOrCode) {
       return "reserved";
     }
   }

@@ -32,6 +32,9 @@ export const unitsRouter = router({
               tenant: {
                 select: { fullName: true },
               },
+              inviteCodes: {
+                select: { code: true, redeemedAt: true, expiresAt: true },
+              },
             },
             orderBy: { startDate: "desc" },
           },
@@ -156,6 +159,9 @@ export const unitsRouter = router({
             include: {
               tenant: {
                 select: { id: true, fullName: true, email: true, phone: true },
+              },
+              inviteCodes: {
+                select: { code: true, redeemedAt: true, expiresAt: true },
               },
             },
             orderBy: { startDate: "desc" },

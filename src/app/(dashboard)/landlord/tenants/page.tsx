@@ -10,13 +10,19 @@ import {
   Phone, 
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RefreshCw,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import { formatDateGB, formatTwoLineRentDue, type RentDueLines } from "@/lib/billing";
 
@@ -30,7 +36,7 @@ interface ProcessedLease {
   endDate: string;
   rentAmount: number;
   rentFrequency: string;
-  leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" | "pending";
+  leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" | "pending" | "invite_sent" | "invite_expired";
   nextDueDate: string | null;
   unpaidPeriods: number;
   nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full" | "pending";
@@ -42,6 +48,10 @@ interface ProcessedLease {
     rentAmount: number;
     rentFrequency: string;
   } | null;
+  inviteCode?: string | null;
+  inviteExpiresAt?: string | null;
+  isCodeInvite?: boolean;
+  hasPayments?: boolean;
 }
 
 interface TenantRow {
@@ -56,7 +66,7 @@ interface TenantRow {
     moreCount: number;
   };
   propertyDisplay: string;
-  overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" | "pending";
+  overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" | "pending" | "invite_sent" | "invite_expired";
   isCurrent: boolean;
   nextRentDue: {
     type: "overdue" | "today" | "upcoming" | "paid_in_full" | "expired" | "pending";
@@ -69,6 +79,18 @@ interface TenantRow {
 
 function LeaseStatusBadge({ status }: { status: string }) {
   switch (status) {
+    case "invite_sent":
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          Invite sent
+        </span>
+      );
+    case "invite_expired":
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+          Invite expired
+        </span>
+      );
     case "pending":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -157,6 +179,76 @@ export default function LandlordTenantsPage() {
   const [leaseStatusFilter, setLeaseStatusFilter] = useState<"" | "active" | "renewal_due" | "expired">("");
   const [page, setPage] = useState(1);
   const [selectedTenant, setSelectedTenant] = useState<TenantRow | null>(null);
+
+  const utils = trpc.useUtils();
+  const { toast } = useToast();
+
+  const [leaseToEditTenant, setLeaseToEditTenant] = useState<{ id: string; fullName: string; email: string } | null>(null);
+  const [editTenantFullName, setEditTenantFullName] = useState("");
+  const [editTenantEmail, setEditTenantEmail] = useState("");
+  const [editTenantError, setEditTenantError] = useState<string | null>(null);
+
+  const [leaseToCancelCode, setLeaseToCancelCode] = useState<{ id: string; unitName: string; tenantName: string } | null>(null);
+  const [leaseToCancelInApp, setLeaseToCancelInApp] = useState<{ id: string; unitName: string } | null>(null);
+
+  const regenerateInviteCodeMutation = trpc.leases.regenerateInviteCode.useMutation({
+    onSuccess: (data) => {
+      toast(`New code ready. Share it with ${data.tenantName}.`, "success");
+      utils.leases.getLandlordTenants.invalidate();
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const updatePlaceholderTenantMutation = trpc.leases.updatePlaceholderTenant.useMutation({
+    onSuccess: () => {
+      toast("Tenant details updated", "success");
+      setLeaseToEditTenant(null);
+      utils.leases.getLandlordTenants.invalidate();
+    },
+    onError: (err) => {
+      setEditTenantError(err.message);
+    },
+  });
+
+  const cancelCodeInviteMutation = trpc.leases.cancelCodeInvite.useMutation({
+    onSuccess: () => {
+      toast("Invite cancelled", "success");
+      setLeaseToCancelCode(null);
+      setSelectedTenant(null);
+      utils.leases.getLandlordTenants.invalidate();
+      utils.properties.list.invalidate();
+      utils.dashboard.landlordSummary.invalidate();
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const resendInvitationMutation = trpc.leases.resendInvitation.useMutation({
+    onSuccess: () => {
+      toast("Invitation resent", "success");
+      utils.leases.getLandlordTenants.invalidate();
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
+
+  const cancelInvitationMutation = trpc.leases.cancelInvitation.useMutation({
+    onSuccess: () => {
+      toast("Invitation cancelled", "success");
+      setLeaseToCancelInApp(null);
+      setSelectedTenant(null);
+      utils.leases.getLandlordTenants.invalidate();
+      utils.properties.list.invalidate();
+      utils.dashboard.landlordSummary.invalidate();
+    },
+    onError: (err) => {
+      toast(err.message, "error");
+    },
+  });
 
   // Debounce search input by 300ms
   useEffect(() => {
@@ -632,12 +724,74 @@ export default function LandlordTenantsPage() {
                             key={lease.id}
                             className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3.5"
                           >
-                            {/* Card Header: Unit Flat3 + status pill */}
+                            {/* Card Header: Unit Flat3 + status pill + actions */}
                             <div className="flex items-center justify-between gap-2">
                               <span className="font-semibold text-sm text-white">
                                 Unit {lease.unitName}
                               </span>
-                              <LeaseStatusBadge status={lease.leaseStatus} />
+                              <div className="flex items-center gap-1.5">
+                                <LeaseStatusBadge status={lease.leaseStatus} />
+                                {(lease.leaseStatus === "invite_sent" || lease.leaseStatus === "invite_expired") && (
+                                  <ActionMenu
+                                    items={
+                                      lease.isCodeInvite
+                                        ? [
+                                            {
+                                              label: "New code",
+                                              icon: <RefreshCw className="w-4 h-4" />,
+                                              onClick: () => regenerateInviteCodeMutation.mutate({ leaseId: lease.id }),
+                                            },
+                                            {
+                                              label: "Edit tenant details",
+                                              icon: <Pencil className="w-4 h-4" />,
+                                              onClick: () => {
+                                                setEditTenantFullName(selectedTenant.fullName);
+                                                setEditTenantEmail(selectedTenant.email);
+                                                setEditTenantError(null);
+                                                setLeaseToEditTenant({
+                                                  id: lease.id,
+                                                  fullName: selectedTenant.fullName,
+                                                  email: selectedTenant.email,
+                                                });
+                                              },
+                                            },
+                                            {
+                                              label: "Cancel invite",
+                                              icon: <Trash2 className="w-4 h-4" />,
+                                              variant: "danger",
+                                              disabled: Boolean(lease.hasPayments),
+                                              disabledTooltip: "This lease has payments. Delete them first.",
+                                              onClick: () => {
+                                                setLeaseToCancelCode({
+                                                  id: lease.id,
+                                                  unitName: lease.unitName,
+                                                  tenantName: selectedTenant.fullName,
+                                                });
+                                              },
+                                            },
+                                          ]
+                                        : [
+                                            {
+                                              label: "Resend invitation",
+                                              icon: <RefreshCw className="w-4 h-4" />,
+                                              onClick: () => resendInvitationMutation.mutate({ leaseId: lease.id }),
+                                            },
+                                            {
+                                              label: "Cancel invitation",
+                                              icon: <Trash2 className="w-4 h-4" />,
+                                              variant: "danger",
+                                              onClick: () => {
+                                                setLeaseToCancelInApp({
+                                                  id: lease.id,
+                                                  unitName: lease.unitName,
+                                                });
+                                              },
+                                            },
+                                          ]
+                                    }
+                                  />
+                                )}
+                              </div>
                             </div>
 
                             {/* 2-column grid: Property, Lease, Rent, Next rent due */}
@@ -704,6 +858,155 @@ export default function LandlordTenantsPage() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
+
+        {/* Cancel Code Invite Dialog */}
+        <ConfirmDialog
+          isOpen={Boolean(leaseToCancelCode)}
+          onClose={() => setLeaseToCancelCode(null)}
+          onConfirm={async () => {
+            if (!leaseToCancelCode) return;
+            try {
+              await cancelCodeInviteMutation.mutateAsync({ leaseId: leaseToCancelCode.id });
+            } catch {
+              // handled
+            }
+          }}
+          title={`Cancel invite for ${leaseToCancelCode?.tenantName || "tenant"}?`}
+          description={`The code stops working and Unit ${leaseToCancelCode?.unitName || ""} becomes vacant.`}
+          confirmText="Cancel invite"
+          cancelText="Keep invite"
+          variant="danger"
+          isLoading={cancelCodeInviteMutation.isPending}
+        />
+
+        {/* Cancel In-App Invitation Dialog */}
+        <ConfirmDialog
+          isOpen={Boolean(leaseToCancelInApp)}
+          onClose={() => setLeaseToCancelInApp(null)}
+          onConfirm={async () => {
+            if (!leaseToCancelInApp) return;
+            try {
+              await cancelInvitationMutation.mutateAsync({ leaseId: leaseToCancelInApp.id });
+            } catch {
+              // handled
+            }
+          }}
+          title="Cancel invitation"
+          description={`Are you sure you want to cancel this invitation? Unit ${leaseToCancelInApp?.unitName || ""} will return to vacant.`}
+          confirmText="Cancel invitation"
+          cancelText="Keep invitation"
+          variant="danger"
+          isLoading={cancelInvitationMutation.isPending}
+        />
+
+        {/* Edit Placeholder Tenant Modal */}
+        {leaseToEditTenant && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold tracking-tight text-white">Edit Tenant Details</h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLeaseToEditTenant(null);
+                    setEditTenantError(null);
+                  }}
+                  className="text-neutral-400 hover:text-white"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const name = editTenantFullName.trim();
+                  const email = editTenantEmail.trim();
+                  if (!name) {
+                    setEditTenantError("Enter the tenant's full name");
+                    return;
+                  }
+                  if (!email) {
+                    setEditTenantError("Enter the tenant's email address");
+                    return;
+                  }
+                  setEditTenantError(null);
+                  updatePlaceholderTenantMutation.mutate({
+                    leaseId: leaseToEditTenant.id,
+                    fullName: name,
+                    email: email,
+                  });
+                }}
+                className="space-y-4"
+              >
+                {editTenantError && (
+                  <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                    {editTenantError}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="editTenantListFullName" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="editTenantListFullName"
+                      type="text"
+                      required
+                      value={editTenantFullName}
+                      onChange={(e) => {
+                        setEditTenantFullName(e.target.value);
+                        if (editTenantError) setEditTenantError(null);
+                      }}
+                      className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                      placeholder="e.g. John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editTenantListEmail" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="editTenantListEmail"
+                      type="email"
+                      required
+                      value={editTenantEmail}
+                      onChange={(e) => {
+                        setEditTenantEmail(e.target.value);
+                        if (editTenantError) setEditTenantError(null);
+                      }}
+                      className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                      placeholder="e.g. john@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setLeaseToEditTenant(null);
+                      setEditTenantError(null);
+                    }}
+                    className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updatePlaceholderTenantMutation.isPending}
+                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                  >
+                    {updatePlaceholderTenantMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

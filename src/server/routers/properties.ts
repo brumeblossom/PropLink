@@ -24,6 +24,12 @@ export const propertiesRouter = router({
                     fullName: true,
                   },
                 },
+                inviteCodes: {
+                  select: {
+                    redeemedAt: true,
+                    expiresAt: true,
+                  },
+                },
               },
               orderBy: { startDate: "desc" },
             },
@@ -76,6 +82,12 @@ export const propertiesRouter = router({
                 },
                 include: {
                   tenant: { select: { fullName: true } },
+                  inviteCodes: {
+                    select: {
+                      redeemedAt: true,
+                      expiresAt: true,
+                    },
+                  },
                 },
                 orderBy: { startDate: "desc" },
               },

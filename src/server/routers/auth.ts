@@ -102,7 +102,7 @@ export const authRouter = router({
       if (!invite) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Invalid invite code.",
+          message: "This invite code has expired. Ask your landlord for a new one.",
         });
       }
 
@@ -116,7 +116,7 @@ export const authRouter = router({
       if (new Date() > invite.expiresAt) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "This invite code has expired.",
+          message: "This invite code has expired. Ask your landlord for a new one.",
         });
       }
 

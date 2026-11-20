@@ -241,12 +241,21 @@ Full audit written to `performance_audit.md` (in brain artifacts). Summary of wh
   - `getUnitStatus(leases, today)`: Returns `"occupied"` if a lease is running today (`startDate <= today <= endDate`), `"reserved"` if only upcoming lease(s) exist, or `"vacant"` otherwise.
   - Used uniformly across tRPC backend (`leases.getForUnit`, `leases.getLandlordTenants`, `units.listByProperty`, `units.getStatus`, `dashboard.landlordSummary`, `properties.list`, `properties.getById`, `payments.create`, `payments.updatePending`) and client pages (landlord unit detail, property units table, tenant list, landlord dashboard, tenant dashboard, tenant payments, tenant settings).
   - Renewals are displayed as a slim "Next lease" row under the Lease Timeline on the landlord unit page, as a muted `"Renewal · DD/MM/YYYY – DD/MM/YYYY"` inside unit cards on the Tenant List side panel, and as confirmed renewal notices rather than duplicate cards or ledger selectors on tenant screens.
-- **Multiple Documents Per Lease Architecture**:
-  - Model `LeaseDocument` mapped to `lease_documents` (`id`, `leaseId`, `name`, `path`, `sizeBytes`, `mimeType`, `uploadedById`, `createdAt`) with index on `leaseId`.
-  - Migration copied existing `leases.document_url` records into `lease_documents`; `document_url` column is retained in the schema but no longer read or written.
-  - Supabase Storage uses private bucket `'leases'` under path `${leaseId}/docs/${uuid}-${safeName}`. Maximum 20 documents per lease, up to 10MB each (PDF, JPG, PNG only), validated on client and server.
-  - Row Level Security (RLS) mirrors `leases` policy: unit landlord has full CRUD access; lease tenant has SELECT access. Documents are viewed and downloaded via 60-second signed URLs.
-  - Payment proof receipts (tenant uploads on payments) remain completely independent and continue using their existing storage paths and mechanisms.
+- **Invite Code Lifecycle & Tenant Management (Prompt 10)**:
+  - **14-Day Code Lifetime**: Invite codes created via `leases.create` last 14 days (matching in-app invitations) instead of 7 days.
+  - **Shared `InviteCard` Component (`src/components/leases/InviteCard.tsx`)**: Calm, unified card (`rounded-xl`, Lucide icons, responsive stack on mobile <=390px) replacing legacy pending/expired banners. Supports both `type="code"` and `type="in_app"`:
+    - Code awaiting: Displays title `"Invite sent to {tenant name}"`, muted line `"{email} · expires DD/MM/YYYY"`, and one-click copy buttons for code and signup link (with toasts `"Code copied"` / `"Link copied"`).
+    - Code expired: Displays title `"Invite code expired"`, muted line `"{tenant name} · {email} · expired DD/MM/YYYY"`, hiding the stale code/link and offering a `"New code"` button alongside the ⋯ `ActionMenu`.
+    - Once redeemed, the invite card is automatically hidden.
+  - **New Code Generation (`leases.regenerateInviteCode`)**: Allows property-owning landlord to invalidate unredeemed codes on a lease and issue a fresh `PL-` code valid for 14 days, triggering toast `"New code ready. Share it with {tenant name}."`
+  - **Edit Tenant Details (`leases.updatePlaceholderTenant`)**: Enables landlords to modify a placeholder tenant's full name and email while their code is unredeemed. If the updated email already belongs to an existing PropLink account, returns inline error `"This email already has a PropLink account. Cancel this invite and invite them again."`
+  - **Cancel Invite (`leases.cancelCodeInvite`)**: Confirmed via `ConfirmDialog` (`"Cancel invite for {tenant name}? The code stops working and {unit} becomes vacant."`). In a single transaction, deletes the lease, associated documents (including files from Supabase `leases` storage bucket), unredeemed invite codes, and notifications. Automatically deletes the placeholder user if they have no other leases and never signed up. Blocked if the lease contains payments (disabled with tooltip in `ActionMenu`).
+  - **Status Display & Unit Counts**:
+    - Lease timeline pill displays `"Invite sent"` (amber) or `"Invite expired"` (red) when an unredeemed code exists.
+    - Summary details "Invite Status" cell displays badge pills: Joined (emerald), Awaiting tenant (amber), Expired (red).
+    - `getUnitStatus` in `src/lib/leases.ts` marks units with unredeemed code invites or pending in-app invitations as `"reserved"` (not `"occupied"`), harmonizing property units table and landlord dashboard counts.
+  - **Tenant List Integration (`/landlord/tenants`)**: Tenant table, mobile cards, and side panel display `"Invite sent"` / `"Invite expired"` badge pills, and side panel unit lease cards provide full ⋯ `ActionMenu` actions (New code, Edit tenant details, Cancel invite, Resend invitation, Cancel invitation) with edit modal and confirmation dialogs.
+  - **Redemption Validation (`auth.ts`)**: Expired or replaced invite codes return user-friendly error `"This invite code has expired. Ask your landlord for a new one."`
 
 
 
