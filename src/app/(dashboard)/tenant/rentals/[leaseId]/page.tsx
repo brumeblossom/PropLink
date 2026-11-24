@@ -16,11 +16,10 @@ import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import {
   formatDateGB,
   formatLagosYMD,
-  getLagosYMD,
   getDueDateStatus,
 } from "@/lib/billing";
-import { getNextLease } from "@/lib/leases";
 import { formatRentFrequency } from "@/lib/rent";
+import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
 import {
   Plus,
   Paperclip,
@@ -41,27 +40,21 @@ function computeLeaseStatus(
     terminatedAt?: Date | string | null;
   },
   today = new Date()
-): "active" | "renewal_due" | "expired" | "upcoming" | "terminated" {
-  if (lease.terminatedAt) return "terminated";
+): "active" | "ended" | "moved_out" | "upcoming" {
+  if (lease.terminatedAt) return "moved_out";
   const todayStr = formatLagosYMD(today);
   const startStr = formatLagosYMD(lease.startDate);
   const endStr = formatLagosYMD(lease.endDate);
 
   if (todayStr < startStr) return "upcoming";
-  if (todayStr > endStr) return "expired";
-
-  const renewalDate = new Date(lease.endDate);
-  renewalDate.setDate(renewalDate.getDate() - (lease.renewalWindowDays ?? 60));
-  const renewalStr = formatLagosYMD(renewalDate);
-
-  if (todayStr >= renewalStr) return "renewal_due";
+  if (todayStr >= endStr) return "ended";
   return "active";
 }
 
 function StatusBadge({
   status,
 }: {
-  status: "active" | "renewal_due" | "expired" | "upcoming" | "terminated";
+  status: "active" | "ended" | "moved_out" | "upcoming";
 }) {
   switch (status) {
     case "active":
@@ -70,20 +63,19 @@ function StatusBadge({
           Active
         </span>
       );
-    case "renewal_due":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-950/40 border border-amber-900/40 text-amber-400">
-          Renewal due
-        </span>
-      );
     case "upcoming":
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-950/40 border border-blue-900/40 text-blue-400">
           Upcoming
         </span>
       );
-    case "expired":
-    case "terminated":
+    case "moved_out":
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-850 border border-neutral-800 text-neutral-400">
+          Moved out
+        </span>
+      );
+    case "ended":
     default:
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-850 border border-neutral-800 text-neutral-400">
@@ -200,9 +192,6 @@ export default function TenantRentalDetailsPage({
   // Payment details view state
   const [selectedPayment, setSelectedPayment] = useState<NonNullable<typeof payments>[number] | null>(null);
 
-  // Year filter
-  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
-
   const resetPaymentForm = () => {
     setAmountInput("");
     setPaymentDate(todayStr);
@@ -219,38 +208,44 @@ export default function TenantRentalDetailsPage({
     billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0
   );
 
-  const availableYears = useMemo(() => {
-    const curYear = new Date().getFullYear();
-    if (!payments || payments.length === 0) return [curYear];
-    const years = new Set(payments.map((p) => new Date(p.paymentDate).getFullYear()));
-    years.add(curYear);
-    return Array.from(years).sort((a, b) => b - a);
+  const filteredPayments = useMemo(() => {
+    return payments || [];
   }, [payments]);
 
-  const filteredPayments = useMemo(() => {
-    if (!payments) return [];
-    return payments.filter((p) => new Date(p.paymentDate).getFullYear() === selectedYear);
-  }, [payments, selectedYear]);
-
-  // Compute status and next lease
+  // Compute status
   const leaseStatus = useMemo(() => {
     if (!lease) return "active";
     return computeLeaseStatus(lease, today);
   }, [lease, today]);
 
-  const nextLease = useMemo(() => {
-    if (!lease?.unit?.leases) return null;
-    return getNextLease(lease.unit.leases, today, lease);
+  // Options for LeasePeriodDropdown
+  const leaseDropdownOptions: LeaseOption[] = useMemo(() => {
+    if (!lease?.unit?.leases) return [];
+    return lease.unit.leases.map((l) => {
+      let status: LeaseOption["status"] = "ended";
+      if (!l.terminatedAt && new Date(l.endDate) > today && new Date(l.startDate) <= today) {
+        status = "current";
+      } else if (l.terminatedAt) {
+        status = "moved_out";
+      } else if (new Date(l.startDate) > today) {
+        status = "upcoming";
+      } else {
+        status = "ended";
+      }
+      return {
+        id: l.id,
+        startDate: l.startDate,
+        endDate: l.endDate,
+        status,
+      };
+    });
   }, [lease, today]);
 
-  const daysUntilNext = useMemo(() => {
-    if (!nextLease) return null;
-    const target = getLagosYMD(nextLease.startDate);
-    const cur = getLagosYMD(today);
-    const d1 = Date.UTC(target.year, target.month - 1, target.day);
-    const d2 = Date.UTC(cur.year, cur.month - 1, cur.day);
-    return Math.max(0, Math.round((d1 - d2) / (1000 * 60 * 60 * 24)));
-  }, [nextLease, today]);
+  const handleSelectLease = (selectedId: string) => {
+    if (selectedId !== leaseId) {
+      router.push(`/tenant/rentals/${selectedId}`);
+    }
+  };
 
   // Handle proof upload
   const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -525,35 +520,6 @@ export default function TenantRentalDetailsPage({
                 </div>
               </div>
             </div>
-
-            {/* Slim Next Lease row if present */}
-            {nextLease && (
-              <div className="mt-4 pt-4 border-t border-neutral-800/80">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-neutral-400 font-medium">Next lease</span>
-                    <span className="text-neutral-500">·</span>
-                    <span className="text-neutral-300">
-                      {formatDateGB(nextLease.startDate)} – {formatDateGB(nextLease.endDate)}
-                    </span>
-                    <span className="text-neutral-500">·</span>
-                    <span className="text-white font-medium">
-                      {formatCurrency(nextLease.rentAmount)} / {formatRentFrequency(nextLease.rentFrequency)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-950/40 border border-blue-900/40 text-blue-400">
-                      Upcoming
-                    </span>
-                    {daysUntilNext !== null && (
-                      <span className="text-neutral-400 text-[11px]">
-                        Starts in {daysUntilNext} days
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Documents Card (2fr) */}
@@ -636,41 +602,40 @@ export default function TenantRentalDetailsPage({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="font-bold text-white text-lg">Payment history</h3>
 
-            <div className="flex items-center gap-3">
-              {availableYears.length > 1 && (
-                <div className="w-28">
-                  <Select
-                    value={String(selectedYear)}
-                    onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-                    className="h-8 text-xs"
-                  >
-                    {availableYears.map((yr) => (
-                      <option key={yr} value={yr}>
-                        {yr}
-                      </option>
-                    ))}
-                  </Select>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                <div className="sm:hidden text-sm font-semibold text-neutral-400">
+                  Payment history
                 </div>
-              )}
-
-              {/* On web (>=640px) the Add payment primary button sits on the right */}
-              <div className="relative group hidden sm:inline-block">
-                <Button
-                  onClick={handleOpenAddPayment}
-                  disabled={isPaidInFull}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-8 px-3 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add payment
-                </Button>
-                {isPaidInFull && (
-                  <div
-                    role="tooltip"
-                    className="pointer-events-none absolute bottom-full right-0 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                {/* Add payment button */}
+                <div className="relative group">
+                  <Button
+                    onClick={handleOpenAddPayment}
+                    disabled={isPaidInFull}
+                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-9 px-3 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
                   >
-                    This lease is fully paid.
-                  </div>
-                )}
+                    <Plus className="w-4 h-4" />
+                    Add payment
+                  </Button>
+                  {isPaidInFull && (
+                    <div
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full right-0 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                    >
+                      This lease is fully paid.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lease period dropdown */}
+              <div className="w-full sm:w-auto">
+                <LeasePeriodDropdown
+                  leases={leaseDropdownOptions}
+                  selectedLeaseId={leaseId}
+                  onSelectLease={handleSelectLease}
+                  isLandlord={false}
+                />
               </div>
             </div>
           </div>
@@ -712,7 +677,7 @@ export default function TenantRentalDetailsPage({
                 ) : filteredPayments.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-12 text-center text-neutral-500">
-                      <p className="text-xs">No payments recorded for {selectedYear}.</p>
+                      <p className="text-xs">No payments recorded for this lease yet.</p>
                     </td>
                   </tr>
                 ) : (
@@ -824,7 +789,7 @@ export default function TenantRentalDetailsPage({
               ))
             ) : filteredPayments.length === 0 ? (
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 text-center text-neutral-500">
-                <p className="text-xs">No payments recorded for {selectedYear}.</p>
+                <p className="text-xs">No payments recorded for this lease yet.</p>
               </div>
             ) : (
               filteredPayments.map((p) => {

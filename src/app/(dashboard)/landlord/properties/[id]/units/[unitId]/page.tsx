@@ -11,18 +11,19 @@ import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
 import { Select } from "@/components/ui/select";
 import { RentFrequency, PaymentMethod } from "@prisma/client";
-import { X, Trash2, Plus, Pencil, Check } from "lucide-react";
+import { X, Trash2, Plus, Pencil, Check, LogOut, RefreshCw } from "lucide-react";
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import { getDueDateStatus, formatDateGB } from "@/lib/billing";
-import { getCurrentLease, getNextLease } from "@/lib/leases";
+import { getCurrentLease, getRenewEligibility } from "@/lib/leases";
 import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { InviteCard } from "@/components/leases/InviteCard";
+import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -50,11 +51,20 @@ export default function UnitDetailPage() {
   const property = properties?.find((p) => p.id === propertyId);
   const unit = property?.units.find((u) => u.id === unitId);
 
-  // Leases: current and next lease
+  // Leases: current and selected lease
   const leases = leaseData?.leases;
   const currentLease = leaseData?.currentLease ?? getCurrentLease(leases);
-  const nextLease = leaseData?.nextLease ?? getNextLease(leases);
-  const activeLease = currentLease;
+  const leaseParam = searchParams?.get("lease");
+  const selectedLease = useMemo(() => {
+    if (!leases || leases.length === 0) return currentLease;
+    if (leaseParam) {
+      const match = leases.find((l) => l.id === leaseParam);
+      if (match) return match;
+    }
+    return currentLease || leases[0];
+  }, [leases, leaseParam, currentLease]);
+
+  const activeLease = selectedLease;
   const pendingLease = leaseData?.pendingLease ?? unitStatus?.pendingLease;
 
   const [cancelInvitationConfirmId, setCancelInvitationConfirmId] = useState<string | null>(null);
@@ -150,7 +160,7 @@ export default function UnitDetailPage() {
   });
 
   const renewLease = trpc.leases.renew.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       utils.leases.getForUnit.invalidate({ unitId });
       utils.units.getStatus.invalidate({ id: unitId });
       utils.properties.list.invalidate();
@@ -159,9 +169,31 @@ export default function UnitDetailPage() {
       }
       setIsRenewLeaseOpen(false);
       resetRenewForm();
+      toast("Lease renewed", "success");
+      // Set new lease in URL
+      const currentUrlParams = new URLSearchParams(window.location.search);
+      currentUrlParams.set("lease", data.lease.id);
+      router.push(`${window.location.pathname}?${currentUrlParams.toString()}`);
     },
     onError: (err) => {
       setRenewError(err.message);
+    },
+  });
+
+  const [isMovedOutConfirmOpen, setIsMovedOutConfirmOpen] = useState(false);
+  const markMovedOutMutation = trpc.leases.markMovedOut.useMutation({
+    onSuccess: () => {
+      utils.leases.getForUnit.invalidate({ unitId });
+      utils.units.getStatus.invalidate({ id: unitId });
+      utils.properties.list.invalidate();
+      if (activeLease) {
+        utils.leases.getTimeline.invalidate({ leaseId: activeLease.id });
+      }
+      setIsMovedOutConfirmOpen(false);
+      toast("Marked as moved out", "success");
+    },
+    onError: (err) => {
+      toast(err.message, "error");
     },
   });
 
@@ -492,24 +524,42 @@ export default function UnitDetailPage() {
     }
   }, [searchParams, payments]);
 
-  // Year filter for payment ledger
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  // Renew eligibility
+  const today = useMemo(() => new Date(), []);
+  const renewEligibility = useMemo(() => {
+    if (!activeLease || !payments) return { eligible: false, reason: "not_ended" as const };
+    const confirmed = payments.filter((p) => p.status === "confirmed");
+    return getRenewEligibility(activeLease, confirmed, today, leases);
+  }, [activeLease, payments, today, leases]);
 
-  // Derived: unique years present in payment history (always includes current year)
-  // NOTE: must live here, before any early returns, to satisfy React Rules of Hooks.
-  const availableYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    if (!payments || payments.length === 0) return [currentYear];
-    const years = new Set(payments.map((p) => new Date(p.paymentDate).getFullYear()));
-    years.add(currentYear);
-    return Array.from(years).sort((a, b) => b - a);
-  }, [payments]);
+  // Options for LeasePeriodDropdown
+  const leaseDropdownOptions: LeaseOption[] = useMemo(() => {
+    if (!leases) return [];
+    return leases.map((l) => {
+      let status: LeaseOption["status"] = "ended";
+      if (currentLease && l.id === currentLease.id && !l.terminatedAt && new Date(l.endDate) > today) {
+        status = "current";
+      } else if (l.terminatedAt) {
+        status = "moved_out";
+      } else if (new Date(l.startDate) > today) {
+        status = "upcoming";
+      } else {
+        status = "ended";
+      }
+      return {
+        id: l.id,
+        startDate: l.startDate,
+        endDate: l.endDate,
+        tenantName: l.tenant?.fullName,
+        status,
+      };
+    });
+  }, [leases, currentLease, today]);
 
-  // Payments visible in the current year selection
+  // Payments visible in the current lease selection
   const filteredPayments = useMemo(() => {
-    if (!payments) return [];
-    return payments.filter((p) => new Date(p.paymentDate).getFullYear() === selectedYear);
-  }, [payments, selectedYear]);
+    return payments || [];
+  }, [payments]);
 
   // Human-readable status labels
   const paymentStatusLabel: Record<string, string> = {
@@ -564,19 +614,16 @@ export default function UnitDetailPage() {
 
   const handleOpenRenewLease = () => {
     if (!activeLease) return;
-    // Default start = old endDate + 1 day
-    const oldEnd = new Date(activeLease.endDate);
-    oldEnd.setDate(oldEnd.getDate() + 1);
-    const newStart = oldEnd.toISOString().split("T")[0];
+    // Starts on source lease end date
+    const newStart = new Date(activeLease.endDate).toISOString().split("T")[0];
     setRenewStartDate(newStart);
-    // Auto-calc end date for residential units
-    if (unit && isResidentialUnitType(unit.unitType)) {
-      const newEnd = new Date(oldEnd);
-      newEnd.setFullYear(newEnd.getFullYear() + 1);
-      setRenewEndDate(newEnd.toISOString().split("T")[0]);
-    } else {
-      setRenewEndDate("");
-    }
+    // Auto-calc end date of the same duration
+    const startMs = new Date(activeLease.startDate).getTime();
+    const endMs = new Date(activeLease.endDate).getTime();
+    const durationMs = endMs - startMs;
+    const newEndDate = new Date(new Date(activeLease.endDate).getTime() + durationMs);
+    setRenewEndDate(newEndDate.toISOString().split("T")[0]);
+
     setRenewRentAmount(Number(activeLease.rentAmount) === 0 ? "" : formatInputNumber(activeLease.rentAmount.toString()));
     setRenewRentFrequency(activeLease.rentFrequency);
     setRenewDepositAmount(activeLease.depositAmount ? formatInputNumber(activeLease.depositAmount.toString()) : "");
@@ -717,9 +764,8 @@ export default function UnitDetailPage() {
     }
 
     const targetLeaseId = selectedPaymentLeaseId || activeLease!.id;
-    const isPayingNextLease = Boolean(nextLease && targetLeaseId === nextLease.id);
 
-    if (!isPayingNextLease && billingSummary && billingSummary.isRentSet && amount > billingSummary.remainingLeaseRent) {
+    if (billingSummary && billingSummary.isRentSet && amount > billingSummary.remainingLeaseRent) {
       setPaymentError(`This is more than the ${formatCurrency(billingSummary.remainingLeaseRent)} left on this lease.`);
       return;
     }
@@ -731,7 +777,7 @@ export default function UnitDetailPage() {
         paymentDate: new Date(paymentDate).toISOString(),
         method: paymentMethod,
         notes: paymentNotes || undefined,
-        confirmUpcoming: isPayingNextLease,
+        confirmUpcoming: false,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to log payment.";
@@ -913,9 +959,16 @@ export default function UnitDetailPage() {
     );
   }
 
+  const isLeaseEndedState = timeline?.status === "ended" && !activeLease?.terminatedAt;
+
+  const handleSelectLease = (leaseId: string) => {
+    const currentUrlParams = new URLSearchParams(window.location.search);
+    currentUrlParams.set("lease", leaseId);
+    router.push(`${window.location.pathname}?${currentUrlParams.toString()}`);
+  };
+
   // Visual Timeline math
   let todayPercent = 0;
-
   if (timeline) {
     const startMs = new Date(timeline.startDate).getTime();
     const endMs = new Date(timeline.endDate).getTime();
@@ -939,7 +992,7 @@ export default function UnitDetailPage() {
           backHref={`/landlord/properties/${propertyId}`}
           backLabel="Back to Property"
           phonePrimaryAction={
-            activeLease
+            isLeaseEndedState ? undefined : activeLease
               ? {
                 label: "Add payment",
                 icon: <Plus className="w-4 h-4" />,
@@ -962,20 +1015,73 @@ export default function UnitDetailPage() {
               : undefined
           }
           actions={[
+            ...(isLeaseEndedState
+              ? [
+                  {
+                    label: "Mark as moved out",
+                    onClick: () => setIsMovedOutConfirmOpen(true),
+                    icon: <LogOut className="w-4 h-4" />,
+                    variant: "outline" as const,
+                  },
+                  {
+                    label: "Renew",
+                    onClick: handleOpenRenewLease,
+                    icon: <RefreshCw className="w-4 h-4" />,
+                    variant: "primary" as const,
+                    disabled: !renewEligibility.eligible,
+                    disabledTooltip: !renewEligibility.eligible && renewEligibility.reason === "unpaid"
+                      ? `${formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease`
+                      : undefined,
+                  },
+                ]
+              : []),
             {
               label: "Edit Unit",
               onClick: handleOpenEditUnit,
               icon: <Pencil className="w-4 h-4" />,
-              variant: "outline",
+              variant: "outline" as const,
             },
             {
               label: "Delete Unit",
               onClick: handleDeleteUnit,
               icon: <Trash2 className="w-4 h-4" />,
-              variant: "danger",
+              variant: "danger" as const,
             },
           ]}
         />
+
+        {/* Mobile two-column row under Back link for Ended state */}
+        {isLeaseEndedState && (
+          <div className="grid grid-cols-2 gap-2 sm:hidden w-full -mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsMovedOutConfirmOpen(true)}
+              className="w-full justify-center text-xs h-9"
+            >
+              <LogOut className="w-4 h-4 mr-1.5" />
+              Mark as moved out
+            </Button>
+            <div className="relative w-full">
+              <Button
+                variant="default"
+                onClick={handleOpenRenewLease}
+                disabled={!renewEligibility.eligible}
+                className="w-full justify-center text-xs h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50"
+              >
+                <RefreshCw className="w-4 h-4 mr-1.5" />
+                Renew
+              </Button>
+              {!renewEligibility.eligible && renewEligibility.reason === "unpaid" && (
+                <div
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1 text-[11px] font-medium text-neutral-200 shadow-xl"
+                >
+                  {formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {deleteError && (
           <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-4 text-sm text-red-400">
@@ -989,10 +1095,10 @@ export default function UnitDetailPage() {
               <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${unitStatus?.status === "occupied"
-                    ? "bg-green-950/30 text-green-400 border border-green-900/30"
-                    : unitStatus?.status === "reserved"
-                      ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
-                      : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                  ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                  : unitStatus?.status === "reserved"
+                    ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
+                    : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
                   }`}
               >
                 {unitStatus?.status === "reserved" ? "Reserved" : unitStatus?.status}
@@ -1046,14 +1152,6 @@ export default function UnitDetailPage() {
                     >
                       Edit Details
                     </button>
-                    {timeline && (timeline.status === "renewal_due" || timeline.status === "expired") && !nextLease && (
-                      <Button
-                        onClick={handleOpenRenewLease}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white h-7 px-2.5 text-xs font-semibold"
-                      >
-                        Renew Lease
-                      </Button>
-                    )}
                   </div>
                   {hasUnredeemedCode ? (
                     <span
@@ -1066,14 +1164,21 @@ export default function UnitDetailPage() {
                     >
                       {isCodeExpired ? "Invite expired" : "Invite sent"}
                     </span>
+                  ) : timeline.status === "moved_out" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-400">
+                      Moved out
+                    </span>
+                  ) : timeline.status === "ended" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-400">
+                      Ended
+                    </span>
+                  ) : timeline.status === "upcoming" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950/30 text-blue-400 border border-blue-900/30">
+                      Upcoming
+                    </span>
                   ) : (
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${timeline.status === "renewal_due"
-                          ? "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30 animate-pulse"
-                          : "bg-green-950/30 text-green-400 border border-green-900/30"
-                        }`}
-                    >
-                      {timeline.status.replace("_", " ")}
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-950/30 text-green-400 border border-green-900/30">
+                      Active
                     </span>
                   )}
                 </div>
@@ -1143,53 +1248,6 @@ export default function UnitDetailPage() {
                     </span>
                   </div>
                 </div>
-
-                {/* Slim Next lease row */}
-                {nextLease && (() => {
-                  const todayMidnight = new Date();
-                  todayMidnight.setHours(0, 0, 0, 0);
-                  const nextStart = new Date(nextLease.startDate);
-                  nextStart.setHours(0, 0, 0, 0);
-                  const diffDays = Math.max(0, Math.ceil((nextStart.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)));
-
-                  const nextLeaseMenuItems: ActionMenuItem[] = [
-                    {
-                      label: "Edit",
-                      icon: <Pencil className="w-4 h-4" />,
-                      onClick: () => handleOpenEditLease(nextLease),
-                    },
-                    {
-                      label: "Delete",
-                      icon: <Trash2 className="w-4 h-4" />,
-                      variant: "danger",
-                      onClick: () => setDeleteLeaseConfirmId(nextLease.id),
-                    },
-                  ];
-
-                  return (
-                    <div className="pt-4 border-t border-neutral-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                      <div className="flex flex-wrap items-center gap-2 text-neutral-300">
-                        <span className="font-semibold text-neutral-400">Next lease:</span>
-                        <span className="font-medium text-white">
-                          {formatDateGB(nextLease.startDate)} – {formatDateGB(nextLease.endDate)}
-                        </span>
-                        <span className="text-neutral-500">·</span>
-                        <span>
-                          {formatCurrency(nextLease.rentAmount)} / {formatRentFrequency(nextLease.rentFrequency)}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-950/40 text-blue-400 border border-blue-900/40 leading-none">
-                          Upcoming
-                        </span>
-                        <span className="text-neutral-400">
-                          Starts in {diffDays} {diffDays === 1 ? "day" : "days"}
-                        </span>
-                      </div>
-                      <div className="self-end sm:self-auto">
-                        <ActionMenu items={nextLeaseMenuItems} />
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
 
               {/* Documents Card */}
@@ -1225,51 +1283,55 @@ export default function UnitDetailPage() {
                   <h3 className="font-bold text-white text-xl">Payment history</h3>
                   <p className="text-neutral-400 text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
                 </div>
-                <div className="flex items-center gap-3 self-start sm:self-auto">
-                  {/* Year filter */}
-                  <Select
-                    id="landlord-ledger-year-filter"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="h-9 w-28 text-sm"
-                    aria-label="Filter payment history by year"
-                  >
-                    {availableYears.map((yr) => (
-                      <option key={yr} value={yr}>{yr}</option>
-                    ))}
-                  </Select>
-                  {(() => {
-                    const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
-                    return (
-                      <div className={`relative hidden sm:inline-block ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
-                        <Button
-                          onClick={() => {
-                            setIsLogPaymentOpen(true);
-                            setSelectedPaymentLeaseId(currentLease?.id || "");
-                            setPaymentAmount(
-                              billingSummary?.outstanding
-                                ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
-                                : ""
-                            );
-                            setPaymentError(null);
-                          }}
-                          disabled={isPaidInFull}
-                          className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none flex items-center"
-                        >
-                          <Plus className="w-4 h-4 mr-1.5" />
-                          Add Payment
-                        </Button>
-                        {isPaidInFull && (
-                          <div
-                            role="tooltip"
-                            className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                {/* Mobile: Add payment on row above dropdown */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                    <div className="sm:hidden text-sm font-semibold text-neutral-400">
+                      Payment history
+                    </div>
+                    {(() => {
+                      const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
+                      return (
+                        <div className={`relative ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
+                          <Button
+                            onClick={() => {
+                              setIsLogPaymentOpen(true);
+                              setSelectedPaymentLeaseId(activeLease?.id || currentLease?.id || "");
+                              setPaymentAmount(
+                                billingSummary?.outstanding
+                                  ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                                  : ""
+                              );
+                              setPaymentError(null);
+                            }}
+                            disabled={isPaidInFull}
+                            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none flex items-center h-9 text-xs sm:text-sm"
                           >
-                            This lease is fully paid.
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                            <Plus className="w-4 h-4 mr-1.5" />
+                            Add Payment
+                          </Button>
+                          {isPaidInFull && (
+                            <div
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                            >
+                              This lease is fully paid.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Lease period dropdown */}
+                  <div className="w-full sm:w-auto">
+                    <LeasePeriodDropdown
+                      leases={leaseDropdownOptions}
+                      selectedLeaseId={activeLease?.id || ""}
+                      onSelectLease={handleSelectLease}
+                      isLandlord={true}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1420,7 +1482,7 @@ export default function UnitDetailPage() {
                           ) : filteredPayments.length === 0 ? (
                             <tr>
                               <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
-                                {!payments || payments.length === 0 ? "No payments recorded yet." : `No payments recorded for ${selectedYear}.`}
+                                {!payments || payments.length === 0 ? "No payments recorded yet." : "No payments recorded for this lease."}
                               </td>
                             </tr>
                           ) : (
@@ -1449,10 +1511,10 @@ export default function UnitDetailPage() {
                                     <div className="flex flex-col space-y-1">
                                       <div className="flex items-center space-x-2">
                                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
-                                            ? "bg-green-950/30 text-green-400 border-green-900/30"
-                                            : p.status === "disputed"
-                                              ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                              : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                          ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                          : p.status === "disputed"
+                                            ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                            : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
                                           }`}>
                                           {paymentStatusLabel[p.status] ?? p.status}
                                         </span>
@@ -1500,7 +1562,7 @@ export default function UnitDetailPage() {
                         ))
                       ) : filteredPayments.length === 0 ? (
                         <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-8 text-center text-sm text-neutral-500 italic">
-                          {!payments || payments.length === 0 ? "No payments recorded yet." : `No payments recorded for ${selectedYear}.`}
+                          {!payments || payments.length === 0 ? "No payments recorded yet." : "No payments recorded for this lease."}
                         </div>
                       ) : (
                         filteredPayments.map((p) => {
@@ -1535,10 +1597,10 @@ export default function UnitDetailPage() {
                               {/* Bottom: status pill + Flagged pill */}
                               <div className="flex items-center space-x-2 pt-1 border-t border-neutral-800/40">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
-                                    ? "bg-green-950/30 text-green-400 border-green-900/30"
-                                    : p.status === "disputed"
-                                      ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                      : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                  ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                  : p.status === "disputed"
+                                    ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                    : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
                                   }`}>
                                   {paymentStatusLabel[p.status] ?? p.status}
                                 </span>
@@ -2197,23 +2259,22 @@ export default function UnitDetailPage() {
                 </div>
               )}
 
-              {nextLease && currentLease && (
+              {leases && leases.length > 1 && (
                 <div>
                   <label htmlFor="paymentLease" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
                     Lease
                   </label>
                   <Select
                     id="paymentLease"
-                    value={selectedPaymentLeaseId || currentLease.id}
+                    value={selectedPaymentLeaseId || activeLease?.id || currentLease?.id || ""}
                     onChange={(e) => setSelectedPaymentLeaseId(e.target.value)}
                     className="mt-1 h-10 text-sm"
                   >
-                    <option value={currentLease.id}>
-                      Current · {formatDateGB(currentLease.startDate)} – {formatDateGB(currentLease.endDate)}
-                    </option>
-                    <option value={nextLease.id}>
-                      Next · {formatDateGB(nextLease.startDate)} – {formatDateGB(nextLease.endDate)}
-                    </option>
+                    {leases.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {formatDateGB(l.startDate)} – {formatDateGB(l.endDate)}{l.tenant?.fullName ? ` · ${l.tenant.fullName}` : ""}{l.id === currentLease?.id ? " (Current)" : l.terminatedAt ? " (Moved out)" : " (Ended)"}
+                      </option>
+                    ))}
                   </Select>
                 </div>
               )}
@@ -2232,16 +2293,10 @@ export default function UnitDetailPage() {
                   className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
                   placeholder="e.g. 150,000"
                 />
-                {selectedPaymentLeaseId === nextLease?.id ? (
+                {billingSummary && billingSummary.isRentSet && (
                   <span className="text-xs text-neutral-400 block mt-1">
-                    {formatCurrency(nextLease.rentAmount)} left on this lease
+                    {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
                   </span>
-                ) : (
-                  billingSummary && billingSummary.isRentSet && (
-                    <span className="text-xs text-neutral-400 block mt-1">
-                      {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
-                    </span>
-                  )
                 )}
               </div>
 
@@ -2411,10 +2466,10 @@ export default function UnitDetailPage() {
                   <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</span>
                   <span className="mt-1 block">
                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${selectedLandlordPayment.status === "confirmed"
-                        ? "bg-green-950/30 text-green-400 border-green-900/30"
-                        : selectedLandlordPayment.status === "disputed"
-                          ? "bg-red-950/30 text-red-400 border-red-900/30"
-                          : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                      ? "bg-green-950/30 text-green-400 border-green-900/30"
+                      : selectedLandlordPayment.status === "disputed"
+                        ? "bg-red-950/30 text-red-400 border-red-900/30"
+                        : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
                       }`}>
                       {paymentStatusLabel[selectedLandlordPayment.status] ?? selectedLandlordPayment.status}
                     </span>
@@ -2898,6 +2953,26 @@ export default function UnitDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Confirm Mark as Moved Out Dialog */}
+      <ConfirmDialog
+        isOpen={isMovedOutConfirmOpen}
+        onClose={() => setIsMovedOutConfirmOpen(false)}
+        onConfirm={() => {
+          if (activeLease) {
+            markMovedOutMutation.mutate({ leaseId: activeLease.id });
+          }
+        }}
+        title={`Mark ${activeLease?.tenant?.fullName || "tenant"} as moved out of Unit ${unit.unitNumber}?`}
+        description={
+          billingSummary && billingSummary.outstanding > 0
+            ? `The unit becomes vacant. This lease and its payments stay in the history.\n\n${formatCurrency(billingSummary.outstanding)} is still unpaid. It stays on record.`
+            : "The unit becomes vacant. This lease and its payments stay in the history."
+        }
+        confirmText="Mark as moved out"
+        cancelText="Cancel"
+        isLoading={markMovedOutMutation.isPending}
+      />
     </div>
   );
 }

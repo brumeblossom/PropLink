@@ -10,8 +10,9 @@ export interface DetailAction {
   label: string;
   onClick: () => void;
   icon?: React.ReactNode;
-  variant?: "outline" | "danger";
+  variant?: "outline" | "danger" | "primary";
   disabled?: boolean;
+  disabledTooltip?: string;
 }
 
 export interface PhonePrimaryAction {
@@ -52,22 +53,33 @@ export function DetailActionRow({
       {/* Desktop actions (>= 640px) */}
       <div className="hidden sm:flex items-center space-x-2 flex-shrink-0">
         {actions.map((action, i) => (
-          <Button
-            key={i}
-            type="button"
-            variant="outline"
-            onClick={action.onClick}
-            disabled={action.disabled}
-            className={cn(
-              "h-9 px-3.5 text-xs font-medium flex items-center transition-colors",
-              action.variant === "danger"
-                ? "border-rose-900/50 text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 hover:border-rose-800"
-                : "border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-850"
+          <div key={i} className="relative group">
+            <Button
+              type="button"
+              variant={action.variant === "primary" ? "default" : "outline"}
+              onClick={action.onClick}
+              disabled={action.disabled}
+              className={cn(
+                "h-9 px-3.5 text-xs font-medium flex items-center transition-colors disabled:opacity-50 disabled:pointer-events-none",
+                action.variant === "danger"
+                  ? "border-rose-900/50 text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 hover:border-rose-800"
+                  : action.variant === "primary"
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+                  : "border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-850"
+              )}
+            >
+              {action.icon && <span className="mr-1.5 flex-shrink-0">{action.icon}</span>}
+              <span>{action.label}</span>
+            </Button>
+            {action.disabled && action.disabledTooltip && (
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+              >
+                {action.disabledTooltip}
+              </div>
             )}
-          >
-            {action.icon && <span className="mr-1.5 flex-shrink-0">{action.icon}</span>}
-            <span>{action.label}</span>
-          </Button>
+          </div>
         ))}
       </div>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getCurrentLease, getNextLease, getUnitStatus } from "./leases";
+import { getCurrentLease, getNextLease, getUnitStatus, getRenewEligibility } from "./leases";
 
 describe("getCurrentLease and getNextLease", () => {
   const today = new Date("2026-11-20T12:00:00Z"); // 2026-11-20 in Lagos
@@ -74,7 +74,8 @@ describe("getCurrentLease and getNextLease", () => {
     const next = getNextLease(leases, today);
     expect(next).toBeNull();
 
-    expect(getUnitStatus(leases, today)).toBe("vacant");
+    // Ended lease not marked as moved out (terminatedAt is null) counts as occupied
+    expect(getUnitStatus(leases, today)).toBe("occupied");
   });
 
   it("handles current + renewal (Ha-Shem 2 scenario): returns running lease as current and renewal as nextLease", () => {
@@ -217,30 +218,101 @@ describe("getCurrentLease and getNextLease", () => {
     expect(getUnitStatus(expiredPending, today)).toBe("vacant");
   });
 
-  it("marks unit reserved when an active lease has an unredeemed invite code", () => {
-    const unredeemedCodeLease = [
+  it("marks unit occupied when lease is ended but not moved out, and vacant when moved out", () => {
+    // Ended lease, terminatedAt is null -> occupied
+    const endedNotMovedOut = [
       {
-        id: "lease-code-1",
-        startDate: "2026-07-01",
-        endDate: "2027-07-01",
-        status: "active",
-        inviteCodes: [{ code: "PL-TEST1", redeemedAt: null, expiresAt: new Date("2026-12-01") }],
+        id: "lease-ended",
+        startDate: "2025-01-01",
+        endDate: "2026-01-01",
         terminatedAt: null,
       },
     ];
-    expect(getUnitStatus(unredeemedCodeLease, today)).toBe("reserved");
+    expect(getUnitStatus(endedNotMovedOut, today)).toBe("occupied");
 
-    const redeemedCodeLease = [
+    // Ended lease, terminatedAt set -> vacant
+    const movedOut = [
       {
-        id: "lease-code-2",
-        startDate: "2026-07-01",
-        endDate: "2027-07-01",
-        status: "active",
-        inviteCodes: [{ code: "PL-TEST1", redeemedAt: new Date("2026-07-02"), expiresAt: new Date("2026-12-01") }],
-        terminatedAt: null,
+        id: "lease-moved-out",
+        startDate: "2025-01-01",
+        endDate: "2026-01-01",
+        terminatedAt: "2026-01-02T00:00:00Z",
       },
     ];
-    // Today is 2026-11-20, so 2026-07-01 to 2027-07-01 is running -> occupied
-    expect(getUnitStatus(redeemedCodeLease, today)).toBe("occupied");
+    expect(getUnitStatus(movedOut, today)).toBe("vacant");
+  });
+});
+
+describe("getRenewEligibility", () => {
+  const today = new Date("2026-11-20T12:00:00Z");
+
+  const baseLease = {
+    id: "lease-1",
+    startDate: "2025-11-20",
+    endDate: "2026-11-20",
+    rentAmount: 1200000,
+    rentFrequency: "annually",
+    terminatedAt: null,
+  };
+
+  it("not ended -> no (reason: not_ended)", () => {
+    const runningLease = {
+      ...baseLease,
+      endDate: "2026-12-31", // ends in the future relative to today
+    };
+    const res = getRenewEligibility(runningLease, [{ amount: 1200000, status: "confirmed" }], today);
+    expect(res.eligible).toBe(false);
+    expect(res.reason).toBe("not_ended");
+  });
+
+  it("ended + unpaid -> disabled (reason: unpaid, unpaidAmount)", () => {
+    const endedLease = {
+      ...baseLease,
+      endDate: "2026-11-19", // ended yesterday
+    };
+    // Paid 1,000,000 of 1,200,000
+    const res = getRenewEligibility(endedLease, [{ amount: 1000000, status: "confirmed" }], today);
+    expect(res.eligible).toBe(false);
+    expect(res.reason).toBe("unpaid");
+    expect(res.unpaidAmount).toBe(200000);
+  });
+
+  it("ended + paid -> yes (eligible: true)", () => {
+    const endedLease = {
+      ...baseLease,
+      endDate: "2026-11-20", // ends today
+    };
+    // Fully paid
+    const res = getRenewEligibility(endedLease, [{ amount: 1200000, status: "confirmed" }], today);
+    expect(res.eligible).toBe(true);
+  });
+
+  it("moved out -> no (reason: moved_out)", () => {
+    const movedOutLease = {
+      ...baseLease,
+      endDate: "2026-11-19",
+      terminatedAt: "2026-11-19T10:00:00Z",
+    };
+    const res = getRenewEligibility(movedOutLease, [{ amount: 1200000, status: "confirmed" }], today);
+    expect(res.eligible).toBe(false);
+    expect(res.reason).toBe("moved_out");
+  });
+
+  it("has later lease -> no (reason: has_later_lease)", () => {
+    const endedLease = {
+      ...baseLease,
+      endDate: "2026-11-19",
+    };
+    const laterLease = {
+      id: "lease-2",
+      startDate: "2026-11-20",
+      endDate: "2027-11-20",
+      rentAmount: 1200000,
+      rentFrequency: "annually",
+      terminatedAt: null,
+    };
+    const res = getRenewEligibility(endedLease, [{ amount: 1200000, status: "confirmed" }], today, [endedLease, laterLease]);
+    expect(res.eligible).toBe(false);
+    expect(res.reason).toBe("has_later_lease");
   });
 });

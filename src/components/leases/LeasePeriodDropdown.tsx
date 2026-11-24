@@ -1,0 +1,138 @@
+'use client';
+
+import * as React from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Check, ChevronDown } from "lucide-react";
+import { formatDateGB } from "@/lib/billing";
+import { cn } from "@/lib/utils";
+
+export interface LeaseOption {
+  id: string;
+  startDate: string | Date;
+  endDate: string | Date;
+  tenantName?: string | null;
+  status: "current" | "ended" | "moved_out" | "upcoming";
+}
+
+interface LeasePeriodDropdownProps {
+  leases: LeaseOption[];
+  selectedLeaseId: string;
+  onSelectLease: (leaseId: string) => void;
+  isLandlord?: boolean;
+  totalLeasesCount?: number;
+  totalTenantsCount?: number;
+}
+
+export function LeasePeriodDropdown({
+  leases,
+  selectedLeaseId,
+  onSelectLease,
+  isLandlord = false,
+  totalLeasesCount,
+  totalTenantsCount,
+}: LeasePeriodDropdownProps) {
+  const selectedLease = leases.find((l) => l.id === selectedLeaseId) || leases[0];
+
+  const getStatusBadge = (status: LeaseOption["status"]) => {
+    switch (status) {
+      case "current":
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-950/40 border border-emerald-900/40 text-emerald-400">
+            Current
+          </span>
+        );
+      case "ended":
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-800 border border-neutral-700 text-neutral-400">
+            Ended
+          </span>
+        );
+      case "moved_out":
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-800 border border-neutral-700 text-neutral-400">
+            Moved out
+          </span>
+        );
+      case "upcoming":
+        return (
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-950/40 border border-blue-900/40 text-blue-400">
+            Upcoming
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const formatOptionLabel = (lease: LeaseOption) => {
+    const range = `${formatDateGB(lease.startDate)} – ${formatDateGB(lease.endDate)}`;
+    if (isLandlord && lease.tenantName) {
+      return `${range} · ${lease.tenantName}`;
+    }
+    return range;
+  };
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-sm text-neutral-200 transition-colors w-full sm:w-auto min-w-[220px] focus:outline-none focus:ring-1 focus:ring-neutral-700"
+          aria-label="Select lease period"
+        >
+          <div className="flex items-center gap-2 min-w-0 truncate">
+            {selectedLease && (
+              <>
+                <span className="font-medium text-white truncate">
+                  {formatOptionLabel(selectedLease)}
+                </span>
+                {getStatusBadge(selectedLease.status)}
+              </>
+            )}
+          </div>
+          <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+        </button>
+      </DropdownMenu.Trigger>
+
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="start"
+          sideOffset={6}
+          className="z-50 min-w-[280px] max-w-[92vw] sm:max-w-md rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/50 text-neutral-200 text-sm focus:outline-none animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        >
+          {isLandlord && (
+            <div className="px-3 py-2 text-xs font-medium text-neutral-500 border-b border-neutral-800/80 mb-1">
+              {totalLeasesCount ?? leases.length} leases · {totalTenantsCount ?? new Set(leases.map((l) => l.tenantName).filter(Boolean)).size} tenants
+            </div>
+          )}
+
+          <div className="max-h-[300px] overflow-y-auto space-y-0.5">
+            {leases.map((lease) => {
+              const isSelected = lease.id === selectedLeaseId;
+              return (
+                <DropdownMenu.Item
+                  key={lease.id}
+                  onSelect={() => onSelectLease(lease.id)}
+                  className={cn(
+                    "flex items-center justify-between gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors outline-none",
+                    isSelected
+                      ? "bg-neutral-800/70 text-white font-medium"
+                      : "hover:bg-neutral-800/50 hover:text-white"
+                  )}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                      {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                    <span className="truncate">{formatOptionLabel(lease)}</span>
+                  </div>
+                  {getStatusBadge(lease.status)}
+                </DropdownMenu.Item>
+              );
+            })}
+          </div>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}

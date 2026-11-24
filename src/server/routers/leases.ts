@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { RentFrequency, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
 import { getLeaseBalance, getDueDateStatus, formatLagosYMD } from "@/lib/billing";
-import { getCurrentLease, getNextLease } from "@/lib/leases";
+import { getCurrentLease, getNextLease, getRenewEligibility } from "@/lib/leases";
 
 export const leasesRouter = router({
   lookupTenantEmail: authedProcedure
@@ -650,26 +650,17 @@ export const leasesRouter = router({
       const start = new Date(lease.startDate);
       const end = new Date(lease.endDate);
 
-      let status: "terminated" | "upcoming" | "active" | "renewal_due" | "expired" = "active";
+      let status: "terminated" | "upcoming" | "active" | "ended" | "moved_out" = "active";
 
       if (lease.terminatedAt) {
-        status = "terminated";
+        status = "moved_out";
       } else if (today < start) {
         status = "upcoming";
-      } else if (today > end) {
-        status = "expired";
+      } else if (today >= end) {
+        status = "ended";
       } else {
-        const renewalStartDate = new Date(end);
-        renewalStartDate.setDate(renewalStartDate.getDate() - lease.renewalWindowDays);
-        if (today >= renewalStartDate) {
-          status = "renewal_due";
-        } else {
-          status = "active";
-        }
+        status = "active";
       }
-
-      const renewalStartDate = new Date(end);
-      renewalStartDate.setDate(renewalStartDate.getDate() - lease.renewalWindowDays);
 
       return {
         id: lease.id,
@@ -681,7 +672,7 @@ export const leasesRouter = router({
         rentAmount: lease.rentAmount,
         rentFrequency: lease.rentFrequency,
         renewalWindowDays: lease.renewalWindowDays,
-        renewalStartDate,
+        renewalStartDate: end,
         terminatedAt: lease.terminatedAt,
         status,
         today,
@@ -1033,7 +1024,10 @@ export const leasesRouter = router({
       }
 
       return await prisma.lease.findMany({
-        where: { tenantId: ctx.user.id, status: "active" },
+        where: {
+          tenantId: ctx.user.id,
+          status: { in: ["active", "expired"] },
+        },
         include: {
           payments: {
             select: {
@@ -1079,7 +1073,7 @@ export const leasesRouter = router({
         where: {
           id: input.leaseId,
           tenantId: ctx.user.id,
-          status: "active",
+          status: { in: ["active", "expired"] },
         },
         include: {
           unit: {
@@ -1098,8 +1092,11 @@ export const leasesRouter = router({
                 },
               },
               leases: {
-                where: { terminatedAt: null, status: "active" },
-                orderBy: { startDate: "asc" },
+                where: {
+                  tenantId: ctx.user.id,
+                  status: { in: ["active", "expired"] },
+                },
+                orderBy: { startDate: "desc" },
                 select: {
                   id: true,
                   startDate: true,
@@ -1136,7 +1133,7 @@ export const leasesRouter = router({
     .input(
       z.object({
         sourceLeaseId: z.string().uuid(),
-        startDate: z.string(),
+        startDate: z.string().optional(),
         endDate: z.string(),
         rentAmount: z.number().nonnegative(),
         rentFrequency: z.nativeEnum(RentFrequency).default(RentFrequency.annually),
@@ -1145,12 +1142,25 @@ export const leasesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // 1. Fetch the source lease
+      // 1. Fetch the source lease with payments and all leases for the unit
       const sourceLease = await prisma.lease.findUnique({
         where: { id: input.sourceLeaseId },
         include: {
-          unit: { include: { property: true } },
+          unit: {
+            include: {
+              property: true,
+              leases: {
+                where: {
+                  status: { notIn: ["declined", "cancelled"] },
+                },
+              },
+            },
+          },
           tenant: { select: { fullName: true, email: true } },
+          payments: {
+            where: { status: "confirmed" },
+            select: { amount: true, status: true },
+          },
         },
       });
 
@@ -1166,40 +1176,48 @@ export const leasesRouter = router({
         });
       }
 
-      const start = new Date(input.startDate);
+      const today = new Date();
+      const eligibility = getRenewEligibility(
+        sourceLease,
+        sourceLease.payments,
+        today,
+        sourceLease.unit.leases
+      );
+
+      if (!eligibility.eligible) {
+        let msg = "Lease is not eligible for renewal.";
+        if (eligibility.reason === "not_ended") {
+          msg = "Renewal is only allowed on or after the lease end date.";
+        } else if (eligibility.reason === "unpaid") {
+          msg = `₦${(eligibility.unpaidAmount ?? 0).toLocaleString()} still unpaid on this lease.`;
+        } else if (eligibility.reason === "moved_out") {
+          msg = "Tenant has already moved out.";
+        } else if (eligibility.reason === "has_later_lease") {
+          msg = "A newer lease already exists on this unit.";
+        }
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: msg,
+        });
+      }
+
+      const start = new Date(sourceLease.endDate);
       const end = new Date(input.endDate);
 
       if (start >= end) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Renewal start date must be before end date.",
+          message: "Renewal end date must be after the start date.",
         });
       }
 
-      // 3. Overlap check — same logic as leases.create
-      const overlap = await prisma.lease.findFirst({
-        where: {
-          unitId: sourceLease.unitId,
-          terminatedAt: null,
-          NOT: {
-            OR: [{ endDate: { lt: start } }, { startDate: { gt: end } }],
-          },
-        },
-        include: {
-          tenant: { select: { fullName: true } },
-        },
+      // 3. Mark source lease as expired so overlap check allows the new lease
+      await prisma.lease.update({
+        where: { id: sourceLease.id },
+        data: { status: "expired" },
       });
 
-      if (overlap) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `This unit already has an active lease for ${
-            overlap.tenant.fullName
-          } until ${new Date(overlap.endDate).toLocaleDateString()}. The renewal start date must be after the existing lease ends.`,
-        });
-      }
-
-      // 4. Create the new lease — tenant linked directly, no invite code
+      // 4. Create the new lease — tenant linked directly, status active
       const newLease = await prisma.lease.create({
         data: {
           unitId: sourceLease.unitId,
@@ -1210,10 +1228,74 @@ export const leasesRouter = router({
           rentFrequency: input.rentFrequency,
           depositAmount: input.depositAmount ?? null,
           renewalWindowDays: input.renewalWindowDays,
+          status: "active",
         },
       });
 
       return { lease: newLease };
+    }),
+
+  markMovedOut: authedProcedure
+    .input(z.object({ leaseId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const lease = await prisma.lease.findUnique({
+        where: { id: input.leaseId },
+        include: {
+          unit: { include: { property: true } },
+          tenant: true,
+        },
+      });
+
+      if (!lease) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Lease not found." });
+      }
+
+      if (lease.unit.property.landlordId !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
+        });
+      }
+
+      const today = new Date();
+      const todayStr = formatLagosYMD(today);
+      const endStr = formatLagosYMD(lease.endDate);
+
+      if (todayStr < endStr) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot mark as moved out before the lease end date.",
+        });
+      }
+
+      if (lease.terminatedAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tenant is already marked as moved out.",
+        });
+      }
+
+      const updated = await prisma.lease.update({
+        where: { id: lease.id },
+        data: {
+          terminatedAt: new Date(),
+        },
+      });
+
+      try {
+        await createNotification({
+          recipientId: lease.tenantId,
+          type: "lease_invitation_declined", // General notice
+          title: "Moved out status updated",
+          body: `${ctx.user.fullName || "Landlord"} marked you as moved out of ${lease.unit.unitNumber} at ${lease.unit.property.name}.`,
+          relatedType: "lease",
+          relatedId: lease.id,
+        });
+      } catch (err) {
+        console.error("Failed to notify tenant of move-out:", err);
+      }
+
+      return updated;
     }),
 
   // Get redirect routing information for a lease
@@ -1235,7 +1317,7 @@ export const leasesRouter = router({
         search: z.string().optional(),
         propertyId: z.string().uuid().optional(),
         status: z.enum(["active", "past", "all"]).optional().default("all"),
-        leaseStatus: z.enum(["active", "renewal_due", "expired"]).optional(),
+        leaseStatus: z.enum(["active", "ended", "moved_out"]).optional(),
         page: z.number().int().min(1).optional().default(1),
         pageSize: z.number().int().min(1).max(100).optional().default(25),
       }).optional()
@@ -1330,7 +1412,7 @@ export const leasesRouter = router({
       const todayStr = formatLagosYMD(today);
 
       const computedTenants = users.map((user) => {
-        // Group leases by unitId so a unit with a current lease + renewal counts as 1 unit
+        // Group leases by unitId
         const leasesByUnit = new Map<string, typeof user.leasesAsTenant>();
         for (const lease of user.leasesAsTenant) {
           const list = leasesByUnit.get(lease.unitId) || [];
@@ -1338,7 +1420,31 @@ export const leasesRouter = router({
           leasesByUnit.set(lease.unitId, list);
         }
 
-        const processedLeases = [];
+        const processedUnits = [];
+        const allProcessedLeases: Array<{
+          id: string;
+          unitId: string;
+          unitName: string;
+          propertyId: string;
+          propertyName: string;
+          startDate: string;
+          endDate: string;
+          rentAmount: number;
+          rentFrequency: string;
+          leaseStatus: "active" | "ended" | "moved_out" | "upcoming" | "pending" | "invite_sent" | "invite_expired";
+          nextDueDate: string | null;
+          unpaidPeriods: number;
+          nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full" | "pending";
+          nextDueText: string;
+          totalLeaseRent: number;
+          totalPaid: number;
+          outstanding: number;
+          inviteCode: string | null;
+          inviteExpiresAt: string | null;
+          isCodeInvite: boolean;
+          hasPayments: boolean;
+        }> = [];
+
         for (const unitLeases of Array.from(leasesByUnit.values())) {
           // Filter out declined and cancelled leases
           const validLeases = unitLeases.filter((l) => {
@@ -1348,156 +1454,130 @@ export const leasesRouter = router({
 
           if (validLeases.length === 0) continue;
 
-          const current = getCurrentLease(validLeases, today) || validLeases[0];
-          const next = getNextLease(validLeases, today);
+          // Process each lease on this unit
+          const unitProcessedLeases = validLeases.map((l) => {
+            const unredeemedCode = l.inviteCodes?.find((c) => !c.redeemedAt);
+            const isPendingInApp = l.status === "pending";
 
-          const unredeemedCode = current.inviteCodes?.find((c) => !c.redeemedAt);
-          const isPendingInApp = current.status === "pending";
+            let leaseStatus: "active" | "ended" | "moved_out" | "upcoming" | "pending" | "invite_sent" | "invite_expired" = "active";
 
-          let leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" | "invite_sent" | "invite_expired" = "active";
-
-          if (unredeemedCode) {
-            const isExpired = new Date(unredeemedCode.expiresAt) <= today;
-            leaseStatus = isExpired ? "invite_expired" : "invite_sent";
-          } else if (isPendingInApp) {
-            const isExpired = Boolean(current.invitationExpiresAt && new Date(current.invitationExpiresAt) <= today);
-            leaseStatus = isExpired ? "invite_expired" : "invite_sent";
-          } else if (current.terminatedAt) {
-            leaseStatus = "terminated";
-          } else {
-            const startStr = formatLagosYMD(current.startDate);
-            const endStr = formatLagosYMD(current.endDate);
-            if (todayStr < startStr) {
-              leaseStatus = "upcoming";
-            } else if (todayStr > endStr) {
-              leaseStatus = "expired";
+            if (unredeemedCode) {
+              const isExpired = new Date(unredeemedCode.expiresAt) <= today;
+              leaseStatus = isExpired ? "invite_expired" : "invite_sent";
+            } else if (isPendingInApp) {
+              const isExpired = Boolean(l.invitationExpiresAt && new Date(l.invitationExpiresAt) <= today);
+              leaseStatus = isExpired ? "invite_expired" : "invite_sent";
+            } else if (l.terminatedAt) {
+              leaseStatus = "moved_out";
             } else {
-              const renewalDate = new Date(current.endDate);
-              renewalDate.setDate(renewalDate.getDate() - (current.renewalWindowDays ?? 60));
-              const renewalStr = formatLagosYMD(renewalDate);
-              if (todayStr >= renewalStr) {
-                leaseStatus = "renewal_due";
+              const startStr = formatLagosYMD(l.startDate);
+              const endStr = formatLagosYMD(l.endDate);
+              if (todayStr < startStr) {
+                leaseStatus = "upcoming";
+              } else if (todayStr >= endStr) {
+                leaseStatus = "ended";
               } else {
                 leaseStatus = "active";
               }
             }
-          }
 
-          if (leaseStatus === "invite_sent" || leaseStatus === "invite_expired") {
-            processedLeases.push({
-              id: current.id,
-              unitId: current.unit.id,
-              unitName: current.unit.unitNumber,
-              propertyId: current.unit.property.id,
-              propertyName: current.unit.property.name,
-              startDate: current.startDate.toISOString(),
-              endDate: current.endDate.toISOString(),
-              rentAmount: Number(current.rentAmount),
-              rentFrequency: current.rentFrequency,
+            const balance = getLeaseBalance(
+              {
+                startDate: l.startDate,
+                endDate: l.endDate,
+                rentAmount: l.rentAmount,
+                rentFrequency: l.rentFrequency,
+              },
+              l.payments,
+              today
+            );
+
+            const dueStatus = getDueDateStatus(
+              balance.nextDueDate,
+              l.endDate,
+              today,
+              balance.unpaidPeriods
+            );
+
+            return {
+              id: l.id,
+              unitId: l.unit.id,
+              unitName: l.unit.unitNumber,
+              propertyId: l.unit.property.id,
+              propertyName: l.unit.property.name,
+              startDate: l.startDate.toISOString(),
+              endDate: l.endDate.toISOString(),
+              rentAmount: Number(l.rentAmount),
+              rentFrequency: l.rentFrequency,
               leaseStatus,
-              nextDueDate: null,
-              unpaidPeriods: 0,
-              nextDueStatus: "pending" as const,
-              nextDueText: "—",
-              renewal: null,
+              nextDueDate: balance.nextDueDate ? balance.nextDueDate.toISOString() : null,
+              unpaidPeriods: balance.unpaidPeriods,
+              nextDueStatus: (leaseStatus === "invite_sent" || leaseStatus === "invite_expired") ? ("pending" as const) : dueStatus.status,
+              nextDueText: (leaseStatus === "invite_sent" || leaseStatus === "invite_expired") ? "—" : dueStatus.text,
+              totalLeaseRent: balance.totalLeaseRent,
+              totalPaid: balance.paidToDate,
+              outstanding: balance.outstanding,
               inviteCode: unredeemedCode?.code ?? null,
               inviteExpiresAt: unredeemedCode
                 ? unredeemedCode.expiresAt.toISOString()
-                : current.invitationExpiresAt
-                ? current.invitationExpiresAt.toISOString()
+                : l.invitationExpiresAt
+                ? l.invitationExpiresAt.toISOString()
                 : null,
               isCodeInvite: Boolean(unredeemedCode),
-              hasPayments: current.payments.length > 0,
-            });
-            continue;
-          }
+              hasPayments: l.payments.length > 0,
+            };
+          });
 
-          const balance = getLeaseBalance(
-            {
-              startDate: current.startDate,
-              endDate: current.endDate,
-              rentAmount: current.rentAmount,
-              rentFrequency: current.rentFrequency,
-            },
-            current.payments,
-            today
-          );
+          // Sort newest first
+          unitProcessedLeases.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+          allProcessedLeases.push(...unitProcessedLeases);
 
-          const dueStatus = getDueDateStatus(
-            balance.nextDueDate,
-            current.endDate,
-            today,
-            balance.unpaidPeriods
-          );
-
-          processedLeases.push({
-            id: current.id,
+          // Current lease for this unit: the one returned by getCurrentLease, or newest
+          const current = getCurrentLease(validLeases, today) || validLeases[0];
+          const currentProcessed = unitProcessedLeases.find((p) => p.id === current.id) || unitProcessedLeases[0];
+          processedUnits.push({
             unitId: current.unit.id,
             unitName: current.unit.unitNumber,
             propertyId: current.unit.property.id,
             propertyName: current.unit.property.name,
-            startDate: current.startDate.toISOString(),
-            endDate: current.endDate.toISOString(),
-            rentAmount: Number(current.rentAmount),
-            rentFrequency: current.rentFrequency,
-            leaseStatus,
-            nextDueDate: balance.nextDueDate ? balance.nextDueDate.toISOString() : null,
-            unpaidPeriods: balance.unpaidPeriods,
-            nextDueStatus: dueStatus.status,
-            nextDueText: dueStatus.text,
-            renewal: next
-              ? {
-                  id: next.id,
-                  startDate: next.startDate.toISOString(),
-                  endDate: next.endDate.toISOString(),
-                  rentAmount: Number(next.rentAmount),
-                  rentFrequency: next.rentFrequency,
-                }
-              : null,
-            inviteCode: null,
-            inviteExpiresAt: null,
-            isCodeInvite: false,
-            hasPayments: current.payments.length > 0,
+            currentLease: currentProcessed,
+            allLeases: unitProcessedLeases,
           });
         }
 
-        const isCurrent = processedLeases.some(
+        const isCurrent = allProcessedLeases.some(
           (l) =>
             l.leaseStatus === "active" ||
-            l.leaseStatus === "renewal_due" ||
             l.leaseStatus === "upcoming" ||
             l.leaseStatus === "invite_sent" ||
             l.leaseStatus === "invite_expired"
         );
 
         let overallStatus:
-          | "expired"
-          | "renewal_due"
+          | "ended"
+          | "moved_out"
           | "active"
           | "upcoming"
-          | "terminated"
           | "invite_sent"
-          | "invite_expired" = "active";
-        if (processedLeases.some((l) => l.leaseStatus === "expired")) {
-          overallStatus = "expired";
-        } else if (processedLeases.some((l) => l.leaseStatus === "renewal_due")) {
-          overallStatus = "renewal_due";
-        } else if (processedLeases.some((l) => l.leaseStatus === "active")) {
+          | "invite_expired" = "ended";
+        if (allProcessedLeases.some((l) => l.leaseStatus === "active")) {
           overallStatus = "active";
-        } else if (processedLeases.some((l) => l.leaseStatus === "upcoming")) {
+        } else if (allProcessedLeases.some((l) => l.leaseStatus === "upcoming")) {
           overallStatus = "upcoming";
-        } else if (processedLeases.some((l) => l.leaseStatus === "invite_expired")) {
+        } else if (allProcessedLeases.some((l) => l.leaseStatus === "invite_expired")) {
           overallStatus = "invite_expired";
-        } else if (processedLeases.some((l) => l.leaseStatus === "invite_sent")) {
+        } else if (allProcessedLeases.some((l) => l.leaseStatus === "invite_sent")) {
           overallStatus = "invite_sent";
-        } else if (processedLeases.some((l) => l.leaseStatus === "terminated")) {
-          overallStatus = "terminated";
+        } else if (allProcessedLeases.some((l) => l.leaseStatus === "ended")) {
+          overallStatus = "ended";
+        } else if (allProcessedLeases.some((l) => l.leaseStatus === "moved_out")) {
+          overallStatus = "moved_out";
         }
 
-        const primaryUnit = processedLeases[0]?.unitName ?? "—";
-        const moreCount = Math.max(0, processedLeases.length - 1);
+        const primaryUnit = processedUnits[0]?.unitName ?? "—";
+        const moreCount = Math.max(0, processedUnits.length - 1);
 
-        const uniqueProperties = Array.from(new Set(processedLeases.map((l) => l.propertyName)));
+        const uniqueProperties = Array.from(new Set(allProcessedLeases.map((l) => l.propertyName)));
         const propertyDisplay =
           uniqueProperties.length === 1
             ? uniqueProperties[0]
@@ -1505,8 +1585,8 @@ export const leasesRouter = router({
             ? `${uniqueProperties.length} properties`
             : "—";
 
-        const activeLeases = processedLeases.filter(
-          (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due" || l.leaseStatus === "upcoming"
+        const activeLeases = allProcessedLeases.filter(
+          (l) => l.leaseStatus === "active" || l.leaseStatus === "upcoming"
         );
 
         let nextRentDue: {
@@ -1556,7 +1636,8 @@ export const leasesRouter = router({
           email: user.email,
           phone: user.phone,
           avatarUrl: user.avatarUrl,
-          leases: processedLeases,
+          leases: allProcessedLeases,
+          units: processedUnits,
           unitDisplay: {
             primaryUnit,
             moreCount,

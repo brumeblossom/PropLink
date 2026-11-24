@@ -1,4 +1,5 @@
-import { formatLagosYMD } from "./billing";
+import { formatLagosYMD, getPeriodStarts, type PaymentLike } from "./billing";
+import { formatCurrency } from "./utils";
 
 export interface LeaseLike {
   id?: string;
@@ -6,6 +7,8 @@ export interface LeaseLike {
   endDate: Date | string;
   terminatedAt?: Date | string | null;
   status?: string | null;
+  rentAmount?: number | string | bigint | { toString(): string } | null;
+  rentFrequency?: string | null;
   invitationExpiresAt?: Date | string | null;
   inviteCodes?: Array<{
     code?: string;
@@ -13,6 +16,133 @@ export interface LeaseLike {
     expiresAt?: Date | string | null;
   }> | null;
   [key: string]: unknown;
+}
+
+export type LeaseDisplayStatus =
+  | "upcoming"
+  | "active"
+  | "ended"
+  | "moved_out"
+  | "pending"
+  | "invite_sent"
+  | "invite_expired";
+
+/**
+ * Returns the user-facing display status for a lease:
+ * - "moved_out": terminatedAt is set
+ * - "pending" / "invite_sent" / "invite_expired": awaiting tenant invitation response
+ * - "upcoming": today < startDate
+ * - "ended": today > endDate
+ * - "active": startDate <= today <= endDate
+ */
+export function getLeaseDisplayStatus(
+  lease: LeaseLike,
+  today: Date | string = new Date()
+): LeaseDisplayStatus {
+  if (lease.terminatedAt) {
+    return "moved_out";
+  }
+  if (lease.status === "pending") {
+    if (lease.invitationExpiresAt && new Date(lease.invitationExpiresAt) < new Date(today)) {
+      return "invite_expired";
+    }
+    return "pending";
+  }
+  if (lease.inviteCodes && lease.inviteCodes.length > 0) {
+    const unredeemed = lease.inviteCodes.find((c) => !c.redeemedAt);
+    if (unredeemed) {
+      if (unredeemed.expiresAt && new Date(unredeemed.expiresAt) < new Date(today)) {
+        return "invite_expired";
+      }
+      return "invite_sent";
+    }
+  }
+
+  const todayStr = formatLagosYMD(today);
+  const startStr = formatLagosYMD(lease.startDate);
+  const endStr = formatLagosYMD(lease.endDate);
+
+  if (todayStr < startStr) {
+    return "upcoming";
+  }
+  if (todayStr > endStr) {
+    return "ended";
+  }
+  return "active";
+}
+
+export interface RenewEligibility {
+  eligible: boolean;
+  reason?: "not_ended" | "moved_out" | "unpaid" | "has_later_lease";
+  unpaidAmount?: number;
+  message?: string;
+}
+
+/**
+ * Checks whether a lease is eligible for renewal:
+ * - Allowed only on/after the source lease end date
+ * - When confirmed payments >= totalLeaseRent for the whole lease
+ * - Not moved out (terminatedAt is null)
+ * - No later lease exists on the unit
+ */
+export function getRenewEligibility(
+  lease: LeaseLike,
+  confirmedPayments: PaymentLike[] = [],
+  today: Date | string = new Date(),
+  allUnitLeases: LeaseLike[] = []
+): RenewEligibility {
+  if (lease.terminatedAt) {
+    return { eligible: false, reason: "moved_out", message: "Tenant has moved out." };
+  }
+
+  const todayStr = formatLagosYMD(today);
+  const endStr = formatLagosYMD(lease.endDate);
+
+  if (todayStr < endStr) {
+    return { eligible: false, reason: "not_ended", message: "Lease has not reached its end date." };
+  }
+
+  // Check if a later lease already exists on the unit
+  const hasLaterLease = allUnitLeases.some((l) => {
+    if (l === lease || (l.id && lease.id && l.id === lease.id)) return false;
+    if (l.terminatedAt || l.status === "declined" || l.status === "cancelled") return false;
+    const startStr = formatLagosYMD(l.startDate);
+    return startStr >= endStr;
+  });
+
+  if (hasLaterLease) {
+    return {
+      eligible: false,
+      reason: "has_later_lease",
+      message: "A renewed or later lease already exists for this unit.",
+    };
+  }
+
+  // Check confirmed payments vs total lease rent
+  const rentAmount = Number(lease.rentAmount || 0);
+  const periodStarts = getPeriodStarts({
+    startDate: lease.startDate,
+    endDate: lease.endDate,
+    rentFrequency: (lease.rentFrequency as string) || "monthly",
+  });
+  const totalLeaseRent = rentAmount * periodStarts.length;
+
+  const confirmedPaid = confirmedPayments
+    .filter((p) => !p.status || p.status === "confirmed")
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+  const unpaidAmount = Math.max(0, totalLeaseRent - confirmedPaid);
+
+  if (unpaidAmount > 0) {
+    return {
+      eligible: false,
+      reason: "unpaid",
+      unpaidAmount,
+      message: `${formatCurrency(unpaidAmount)} still unpaid on this lease`,
+    };
+  }
+
+  return { eligible: true };
 }
 
 /**
@@ -169,6 +299,12 @@ export function getUnitStatus(
 
     if (startStr > todayStr) {
       return "reserved";
+    }
+
+    // Ended lease: todayStr > endStr
+    // An ended, not moved out (terminatedAt is empty), not renewed lease still counts as occupied
+    if (!current.terminatedAt) {
+      return "occupied";
     }
   }
 

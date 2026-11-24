@@ -540,6 +540,12 @@ export default function PropertyDetailPage() {
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 text-neutral-400">
                 {units?.length || 0}
               </span>
+              <Link
+                href={`/landlord/tenants?propertyId=${propertyId}&status=all`}
+                className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800/80 hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors border border-neutral-700/60 inline-flex items-center gap-1"
+              >
+                <span>{property.tenantsSoFarCount ?? 0} tenants so far</span>
+              </Link>
             </div>
 
             {/* Unified Add Unit dropdown */}

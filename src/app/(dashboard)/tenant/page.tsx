@@ -29,27 +29,21 @@ function computeLeaseStatus(
     terminatedAt?: Date | string | null;
   },
   today = new Date()
-): "active" | "renewal_due" | "expired" | "upcoming" | "terminated" {
-  if (lease.terminatedAt) return "terminated";
+): "active" | "ended" | "moved_out" | "upcoming" {
+  if (lease.terminatedAt) return "moved_out";
   const todayStr = formatLagosYMD(today);
   const startStr = formatLagosYMD(lease.startDate);
   const endStr = formatLagosYMD(lease.endDate);
 
   if (todayStr < startStr) return "upcoming";
-  if (todayStr > endStr) return "expired";
-
-  const renewalDate = new Date(lease.endDate);
-  renewalDate.setDate(renewalDate.getDate() - (lease.renewalWindowDays ?? 60));
-  const renewalStr = formatLagosYMD(renewalDate);
-
-  if (todayStr >= renewalStr) return "renewal_due";
+  if (todayStr >= endStr) return "ended";
   return "active";
 }
 
 function StatusBadge({
   status,
 }: {
-  status: "active" | "renewal_due" | "expired" | "upcoming" | "terminated";
+  status: "active" | "ended" | "moved_out" | "upcoming";
 }) {
   switch (status) {
     case "active":
@@ -58,20 +52,19 @@ function StatusBadge({
           Active
         </span>
       );
-    case "renewal_due":
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-950/40 border border-amber-900/40 text-amber-400">
-          Renewal due
-        </span>
-      );
     case "upcoming":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-950/40 border border-blue-900/40 text-blue-400">
           Upcoming
         </span>
       );
-    case "expired":
-    case "terminated":
+    case "moved_out":
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-850 border border-neutral-800 text-neutral-400">
+          Moved out
+        </span>
+      );
+    case "ended":
     default:
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-850 border border-neutral-800 text-neutral-400">
@@ -160,7 +153,7 @@ export default function TenantHomePage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "renewal_due" | "upcoming" | "ended"
+    "all" | "active" | "upcoming" | "ended"
   >("all");
 
   const today = useMemo(() => new Date(), []);
@@ -183,7 +176,26 @@ export default function TenantHomePage() {
       };
     }
 
-    const processed = leases.map((lease) => {
+    // Group leases by unitId so "Your rentals" has 1 row per unit (current lease)
+    const leasesByUnit = new Map<string, typeof leases>();
+    for (const l of leases) {
+      const list = leasesByUnit.get(l.unit.id) || [];
+      list.push(l);
+      leasesByUnit.set(l.unit.id, list);
+    }
+
+    const unitCurrentLeases: typeof leases = [];
+    for (const unitLeases of Array.from(leasesByUnit.values())) {
+      // Find current lease or newest
+      const current = unitLeases.find((l) => !l.terminatedAt && new Date(l.endDate) > today && new Date(l.startDate) <= today)
+        || unitLeases.find((l) => !l.terminatedAt && new Date(l.startDate) > today)
+        || unitLeases[0];
+      if (current) {
+        unitCurrentLeases.push(current);
+      }
+    }
+
+    const processed = unitCurrentLeases.map((lease) => {
       const leaseStatus = computeLeaseStatus(lease, today);
       const balance = getLeaseBalance(
         {
@@ -212,9 +224,9 @@ export default function TenantHomePage() {
       };
     });
 
-    // Active leases are running today (active or renewal_due)
+    // Active leases are running today (active)
     const activeRunning = processed.filter(
-      (l) => l.leaseStatus === "active" || l.leaseStatus === "renewal_due"
+      (l) => l.leaseStatus === "active"
     );
 
     const activeCount = activeRunning.length;
@@ -268,18 +280,16 @@ export default function TenantHomePage() {
     return processedLeases.filter((l) => {
       // Status filter
       if (statusFilter === "all") {
-        // Current and upcoming; ended only when filter says Ended
-        if (l.leaseStatus === "expired" || l.leaseStatus === "terminated") {
+        // Current and upcoming; ended and moved_out only when filter says Ended
+        if (l.leaseStatus === "ended" || l.leaseStatus === "moved_out") {
           return false;
         }
       } else if (statusFilter === "active") {
         if (l.leaseStatus !== "active") return false;
-      } else if (statusFilter === "renewal_due") {
-        if (l.leaseStatus !== "renewal_due") return false;
       } else if (statusFilter === "upcoming") {
         if (l.leaseStatus !== "upcoming") return false;
       } else if (statusFilter === "ended") {
-        if (l.leaseStatus !== "expired" && l.leaseStatus !== "terminated") {
+        if (l.leaseStatus !== "ended" && l.leaseStatus !== "moved_out") {
           return false;
         }
       }
@@ -530,14 +540,13 @@ export default function TenantHomePage() {
                 value={statusFilter}
                 onChange={(e) =>
                   setStatusFilter(
-                    e.target.value as "all" | "active" | "renewal_due" | "upcoming" | "ended"
+                    e.target.value as "all" | "active" | "upcoming" | "ended"
                   )
                 }
                 className="w-full h-9 text-xs"
               >
                 <option value="all">All statuses</option>
                 <option value="active">Active</option>
-                <option value="renewal_due">Renewal due</option>
                 <option value="upcoming">Upcoming</option>
                 <option value="ended">Ended</option>
               </Select>

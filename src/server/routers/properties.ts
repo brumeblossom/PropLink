@@ -106,8 +106,20 @@ export const propertiesRouter = router({
       const totalUnits = property.units.length;
       const occupiedUnits = property.units.filter((u) => getUnitStatus(u.leases, now) === "occupied").length;
 
+      // Count distinct tenants who ever had an accepted lease in this property (current and past)
+      const allAcceptedLeases = await prisma.lease.findMany({
+        where: {
+          unit: { propertyId: input.id },
+          status: { notIn: ["declined", "cancelled", "pending"] },
+        },
+        select: { tenantId: true },
+        distinct: ["tenantId"],
+      });
+      const tenantsSoFarCount = allAcceptedLeases.length;
+
       return {
         ...property,
+        tenantsSoFarCount,
         stats: {
           totalUnits,
           occupiedUnits,

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { trpc } from "@/utils/trpc";
 import * as Dialog from "@radix-ui/react-dialog";
 import { 
@@ -10,17 +11,13 @@ import {
   Phone, 
   X,
   ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-  Pencil,
-  Trash2
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ActionMenu } from "@/components/ui/action-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -36,11 +33,14 @@ interface ProcessedLease {
   endDate: string;
   rentAmount: number;
   rentFrequency: string;
-  leaseStatus: "active" | "renewal_due" | "expired" | "upcoming" | "terminated" | "pending" | "invite_sent" | "invite_expired";
+  leaseStatus: "active" | "ended" | "moved_out" | "upcoming" | "pending" | "invite_sent" | "invite_expired";
   nextDueDate: string | null;
   unpaidPeriods: number;
   nextDueStatus: "overdue" | "today" | "upcoming" | "paid_in_full" | "pending";
   nextDueText: string;
+  totalLeaseRent?: number;
+  totalPaid?: number;
+  outstanding?: number;
   renewal?: {
     id: string;
     startDate: string;
@@ -54,6 +54,15 @@ interface ProcessedLease {
   hasPayments?: boolean;
 }
 
+interface UnitLeaseGroup {
+  unitId: string;
+  unitName: string;
+  propertyId: string;
+  propertyName: string;
+  currentLease: ProcessedLease;
+  allLeases: ProcessedLease[];
+}
+
 interface TenantRow {
   id: string;
   fullName: string;
@@ -61,12 +70,13 @@ interface TenantRow {
   phone: string | null;
   avatarUrl: string | null;
   leases: ProcessedLease[];
+  units?: UnitLeaseGroup[];
   unitDisplay: {
     primaryUnit: string;
     moreCount: number;
   };
   propertyDisplay: string;
-  overallStatus: "expired" | "renewal_due" | "active" | "upcoming" | "terminated" | "pending" | "invite_sent" | "invite_expired";
+  overallStatus: "ended" | "moved_out" | "active" | "upcoming" | "pending" | "invite_sent" | "invite_expired";
   isCurrent: boolean;
   nextRentDue: {
     type: "overdue" | "today" | "upcoming" | "paid_in_full" | "expired" | "pending";
@@ -97,16 +107,16 @@ function LeaseStatusBadge({ status }: { status: string }) {
           Pending
         </span>
       );
-    case "expired":
+    case "ended":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-          Expired
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
+          Ended
         </span>
       );
-    case "renewal_due":
+    case "moved_out":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-          Renewal due
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
+          Moved out
         </span>
       );
     case "active":
@@ -124,7 +134,7 @@ function LeaseStatusBadge({ status }: { status: string }) {
     case "terminated":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
-          Terminated
+          Moved out
         </span>
       );
     default:
@@ -171,12 +181,16 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
   );
 }
 
-export default function LandlordTenantsPage() {
+function LandlordTenantsContent() {
+  const searchParams = useSearchParams();
+  const initialPropertyId = searchParams.get("propertyId") || "";
+  const initialStatus = (searchParams.get("status") as "all" | "active" | "past") || "all";
+
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [propertyId, setPropertyId] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "past">("all");
-  const [leaseStatusFilter, setLeaseStatusFilter] = useState<"" | "active" | "renewal_due" | "expired">("");
+  const [propertyId, setPropertyId] = useState(initialPropertyId);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "past">(initialStatus);
+  const [leaseStatusFilter, setLeaseStatusFilter] = useState<"" | "active" | "ended" | "moved_out">("");
   const [page, setPage] = useState(1);
   const [selectedTenant, setSelectedTenant] = useState<TenantRow | null>(null);
 
@@ -190,16 +204,6 @@ export default function LandlordTenantsPage() {
 
   const [leaseToCancelCode, setLeaseToCancelCode] = useState<{ id: string; unitName: string; tenantName: string } | null>(null);
   const [leaseToCancelInApp, setLeaseToCancelInApp] = useState<{ id: string; unitName: string } | null>(null);
-
-  const regenerateInviteCodeMutation = trpc.leases.regenerateInviteCode.useMutation({
-    onSuccess: (data) => {
-      toast(`New code ready. Share it with ${data.tenantName}.`, "success");
-      utils.leases.getLandlordTenants.invalidate();
-    },
-    onError: (err) => {
-      toast(err.message, "error");
-    },
-  });
 
   const updatePlaceholderTenantMutation = trpc.leases.updatePlaceholderTenant.useMutation({
     onSuccess: () => {
@@ -220,16 +224,6 @@ export default function LandlordTenantsPage() {
       utils.leases.getLandlordTenants.invalidate();
       utils.properties.list.invalidate();
       utils.dashboard.landlordSummary.invalidate();
-    },
-    onError: (err) => {
-      toast(err.message, "error");
-    },
-  });
-
-  const resendInvitationMutation = trpc.leases.resendInvitation.useMutation({
-    onSuccess: () => {
-      toast("Invitation resent", "success");
-      utils.leases.getLandlordTenants.invalidate();
     },
     onError: (err) => {
       toast(err.message, "error");
@@ -368,15 +362,15 @@ export default function LandlordTenantsPage() {
               <Select
                 value={leaseStatusFilter}
                 onChange={(e) => {
-                  setLeaseStatusFilter(e.target.value as "" | "active" | "renewal_due" | "expired");
+                  setLeaseStatusFilter(e.target.value as "" | "active" | "ended" | "moved_out");
                   setPage(1);
                 }}
                 aria-label="Filter by lease status"
               >
                 <option value="">All lease statuses</option>
                 <option value="active">Active</option>
-                <option value="renewal_due">Renewal due</option>
-                <option value="expired">Expired</option>
+                <option value="ended">Ended</option>
+                <option value="moved_out">Moved out</option>
               </Select>
             </div>
           </div>
@@ -706,151 +700,94 @@ export default function LandlordTenantsPage() {
                   <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6 space-y-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
-                        Units ({selectedTenant.leases.length})
+                        Units ({selectedTenant.units?.length ?? new Set(selectedTenant.leases.map((l) => l.unitId)).size})
                       </h3>
                     </div>
 
-                    <div className="space-y-3">
-                      {selectedTenant.leases.map((lease) => {
-                        const leaseDue = formatTwoLineRentDue({
-                          leaseStatus: lease.leaseStatus,
-                          nextDueDate: lease.nextDueDate,
-                          unpaidPeriods: lease.unpaidPeriods,
-                          startDate: lease.startDate,
-                        });
-
-                        return (
-                          <div
-                            key={lease.id}
-                            className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3.5"
-                          >
-                            {/* Card Header: Unit Flat3 + status pill + actions */}
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-semibold text-sm text-white">
-                                Unit {lease.unitName}
+                    <div className="space-y-4">
+                      {(selectedTenant.units && selectedTenant.units.length > 0
+                        ? selectedTenant.units
+                        : Array.from(
+                            selectedTenant.leases.reduce((map, l) => {
+                              const list = map.get(l.unitId) || [];
+                              list.push(l);
+                              map.set(l.unitId, list);
+                              return map;
+                            }, new Map<string, ProcessedLease[]>()).entries()
+                          ).map(([unitId, leases]) => ({
+                            unitId,
+                            unitName: leases[0].unitName,
+                            propertyId: leases[0].propertyId,
+                            propertyName: leases[0].propertyName,
+                            currentLease: leases[0],
+                            allLeases: leases,
+                          }))
+                      ).map((unitGroup) => (
+                        <div
+                          key={unitGroup.unitId}
+                          className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3.5"
+                        >
+                          {/* Unit Card Header */}
+                          <div className="flex items-center justify-between gap-2 border-b border-neutral-800/60 pb-3">
+                            <div>
+                              <span className="font-semibold text-sm text-white block">
+                                Unit {unitGroup.unitName}
                               </span>
-                              <div className="flex items-center gap-1.5">
-                                <LeaseStatusBadge status={lease.leaseStatus} />
-                                {(lease.leaseStatus === "invite_sent" || lease.leaseStatus === "invite_expired") && (
-                                  <ActionMenu
-                                    items={
-                                      lease.isCodeInvite
-                                        ? [
-                                            {
-                                              label: "New code",
-                                              icon: <RefreshCw className="w-4 h-4" />,
-                                              onClick: () => regenerateInviteCodeMutation.mutate({ leaseId: lease.id }),
-                                            },
-                                            {
-                                              label: "Edit tenant details",
-                                              icon: <Pencil className="w-4 h-4" />,
-                                              onClick: () => {
-                                                setEditTenantFullName(selectedTenant.fullName);
-                                                setEditTenantEmail(selectedTenant.email);
-                                                setEditTenantError(null);
-                                                setLeaseToEditTenant({
-                                                  id: lease.id,
-                                                  fullName: selectedTenant.fullName,
-                                                  email: selectedTenant.email,
-                                                });
-                                              },
-                                            },
-                                            {
-                                              label: "Cancel invite",
-                                              icon: <Trash2 className="w-4 h-4" />,
-                                              variant: "danger",
-                                              disabled: Boolean(lease.hasPayments),
-                                              disabledTooltip: "This lease has payments. Delete them first.",
-                                              onClick: () => {
-                                                setLeaseToCancelCode({
-                                                  id: lease.id,
-                                                  unitName: lease.unitName,
-                                                  tenantName: selectedTenant.fullName,
-                                                });
-                                              },
-                                            },
-                                          ]
-                                        : [
-                                            {
-                                              label: "Resend invitation",
-                                              icon: <RefreshCw className="w-4 h-4" />,
-                                              onClick: () => resendInvitationMutation.mutate({ leaseId: lease.id }),
-                                            },
-                                            {
-                                              label: "Cancel invitation",
-                                              icon: <Trash2 className="w-4 h-4" />,
-                                              variant: "danger",
-                                              onClick: () => {
-                                                setLeaseToCancelInApp({
-                                                  id: lease.id,
-                                                  unitName: lease.unitName,
-                                                });
-                                              },
-                                            },
-                                          ]
-                                    }
-                                  />
-                                )}
-                              </div>
+                              <span className="text-xs text-neutral-400 block mt-0.5">
+                                {unitGroup.propertyName}
+                              </span>
                             </div>
-
-                            {/* 2-column grid: Property, Lease, Rent, Next rent due */}
-                            <div className="grid grid-cols-2 gap-3 text-xs">
-                              {/* Property */}
-                              <div className="space-y-0.5 min-w-0">
-                                <div className="text-neutral-500">Property</div>
-                                <div
-                                  className="font-medium text-neutral-200 truncate"
-                                  title={lease.propertyName}
-                                >
-                                  {lease.propertyName}
-                                </div>
-                              </div>
-
-                              {/* Lease */}
-                              <div className="space-y-0.5 min-w-0">
-                                <div className="text-neutral-500">Lease</div>
-                                <div className="font-medium text-neutral-200 whitespace-nowrap">
-                                  {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
-                                </div>
-                              </div>
-
-                              {/* Rent */}
-                              <div className="space-y-0.5 min-w-0">
-                                <div className="text-neutral-500">Rent</div>
-                                <div className="font-medium text-neutral-200 truncate">
-                                  {formatCurrency(lease.rentAmount)} / {lease.rentFrequency}
-                                </div>
-                              </div>
-
-                              {/* Next rent due: same two-line format */}
-                              <div className="space-y-0.5 min-w-0">
-                                <div className="text-neutral-500">Next rent due</div>
-                                <div>
-                                  <TwoLineRentDue data={leaseDue} />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Renewal note if renewal exists */}
-                            {lease.renewal && (
-                              <div className="pt-2 border-t border-neutral-800/40 text-xs text-neutral-400">
-                                Renewal · {formatDateGB(lease.renewal.startDate)} – {formatDateGB(lease.renewal.endDate)}
-                              </div>
-                            )}
-
-                            {/* Footer link: View unit ↗ */}
-                            <div className="pt-2 border-t border-neutral-800/60">
-                              <Link
-                                href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}`}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
-                              >
-                                View unit ↗
-                              </Link>
-                            </div>
+                            <Link
+                              href={`/landlord/properties/${unitGroup.propertyId}/units/${unitGroup.unitId}`}
+                              className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+                            >
+                              View unit ↗
+                            </Link>
                           </div>
-                        );
-                      })}
+
+                          {/* Leases for this unit */}
+                          <div className="space-y-3">
+                            {unitGroup.allLeases.map((lease) => {
+                              const totalRent = lease.totalLeaseRent ?? 0;
+                              const paid = lease.totalPaid ?? 0;
+                              const outstanding = lease.outstanding ?? 0;
+
+                              return (
+                                <div
+                                  key={lease.id}
+                                  className="rounded-lg border border-neutral-800/80 bg-neutral-900/40 p-3 space-y-2 text-xs"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-medium text-neutral-200">
+                                        {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                                      </span>
+                                      <LeaseStatusBadge status={lease.leaseStatus} />
+                                    </div>
+                                    <Link
+                                      href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}?lease=${lease.id}`}
+                                      className="text-emerald-400 hover:text-emerald-300 font-medium shrink-0"
+                                    >
+                                      View
+                                    </Link>
+                                  </div>
+
+                                  <div className="flex items-center justify-between gap-2 text-neutral-400">
+                                    <span>
+                                      Paid {formatCurrency(paid)} of {formatCurrency(totalRent)}
+                                    </span>
+                                    {outstanding > 0 && (
+                                      <span className="text-red-400 font-medium">
+                                        {formatCurrency(outstanding)} outstanding
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </>
@@ -1009,5 +946,25 @@ export default function LandlordTenantsPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function LandlordTenantsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-neutral-950 text-white">
+          <PageHeader title="Tenant List" />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 space-y-4">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <LandlordTenantsContent />
+    </Suspense>
   );
 }

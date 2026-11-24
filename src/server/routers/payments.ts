@@ -28,10 +28,10 @@ export const paymentsRouter = router({
         });
       }
 
-      if (lease.status !== "active") {
+      if (lease.status === "pending" || lease.status === "declined" || lease.status === "cancelled") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Payments cannot be logged against a pending, declined, or expired lease.",
+          message: "Payments cannot be logged against a pending, declined, or cancelled lease.",
         });
       }
 
@@ -88,10 +88,10 @@ export const paymentsRouter = router({
         });
       }
 
-      if (lease.status !== "active") {
+      if (lease.status === "pending" || lease.status === "declined" || lease.status === "cancelled") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Payments cannot be logged against a pending, declined, or expired lease.",
+          message: "Payments cannot be logged against a pending, declined, or cancelled lease.",
         });
       }
 
@@ -776,10 +776,10 @@ export const paymentsRouter = router({
         });
       }
 
-      if (lease.status !== "active") {
+      if (lease.status === "pending" || lease.status === "declined" || lease.status === "cancelled") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Payments cannot be logged against a pending, declined, or expired lease.",
+          message: "Payments cannot be logged against a pending, declined, or cancelled lease.",
         });
       }
 
@@ -1013,10 +1013,10 @@ export const paymentsRouter = router({
         });
       }
 
-      if (lease.status !== "active") {
+      if (lease.status === "pending" || lease.status === "declined" || lease.status === "cancelled") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Payments cannot be logged against a pending, declined, or expired lease.",
+          message: "Payments cannot be logged against a pending, declined, or cancelled lease.",
         });
       }
 
