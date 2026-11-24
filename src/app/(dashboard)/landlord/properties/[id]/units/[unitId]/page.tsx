@@ -865,7 +865,7 @@ export default function UnitDetailPage() {
 
   if (isLoadingStatus || isLoadingLeases) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title={unit ? `Unit ${unit.unitNumber}` : "Unit"} />
 
         {/* Main Content */}
@@ -879,7 +879,7 @@ export default function UnitDetailPage() {
           </div>
 
           {/* Unit Header Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6 backdrop-blur-sm space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-2">
                 <div className="flex items-center space-x-3">
@@ -893,7 +893,7 @@ export default function UnitDetailPage() {
                 <Skeleton className="h-9 w-24 rounded-md" />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-neutral-800">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="space-y-1">
                   <Skeleton className="h-3 w-16" />
@@ -904,7 +904,7 @@ export default function UnitDetailPage() {
           </div>
 
           {/* Lease / Timeline Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-4">
+          <div className="rounded-xl border border-border bg-card p-6 backdrop-blur-sm space-y-4">
             <div className="flex items-center justify-between">
               <Skeleton className="h-6 w-40" />
               <Skeleton className="h-6 w-24 rounded-full" />
@@ -921,12 +921,12 @@ export default function UnitDetailPage() {
           </div>
 
           {/* Payments Ledger Section */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 overflow-hidden">
-            <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="p-4 border-b border-border flex justify-between items-center">
               <Skeleton className="h-6 w-36" />
               <Skeleton className="h-8 w-28 rounded-md" />
             </div>
-            <div className="p-4 border-b border-neutral-800 flex gap-4">
+            <div className="p-4 border-b border-border flex gap-4">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-4 w-20" />
@@ -934,7 +934,7 @@ export default function UnitDetailPage() {
               <Skeleton className="h-4 w-20 ml-auto" />
             </div>
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="p-4 border-b border-neutral-800/60 flex items-center justify-between">
+              <div key={i} className="p-4 border-b border-border/60 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <Skeleton className="h-4 w-20" />
                   <Skeleton className="h-4 w-28" />
@@ -951,7 +951,7 @@ export default function UnitDetailPage() {
 
   if (!property || !unit) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-950 text-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground">
         <p className="text-lg">Unit not found.</p>
         <Link href="/landlord/properties" className="text-sm underline mt-2">
           Back to properties
@@ -983,7 +983,7 @@ export default function UnitDetailPage() {
   // availableYears and filteredPayments are declared above, before the early returns.
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Sticky header shows only unit title and notification bell */}
       <PageHeader title={`Unit ${unit.unitNumber}`} />
 
@@ -1071,7 +1071,7 @@ export default function UnitDetailPage() {
                         variant="default"
                         onClick={handleOpenRenewLease}
                         disabled
-                        className="w-full justify-center text-xs h-9 bg-emerald-600 text-white font-semibold opacity-50 pointer-events-none"
+                        className="w-full justify-center text-xs h-9 bg-success text-success-foreground font-semibold opacity-50 pointer-events-none"
                       >
                         <RefreshCw className="w-4 h-4 mr-1.5" />
                         Renew
@@ -1087,7 +1087,7 @@ export default function UnitDetailPage() {
                   variant="default"
                   onClick={handleOpenRenewLease}
                   disabled={!renewEligibility.eligible}
-                  className="w-full justify-center text-xs h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50"
+                  className="w-full justify-center text-xs h-9 bg-success hover:bg-success/90 text-success-foreground font-semibold disabled:opacity-50"
                 >
                   <RefreshCw className="w-4 h-4 mr-1.5" />
                   Renew
@@ -1098,53 +1098,53 @@ export default function UnitDetailPage() {
         )}
 
         {deleteError && (
-          <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-4 text-sm text-red-400">
+          <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-4 text-sm text-destructive">
             {deleteError}
           </div>
         )}
         {/* Unit Info Card */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="rounded-xl border border-border bg-card p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <div className="flex items-center space-x-3">
               <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${unitStatus?.status === "occupied"
-                  ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                  ? "bg-success-tint text-success border border-success/20"
                   : unitStatus?.status === "reserved"
-                    ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
-                    : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                    ? "bg-primary-tint text-primary border border-primary/20"
+                    : "bg-warning-tint text-warning border border-warning/20"
                   }`}
               >
                 {unitStatus?.status === "reserved" ? "Reserved" : unitStatus?.status}
               </span>
             </div>
-            <p className="text-neutral-400 text-sm mt-1 capitalize">
+            <p className="text-muted-foreground text-sm mt-1 capitalize">
               {unit.unitType} {unit.sizeSqm ? `• ${unit.sizeSqm} sqm` : ""}
             </p>
           </div>
 
           {activeLease ? (
-            <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
-              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Current Tenant</span>
-              <span className="text-sm font-semibold text-white">{activeLease.tenant.fullName}</span>
-              <div className="text-xs text-neutral-400 space-y-0.5">
+            <div className="border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
+              <span className="text-xs font-bold text-subtle-foreground uppercase tracking-wider">Current Tenant</span>
+              <span className="text-sm font-semibold text-foreground">{activeLease.tenant.fullName}</span>
+              <div className="text-xs text-muted-foreground space-y-0.5">
                 <p className="truncate">Email: {activeLease.tenant.email}</p>
                 <p>Phone: {activeLease.tenant.phone || "—"}</p>
               </div>
             </div>
           ) : pendingLease ? (
-            <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
-              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Prospective Tenant</span>
-              <span className="text-sm font-semibold text-white">{pendingLease.tenant.fullName}</span>
-              <div className="text-xs text-neutral-400 space-y-0.5">
+            <div className="border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
+              <span className="text-xs font-bold text-subtle-foreground uppercase tracking-wider">Prospective Tenant</span>
+              <span className="text-sm font-semibold text-foreground">{pendingLease.tenant.fullName}</span>
+              <div className="text-xs text-muted-foreground space-y-0.5">
                 <p className="truncate">Email: {pendingLease.tenant.email}</p>
                 <p>Phone: {pendingLease.tenant.phone || "—"}</p>
               </div>
             </div>
           ) : (
-            <div className="border-t md:border-t-0 md:border-l border-neutral-800 pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1 min-w-[200px]">
-              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Current Tenant</span>
-              <p className="text-sm text-neutral-500 italic">Vacant, no active tenant</p>
+            <div className="border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1 min-w-[200px]">
+              <span className="text-xs font-bold text-subtle-foreground uppercase tracking-wider">Current Tenant</span>
+              <p className="text-sm text-subtle-foreground italic">Vacant, no active tenant</p>
             </div>
           )}
         </div>
@@ -1156,13 +1156,13 @@ export default function UnitDetailPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
               {/* Timeline Display Card */}
-              <div className="lg:col-span-3 rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 space-y-6 h-full flex flex-col justify-between">
+              <div className="lg:col-span-3 rounded-xl border border-border bg-card p-5 space-y-6 h-full flex flex-col justify-between">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center space-x-3">
-                    <h3 className="font-bold text-white text-lg">Lease Timeline</h3>
+                    <h3 className="font-bold text-foreground text-lg">Lease Timeline</h3>
                     <button
                       onClick={() => handleOpenEditLease()}
-                      className="text-xs text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 px-2 py-1 rounded transition-colors"
+                      className="text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:bg-accent px-2 py-1 rounded transition-colors"
                     >
                       Edit Details
                     </button>
@@ -1172,26 +1172,26 @@ export default function UnitDetailPage() {
                       className={cn(
                         "px-2.5 py-0.5 rounded-full text-xs font-semibold",
                         isCodeExpired
-                          ? "bg-red-950/30 text-red-400 border border-red-900/30"
-                          : "bg-amber-950/30 text-amber-400 border border-amber-900/30"
+                          ? "bg-destructive-tint text-destructive border border-destructive/20"
+                          : "bg-warning-tint text-warning border border-warning/20"
                       )}
                     >
                       {isCodeExpired ? "Invite expired" : "Invite sent"}
                     </span>
                   ) : timeline.status === "moved_out" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-400">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
                       Moved out
                     </span>
                   ) : timeline.status === "ended" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 border border-neutral-700 text-neutral-400">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
                       Ended
                     </span>
                   ) : timeline.status === "upcoming" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950/30 text-blue-400 border border-blue-900/30">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-tint text-primary border border-primary/20">
                       Upcoming
                     </span>
                   ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-950/30 text-green-400 border border-green-900/30">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
                       Active
                     </span>
                   )}
@@ -1199,63 +1199,63 @@ export default function UnitDetailPage() {
 
                 {/* Progress Visual Tracker */}
                 <div className="space-y-3 pt-4">
-                  <div className="relative w-full h-3 rounded-full bg-neutral-800 overflow-visible">
+                  <div className="relative w-full h-3 rounded-full bg-muted overflow-visible">
                     {/* Elapsed progress tracker */}
                     <div
-                      className="absolute top-0 bottom-0 left-0 bg-neutral-600 rounded-l-full"
+                      className="absolute top-0 bottom-0 left-0 bg-primary/40 rounded-l-full"
                       style={{ width: `${todayPercent}%` }}
                     />
                     {/* Current day marker dot */}
                     <div
-                      className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-white bg-white shadow-md cursor-pointer transition-transform hover:scale-110"
+                      className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-primary bg-primary shadow-md cursor-pointer transition-transform hover:scale-110"
                       style={{ left: `calc(${todayPercent}% - 10px)` }}
                       title="Today"
                     />
                   </div>
 
-                  <div className="flex justify-between text-xs text-neutral-500 font-medium pt-1">
+                  <div className="flex justify-between text-xs text-subtle-foreground font-medium pt-1">
                     <span>Start: {new Date(timeline.startDate).toLocaleDateString()}</span>
                     <span>End: {new Date(timeline.endDate).toLocaleDateString()}</span>
                   </div>
                 </div>
 
                 {/* Summary details */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-neutral-800/40 text-sm">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border/40 text-sm">
                   <div>
-                    <span className="block text-neutral-500 text-xs">Tenant</span>
-                    <span className="font-semibold text-white mt-0.5 block">{timeline.tenantName}</span>
+                    <span className="block text-subtle-foreground text-xs">Tenant</span>
+                    <span className="font-semibold text-foreground mt-0.5 block">{timeline.tenantName}</span>
                   </div>
                   <div>
-                    <span className="block text-neutral-500 text-xs">Rent</span>
-                    <span className="font-semibold text-white mt-0.5 block">
+                    <span className="block text-subtle-foreground text-xs">Rent</span>
+                    <span className="font-semibold text-foreground mt-0.5 block">
                       {formatCurrency(timeline.rentAmount)} / {formatRentFrequency(timeline.rentFrequency)}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-neutral-500 text-xs">Deposit</span>
-                    <span className="font-semibold text-white mt-0.5 block">
+                    <span className="block text-subtle-foreground text-xs">Deposit</span>
+                    <span className="font-semibold text-foreground mt-0.5 block">
                       {activeLease.depositAmount ? formatCurrency(activeLease.depositAmount) : "—"}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-neutral-500 text-xs">Invite Status</span>
+                    <span className="block text-subtle-foreground text-xs">Invite Status</span>
                     <span className="mt-1 block">
                       {codeInvite ? (
                         codeInvite.redeemedAt ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
                             Joined
                           </span>
                         ) : isCodeExpired ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-destructive-tint text-destructive border border-destructive/20">
                             Expired
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint text-warning border border-warning/20">
                             Awaiting tenant
                           </span>
                         )
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
                           Joined
                         </span>
                       )}
@@ -1291,16 +1291,16 @@ export default function UnitDetailPage() {
             )}
 
             {/* Payment Ledger Section */}
-            <div className="pt-6 border-t border-neutral-800 space-y-6">
+            <div className="pt-6 border-t border-border space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h3 className="font-bold text-white text-xl">Payment history</h3>
-                  <p className="text-neutral-400 text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
+                  <h3 className="font-bold text-foreground text-xl">Payment history</h3>
+                  <p className="text-muted-foreground text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
                 </div>
                 {/* Mobile: Add payment on row above dropdown */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
                   <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-                    <div className="sm:hidden text-sm font-semibold text-neutral-400">
+                    <div className="sm:hidden text-sm font-semibold text-muted-foreground">
                       Payment history
                     </div>
                     {(() => {
@@ -1311,7 +1311,7 @@ export default function UnitDetailPage() {
                             <span className="inline-flex cursor-not-allowed">
                               <Button
                                 disabled
-                                className="bg-white text-neutral-950 font-semibold opacity-50 pointer-events-none flex items-center h-9 text-xs sm:text-sm"
+                                className="bg-primary text-primary-foreground font-semibold opacity-50 pointer-events-none flex items-center h-9 text-xs sm:text-sm"
                               >
                                 <Plus className="w-4 h-4 mr-1.5" />
                                 Add Payment
@@ -1334,7 +1334,7 @@ export default function UnitDetailPage() {
                             );
                             setPaymentError(null);
                           }}
-                          className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold flex items-center h-9 text-xs sm:text-sm"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold flex items-center h-9 text-xs sm:text-sm"
                         >
                           <Plus className="w-4 h-4 mr-1.5" />
                           Add Payment
@@ -1357,35 +1357,35 @@ export default function UnitDetailPage() {
 
               {/* Billing Summary Banner */}
               {billingSummary && (
-                <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 space-y-4">
+                <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">RENT DUE TO DATE</span>
-                      <span className="text-[22px] font-semibold text-white block leading-tight">
+                      <span className="block text-[11px] font-semibold text-subtle-foreground uppercase tracking-wider">RENT DUE TO DATE</span>
+                      <span className="text-[22px] font-semibold text-foreground block leading-tight">
                         {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
                       </span>
                       {billingSummary.isRentSet && (
-                        <span className="block text-xs text-neutral-400">
+                        <span className="block text-xs text-muted-foreground">
                           {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} finished
                         </span>
                       )}
                     </div>
                     <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">PAID (CONFIRMED)</span>
-                      <span className="text-[22px] font-semibold text-white block leading-tight">
+                      <span className="block text-[11px] font-semibold text-subtle-foreground uppercase tracking-wider">PAID (CONFIRMED)</span>
+                      <span className="text-[22px] font-semibold text-foreground block leading-tight">
                         {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.paidToDate)}
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">OUTSTANDING</span>
+                      <span className="block text-[11px] font-semibold text-subtle-foreground uppercase tracking-wider">OUTSTANDING</span>
                       {!billingSummary.isRentSet ? (
-                        <span className="text-[22px] font-semibold text-neutral-400 block leading-tight">Rent not set</span>
+                        <span className="text-[22px] font-semibold text-muted-foreground block leading-tight">Rent not set</span>
                       ) : billingSummary.credit > 0 ? (
-                        <span className="text-[22px] font-semibold text-green-400 block leading-tight">Credit {formatCurrency(billingSummary.credit)}</span>
+                        <span className="text-[22px] font-semibold text-success block leading-tight">Credit {formatCurrency(billingSummary.credit)}</span>
                       ) : billingSummary.outstanding > 0 ? (
-                        <span className="text-[22px] font-semibold text-red-400 block leading-tight">{formatCurrency(billingSummary.outstanding)}</span>
+                        <span className="text-[22px] font-semibold text-destructive block leading-tight">{formatCurrency(billingSummary.outstanding)}</span>
                       ) : (
-                        <span className="text-[22px] font-semibold text-green-400 block leading-tight">₦0</span>
+                        <span className="text-[22px] font-semibold text-success block leading-tight">₦0</span>
                       )}
                     </div>
                   </div>
@@ -1398,18 +1398,18 @@ export default function UnitDetailPage() {
                     );
                     const statusColor =
                       status.status === "overdue"
-                        ? "text-red-400 font-medium"
+                        ? "text-destructive font-medium"
                         : status.status === "today"
-                          ? "text-amber-400 font-medium"
+                          ? "text-warning font-medium"
                           : status.status === "paid_in_full"
-                            ? "text-green-400 font-medium"
-                            : "text-neutral-300";
+                            ? "text-success font-medium"
+                            : "text-foreground/80";
 
                     return (
-                      <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
+                      <div className="pt-3 border-t border-border/60 text-sm text-foreground/80">
                         <span className={statusColor}>{status.text}</span>
                         {billingSummary.pendingAmount > 0 && (
-                          <span className="text-amber-400 font-medium">
+                          <span className="text-warning font-medium">
                             {" • "}
                             {formatCurrency(billingSummary.pendingAmount)} pending your confirmation
                           </span>
@@ -1477,18 +1477,18 @@ export default function UnitDetailPage() {
                 return (
                   <>
                     {/* Desktop Table (>= 640px) */}
-                    <div className="hidden sm:block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20">
-                      <table className="min-w-full divide-y divide-neutral-800">
-                        <thead className="bg-neutral-900/50">
+                    <div className="hidden sm:block overflow-hidden rounded-xl border border-border bg-card">
+                      <table className="min-w-full divide-y divide-border">
+                        <thead className="bg-muted">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Date Logged</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Method</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-center text-xs font-semibold text-neutral-400 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date Logged</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Method</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-neutral-800/60">
+                        <tbody className="divide-y divide-border/60">
                           {isLoadingPayments ? (
                             [...Array(3)].map((_, i) => (
                               <tr key={i} className="animate-pulse">
@@ -1501,7 +1501,7 @@ export default function UnitDetailPage() {
                             ))
                           ) : filteredPayments.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="px-6 py-8 text-center text-sm text-neutral-500 italic">
+                              <td colSpan={5} className="px-6 py-8 text-center text-sm text-subtle-foreground italic">
                                 {!payments || payments.length === 0 ? "No payments recorded yet." : "No payments recorded for this lease."}
                               </td>
                             </tr>
@@ -1512,40 +1512,40 @@ export default function UnitDetailPage() {
                               return (
                                 <tr
                                   key={p.id}
-                                  className="hover:bg-neutral-900/20 transition-colors cursor-pointer"
+                                  className="hover:bg-accent transition-colors cursor-pointer"
                                   onClick={() => {
                                     setSelectedLandlordPayment(p);
                                     setIsLandlordPaymentDetailOpen(true);
                                   }}
                                 >
-                                  <td className="px-6 py-4 text-sm text-neutral-300">
+                                  <td className="px-6 py-4 text-sm text-foreground/80">
                                     {new Date(p.paymentDate).toLocaleDateString()}
                                   </td>
-                                  <td className="px-6 py-4 text-sm font-semibold text-white">
+                                  <td className="px-6 py-4 text-sm font-semibold text-foreground">
                                     {formatCurrency(p.amount)}
                                   </td>
-                                  <td className="px-6 py-4 text-sm text-neutral-400 capitalize">
+                                  <td className="px-6 py-4 text-sm text-muted-foreground capitalize">
                                     {p.method.replace('_', ' ')}
                                   </td>
                                   <td className="px-6 py-4 text-sm">
                                     <div className="flex flex-col space-y-1">
                                       <div className="flex items-center space-x-2">
                                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
-                                          ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                          ? "bg-success-tint text-success border-success/30"
                                           : p.status === "disputed"
-                                            ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                            : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                            ? "bg-destructive-tint text-destructive border-destructive/30"
+                                            : "bg-warning-tint text-warning border-warning/30"
                                           }`}>
                                           {paymentStatusLabel[p.status] ?? p.status}
                                         </span>
                                         {hasTenantDispute && (
-                                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
+                                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-destructive-tint text-destructive border border-destructive/30">
                                             Flagged
                                           </span>
                                         )}
                                       </div>
                                       {p.counterVerifiedAt && (
-                                        <span className="text-[11px] text-green-500 font-medium">
+                                        <span className="text-[11px] text-success font-medium">
                                           ✓ Acknowledged by tenant
                                         </span>
                                       )}
@@ -1571,7 +1571,7 @@ export default function UnitDetailPage() {
                     <div className="sm:hidden space-y-2">
                       {isLoadingPayments ? (
                         [...Array(3)].map((_, i) => (
-                          <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-4 space-y-2 animate-pulse">
+                          <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-2 animate-pulse">
                             <div className="flex justify-between items-center">
                               <Skeleton className="h-5 w-24" />
                               <Skeleton className="h-8 w-8 rounded-lg" />
@@ -1581,7 +1581,7 @@ export default function UnitDetailPage() {
                           </div>
                         ))
                       ) : filteredPayments.length === 0 ? (
-                        <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-8 text-center text-sm text-neutral-500 italic">
+                        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-subtle-foreground italic">
                           {!payments || payments.length === 0 ? "No payments recorded yet." : "No payments recorded for this lease."}
                         </div>
                       ) : (
@@ -1594,11 +1594,11 @@ export default function UnitDetailPage() {
                                 setSelectedLandlordPayment(p);
                                 setIsLandlordPaymentDetailOpen(true);
                               }}
-                              className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-4 space-y-2 cursor-pointer hover:bg-neutral-900/40 hover:border-neutral-700 transition-colors"
+                              className="rounded-xl border border-border bg-card p-4 space-y-2 cursor-pointer hover:bg-accent hover:border-border/80 transition-colors"
                             >
                               {/* Top line: amount on left, ActionMenu ⋯ on right */}
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-white text-base">
+                                <span className="font-semibold text-foreground text-base">
                                   {formatCurrency(p.amount)}
                                 </span>
                                 <div onClick={(e) => e.stopPropagation()}>
@@ -1610,27 +1610,27 @@ export default function UnitDetailPage() {
                               </div>
 
                               {/* Second line: date and method, muted */}
-                              <div className="text-xs text-neutral-400 capitalize">
+                              <div className="text-xs text-muted-foreground capitalize">
                                 {new Date(p.paymentDate).toLocaleDateString()} · {p.method.replace('_', ' ')}
                               </div>
 
                               {/* Bottom: status pill + Flagged pill */}
-                              <div className="flex items-center space-x-2 pt-1 border-t border-neutral-800/40">
+                              <div className="flex items-center space-x-2 pt-1 border-t border-border/40">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
-                                  ? "bg-green-950/30 text-green-400 border-green-900/30"
+                                  ? "bg-success-tint text-success border-success/30"
                                   : p.status === "disputed"
-                                    ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                    : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                    ? "bg-destructive-tint text-destructive border-destructive/30"
+                                    : "bg-warning-tint text-warning border-warning/30"
                                   }`}>
                                   {paymentStatusLabel[p.status] ?? p.status}
                                 </span>
                                 {hasTenantDispute && (
-                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-950/40 text-rose-400 border border-rose-900/50">
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-destructive-tint text-destructive border border-destructive/30">
                                     Flagged
                                   </span>
                                 )}
                                 {p.counterVerifiedAt && (
-                                  <span className="text-[11px] text-green-500 font-medium">
+                                  <span className="text-[11px] text-success font-medium">
                                     ✓ Acknowledged
                                   </span>
                                 )}
@@ -1647,14 +1647,14 @@ export default function UnitDetailPage() {
 
             {/* Tenant Chat Section is disabled/hidden per visibility request */}
             {/*
-            <div className="pt-6 border-t border-neutral-800 space-y-6">
+            <div className="pt-6 border-t border-border space-y-6">
               <div>
-                <h3 className="font-bold text-white text-xl">Tenant Chat</h3>
-                <p className="text-neutral-400 text-sm mt-0.5">Send messages and chat with the tenant of this unit.</p>
+                <h3 className="font-bold text-foreground text-xl">Tenant Chat</h3>
+                <p className="text-muted-foreground text-sm mt-0.5">Send messages and chat with the tenant of this unit.</p>
               </div>
               <Button
                 onClick={() => chatWidget.open(unitId)}
-                className="bg-white text-neutral-950 hover:bg-neutral-200"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Chat with Tenant
               </Button>
@@ -1674,14 +1674,14 @@ export default function UnitDetailPage() {
             isLoading={resendInvitation.isPending}
           />
         ) : (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto space-y-4">
-            <h3 className="text-lg font-medium text-white">This unit is vacant</h3>
-            <p className="text-neutral-400 text-sm">
+          <div className="rounded-xl border border-border bg-card p-12 text-center max-w-xl mx-auto space-y-4">
+            <h3 className="text-lg font-medium text-foreground">This unit is vacant</h3>
+            <p className="text-muted-foreground text-sm">
               Create a formal tenancy lease to link a tenant to this unit and enable tracking.
             </p>
             <Button
               onClick={() => setIsAddLeaseOpen(true)}
-              className="bg-white text-neutral-950 hover:bg-neutral-200 mt-2"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
             >
               Invite Tenants
             </Button>
@@ -1692,8 +1692,8 @@ export default function UnitDetailPage() {
 
       {/* Edit Unit Modal */}
       {isEditUnitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Edit Unit</h2>
               <button
@@ -1701,7 +1701,7 @@ export default function UnitDetailPage() {
                   setIsEditUnitOpen(false);
                   setEditUnitError(null);
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -1709,14 +1709,14 @@ export default function UnitDetailPage() {
 
             <form onSubmit={handleUpdateUnitSubmit} className="space-y-4">
               {editUnitError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {editUnitError}
                 </div>
               )}
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Unit Number / Name
                   </label>
                   <input
@@ -1725,13 +1725,13 @@ export default function UnitDetailPage() {
                     required
                     value={editUnitNumber}
                     onChange={(e) => setEditUnitNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. Flat 101, Shop 5"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Unit Type
                   </label>
                   <Select
@@ -1756,7 +1756,7 @@ export default function UnitDetailPage() {
 
                 {isResidentialUnitType(editUnitType) && (
                   <div>
-                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Number of Rooms
                     </label>
                     <input
@@ -1766,13 +1766,13 @@ export default function UnitDetailPage() {
                       value={editRoomsCount}
                       onChange={(e) => setEditRoomsCount(e.target.value)}
                       placeholder="e.g. 3"
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -1780,14 +1780,14 @@ export default function UnitDetailPage() {
                     setEditUnitError(null);
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateUnit.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {updateUnit.isPending ? "Saving..." : "Save Changes"}
                 </Button>
@@ -1799,12 +1799,12 @@ export default function UnitDetailPage() {
 
       {/* Renew Lease Modal */}
       {isRenewLeaseOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 my-8">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Renew Lease</h2>
-                <p className="text-neutral-400 text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-1">
                   Creates a new lease for the same tenant. The current lease is preserved as history.
                 </p>
               </div>
@@ -1813,34 +1813,34 @@ export default function UnitDetailPage() {
                   setIsRenewLeaseOpen(false);
                   resetRenewForm();
                 }}
-                className="text-neutral-400 hover:text-white ml-4 flex-shrink-0"
+                className="text-muted-foreground hover:text-foreground ml-4 flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Read-only tenant/unit info */}
-            <div className="grid grid-cols-2 gap-4 rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 text-sm">
               <div>
-                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Tenant</span>
-                <span className="text-white font-semibold mt-1 block">{activeLease.tenant.fullName}</span>
+                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Tenant</span>
+                <span className="text-foreground font-semibold mt-1 block">{activeLease.tenant.fullName}</span>
               </div>
               <div>
-                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Unit</span>
-                <span className="text-white font-semibold mt-1 block">Unit {unit?.unitNumber}</span>
+                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Unit</span>
+                <span className="text-foreground font-semibold mt-1 block">Unit {unit?.unitNumber}</span>
               </div>
             </div>
 
             <form onSubmit={handleRenewLeaseSubmit} className="space-y-4">
               {renewError && (
-                <div className="rounded bg-red-950/20 border border-red-900/30 p-2.5 text-xs text-red-400">
+                <div className="rounded bg-destructive-tint border border-destructive/30 p-2.5 text-xs text-destructive">
                   {renewError}
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="renewStartDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="renewStartDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     New Start Date
                   </label>
                   <input
@@ -1849,12 +1849,12 @@ export default function UnitDetailPage() {
                     required
                     value={renewStartDate}
                     onChange={(e) => handleRenewStartDateChange(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                   />
                 </div>
                 <div>
-                  <label htmlFor="renewEndDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    New End Date {unit && !isResidentialUnitType(unit.unitType) && <span className="text-neutral-500 normal-case font-normal">(required)</span>}
+                  <label htmlFor="renewEndDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                    New End Date {unit && !isResidentialUnitType(unit.unitType) && <span className="text-subtle-foreground normal-case font-normal">(required)</span>}
                   </label>
                   <input
                     id="renewEndDate"
@@ -1862,17 +1862,17 @@ export default function UnitDetailPage() {
                     required
                     value={renewEndDate}
                     onChange={(e) => setRenewEndDate(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                   />
                   {unit && isResidentialUnitType(unit.unitType) && (
-                    <p className="text-xs text-neutral-500 mt-1">Auto-set to 1 year from start date</p>
+                    <p className="text-xs text-subtle-foreground mt-1">Auto-set to 1 year from start date</p>
                   )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="renewRentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="renewRentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Rent Amount (₦)
                   </label>
                   <input
@@ -1881,12 +1881,12 @@ export default function UnitDetailPage() {
                     inputMode="decimal"
                     value={renewRentAmount}
                     onChange={(e) => setRenewRentAmount(formatInputNumber(e.target.value))}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                     placeholder="e.g. 150,000"
                   />
                 </div>
                 <div>
-                  <label htmlFor="renewRentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="renewRentFrequency" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Frequency
                   </label>
                   <Select
@@ -1905,8 +1905,8 @@ export default function UnitDetailPage() {
               </div>
 
               <div>
-                <label htmlFor="renewDepositAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                  Security Deposit (₦) <span className="text-neutral-500 normal-case font-normal">— optional</span>
+                <label htmlFor="renewDepositAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                  Security Deposit (₦) <span className="text-subtle-foreground normal-case font-normal">— optional</span>
                 </label>
                 <input
                   id="renewDepositAmount"
@@ -1914,7 +1914,7 @@ export default function UnitDetailPage() {
                   inputMode="decimal"
                   value={renewDepositAmount}
                   onChange={(e) => setRenewDepositAmount(formatInputNumber(e.target.value))}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                   placeholder="e.g. 300,000"
                 />
               </div>
@@ -1927,14 +1927,14 @@ export default function UnitDetailPage() {
                     resetRenewForm();
                   }}
                   variant="outline"
-                  className="w-full border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-full border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={renewLease.isPending}
-                  className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-semibold h-10 text-sm"
+                  className="w-full bg-success hover:bg-success/90 text-success-foreground font-semibold h-10 text-sm"
                 >
                   {renewLease.isPending ? "Creating..." : "Create Renewal Lease"}
                 </Button>
@@ -1946,8 +1946,8 @@ export default function UnitDetailPage() {
 
       {/* Add Lease Modal */}
       {isAddLeaseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Invite Tenant</h2>
               <button
@@ -1955,7 +1955,7 @@ export default function UnitDetailPage() {
                   setIsAddLeaseOpen(false);
                   resetLeaseForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -1963,7 +1963,7 @@ export default function UnitDetailPage() {
 
             <form onSubmit={handleCreateLease} className="space-y-4">
               {leaseError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {leaseError}
                 </div>
               )}
@@ -1971,8 +1971,8 @@ export default function UnitDetailPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="tenantName" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Tenant Full Name <span className="text-red-500">*</span>
+                    <label htmlFor="tenantName" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Tenant Full Name <span className="text-destructive">*</span>
                     </label>
                     <input
                       id="tenantName"
@@ -1984,20 +1984,20 @@ export default function UnitDetailPage() {
                         if (tenantNameError) setTenantNameError(null);
                       }}
                       className={cn(
-                        "mt-1 block w-full rounded-lg border bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:ring-1 text-sm",
+                        "mt-1 block w-full rounded-lg border bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
                         tenantNameError
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                          : "border-neutral-800 focus:border-neutral-700 focus:ring-neutral-700"
+                          ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
+                          : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
                       )}
                       placeholder="e.g. Sandra Okon"
                     />
                     {tenantNameError && (
-                      <p className="mt-1 text-xs text-red-500">{tenantNameError}</p>
+                      <p className="mt-1 text-xs text-destructive">{tenantNameError}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="tenantEmail" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Tenant Email <span className="text-red-500">*</span>
+                    <label htmlFor="tenantEmail" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Tenant Email <span className="text-destructive">*</span>
                     </label>
                     <input
                       id="tenantEmail"
@@ -2009,23 +2009,23 @@ export default function UnitDetailPage() {
                         if (tenantEmailError) setTenantEmailError(null);
                       }}
                       className={cn(
-                        "mt-1 block w-full rounded-lg border bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:outline-none focus:ring-1 text-sm",
+                        "mt-1 block w-full rounded-lg border bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
                         tenantEmailError || tenantEmailCheck?.isLandlord
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                          : "border-neutral-800 focus:border-neutral-700 focus:ring-neutral-700"
+                          ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
+                          : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
                       )}
                       placeholder="sandra@example.com"
                     />
                     {tenantEmailError && (
-                      <p className="mt-1 text-xs text-red-500">{tenantEmailError}</p>
+                      <p className="mt-1 text-xs text-destructive">{tenantEmailError}</p>
                     )}
                     {!tenantEmailError && tenantEmailCheck?.isLandlord && (
-                      <p className="mt-1 text-xs text-red-500">
+                      <p className="mt-1 text-xs text-destructive">
                         This email belongs to a landlord account. Use the tenant&apos;s personal email.
                       </p>
                     )}
                     {!tenantEmailError && !tenantEmailCheck?.isLandlord && tenantEmailCheck?.isTenant && (
-                      <p className="mt-1 text-xs text-neutral-400">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         This person already uses PropLink. They&apos;ll get an invitation in the app.
                       </p>
                     )}
@@ -2034,35 +2034,35 @@ export default function UnitDetailPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="startDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Start Date <span className="text-neutral-500 font-normal lowercase">(optional)</span>
+                    <label htmlFor="startDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Start Date <span className="text-subtle-foreground font-normal lowercase">(optional)</span>
                     </label>
                     <input
                       id="startDate"
                       type="date"
                       value={startDate}
                       onChange={(e) => handleStartDateChange(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                   <div>
-                    <label htmlFor="endDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      End Date <span className="text-neutral-500 font-normal lowercase">(optional)</span>
+                    <label htmlFor="endDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      End Date <span className="text-subtle-foreground font-normal lowercase">(optional)</span>
                     </label>
                     <input
                       id="endDate"
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="rentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Rent amount (₦) <span className="text-red-500">*</span>
+                    <label htmlFor="rentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Rent amount (₦) <span className="text-destructive">*</span>
                     </label>
                     <input
                       id="rentAmount"
@@ -2073,16 +2073,16 @@ export default function UnitDetailPage() {
                         setRentAmount(formatInputNumber(e.target.value));
                         if (rentAmountError) setRentAmountError(null);
                       }}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                       placeholder="e.g. 150,000"
                     />
                     {rentAmountError && (
-                      <p className="mt-1 text-xs text-red-500">{rentAmountError}</p>
+                      <p className="mt-1 text-xs text-destructive">{rentAmountError}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="rentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Rent frequency <span className="text-red-500">*</span>
+                    <label htmlFor="rentFrequency" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Rent frequency <span className="text-destructive">*</span>
                     </label>
                     <Select
                       id="rentFrequency"
@@ -2091,7 +2091,7 @@ export default function UnitDetailPage() {
                         setRentFrequency(e.target.value as RentFrequency);
                         if (rentFrequencyError) setRentFrequencyError(null);
                       }}
-                      className="mt-1 h-[38px] text-sm text-white"
+                      className="mt-1 h-[38px] text-sm text-foreground"
                     >
                       <option value="" disabled>Select frequency</option>
                       {RENT_FREQUENCY_OPTIONS.map((opt) => (
@@ -2101,13 +2101,13 @@ export default function UnitDetailPage() {
                       ))}
                     </Select>
                     {rentFrequencyError && (
-                      <p className="mt-1 text-xs text-red-500">{rentFrequencyError}</p>
+                      <p className="mt-1 text-xs text-destructive">{rentFrequencyError}</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -2115,14 +2115,14 @@ export default function UnitDetailPage() {
                     resetLeaseForm();
                   }}
                   variant="outline"
-                  className="w-full border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-full border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createLease.isPending}
-                  className="w-full bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {createLease.isPending ? "Sending..." : "Send Invite"}
                 </Button>
@@ -2134,13 +2134,13 @@ export default function UnitDetailPage() {
 
       {/* Edit Lease Modal */}
       {isEditLeaseOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Edit Lease Details</h2>
               <button
                 onClick={() => setIsEditLeaseOpen(false)}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -2148,7 +2148,7 @@ export default function UnitDetailPage() {
 
             <form onSubmit={handleUpdateLeaseSubmit} className="space-y-4">
               {editLeaseError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {editLeaseError}
                 </div>
               )}
@@ -2156,7 +2156,7 @@ export default function UnitDetailPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="editStartDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editStartDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Start Date
                     </label>
                     <input
@@ -2165,11 +2165,11 @@ export default function UnitDetailPage() {
                       required
                       value={editStartDate}
                       onChange={(e) => handleEditStartDateChange(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                   <div>
-                    <label htmlFor="editEndDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editEndDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       End Date
                     </label>
                     <input
@@ -2178,14 +2178,14 @@ export default function UnitDetailPage() {
                       required
                       value={editEndDate}
                       onChange={(e) => setEditEndDate(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="editRentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editRentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Rent Amount (₦)
                     </label>
                     <input
@@ -2194,12 +2194,12 @@ export default function UnitDetailPage() {
                       inputMode="decimal"
                       value={editRentAmount}
                       onChange={(e) => setEditRentAmount(formatInputNumber(e.target.value))}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       placeholder="e.g. 150,000"
                     />
                   </div>
                   <div>
-                    <label htmlFor="editRentFrequency" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editRentFrequency" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Frequency
                     </label>
                     <Select
@@ -2218,7 +2218,7 @@ export default function UnitDetailPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="editDepositAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="editDepositAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Deposit Amount (₦) - Optional
                   </label>
                   <input
@@ -2227,25 +2227,25 @@ export default function UnitDetailPage() {
                     inputMode="decimal"
                     value={editDepositAmount}
                     onChange={(e) => setEditDepositAmount(formatInputNumber(e.target.value))}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. 50,000"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => setIsEditLeaseOpen(false)}
                   variant="outline"
-                  className="w-full border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-full border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateLease.isPending}
-                  className="w-full bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {updateLease.isPending ? "Saving..." : "Save Changes"}
                 </Button>
@@ -2258,15 +2258,15 @@ export default function UnitDetailPage() {
       {/* Log Payment Modal */}
       {isLogPaymentOpen && activeLease && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl my-8">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-800">
-              <h2 className="text-xl font-bold text-white font-sans">Add Payment</h2>
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl my-8">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-border">
+              <h2 className="text-xl font-bold text-foreground font-sans">Add Payment</h2>
               <button
                 onClick={() => {
                   setIsLogPaymentOpen(false);
                   resetPaymentForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2274,14 +2274,14 @@ export default function UnitDetailPage() {
 
             <form onSubmit={handleLogPaymentSubmit} className="space-y-4">
               {paymentError && (
-                <div className="rounded bg-red-950/20 border border-red-900/30 p-2.5 text-xs text-red-400">
+                <div className="rounded bg-destructive-tint border border-destructive/30 p-2.5 text-xs text-destructive">
                   {paymentError}
                 </div>
               )}
 
               {leases && leases.length > 1 && (
                 <div>
-                  <label htmlFor="paymentLease" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="paymentLease" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Lease
                   </label>
                   <Select
@@ -2300,7 +2300,7 @@ export default function UnitDetailPage() {
               )}
 
               <div>
-                <label htmlFor="paymentAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label htmlFor="paymentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Amount (₦)
                 </label>
                 <input
@@ -2310,18 +2310,18 @@ export default function UnitDetailPage() {
                   required
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(formatInputNumber(e.target.value))}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                   placeholder="e.g. 150,000"
                 />
                 {billingSummary && billingSummary.isRentSet && (
-                  <span className="text-xs text-neutral-400 block mt-1">
+                  <span className="text-xs text-muted-foreground block mt-1">
                     {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
                   </span>
                 )}
               </div>
 
               <div>
-                <label htmlFor="paymentDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label htmlFor="paymentDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Payment Date
                 </label>
                 <input
@@ -2331,12 +2331,12 @@ export default function UnitDetailPage() {
                   max={new Date().toISOString().split("T")[0]}
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                 />
               </div>
 
               <div>
-                <label htmlFor="paymentMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label htmlFor="paymentMethod" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Payment Method
                 </label>
                 <Select
@@ -2353,19 +2353,19 @@ export default function UnitDetailPage() {
               </div>
 
               <div>
-                <label htmlFor="paymentNotes" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label htmlFor="paymentNotes" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Notes
                 </label>
                 <textarea
                   id="paymentNotes"
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-20"
+                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-20"
                   placeholder="Reference, receipt numbers or bank metadata..."
                 />
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -2373,14 +2373,14 @@ export default function UnitDetailPage() {
                     resetPaymentForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createPayment.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {createPayment.isPending ? "Saving..." : "Save"}
                 </Button>
@@ -2393,16 +2393,16 @@ export default function UnitDetailPage() {
       {/* Reject Payment Modal */}
       {isRejectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
-              <h2 className="text-lg font-bold text-white font-sans">Dispute Tenant Payment</h2>
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground font-sans">Dispute Tenant Payment</h2>
               <button
                 onClick={() => {
                   setIsRejectOpen(false);
                   setRejectReason("");
                   setRejectPaymentId("");
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2423,7 +2423,7 @@ export default function UnitDetailPage() {
               className="space-y-4"
             >
               <div>
-                <label htmlFor="rejectReason" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label htmlFor="rejectReason" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Reason for dispute
                 </label>
                 <textarea
@@ -2431,7 +2431,7 @@ export default function UnitDetailPage() {
                   required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-24"
+                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-24"
                   placeholder="Specify why this payment is incorrect (e.g. money never received, wrong amount)..."
                 />
               </div>
@@ -2445,14 +2445,14 @@ export default function UnitDetailPage() {
                     setRejectPaymentId("");
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-[38px]"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-[38px]"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={!rejectReason.trim() || rejectPayment.isPending}
-                  className="w-1/2 bg-red-600 hover:bg-red-500 text-white font-semibold h-[38px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-1/2 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold h-[38px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {rejectPayment.isPending ? "Submitting..." : "Submit"}
                 </Button>
@@ -2465,12 +2465,12 @@ export default function UnitDetailPage() {
       {/* Landlord Payment Detail Modal */}
       {isLandlordPaymentDetailOpen && selectedLandlordPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-6 flex flex-col my-auto">
-            <div className="flex justify-between items-center pb-4 border-b border-neutral-800">
-              <h2 className="text-xl font-bold text-white font-sans">Payment Details</h2>
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-6 flex flex-col my-auto">
+            <div className="flex justify-between items-center pb-4 border-b border-border">
+              <h2 className="text-xl font-bold text-foreground font-sans">Payment Details</h2>
               <button
                 onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2479,17 +2479,17 @@ export default function UnitDetailPage() {
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Amount</span>
-                  <span className="text-base font-bold text-white mt-1 block">{formatCurrency(selectedLandlordPayment.amount)}</span>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Amount</span>
+                  <span className="text-base font-bold text-foreground mt-1 block">{formatCurrency(selectedLandlordPayment.amount)}</span>
                 </div>
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</span>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Status</span>
                   <span className="mt-1 block">
                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${selectedLandlordPayment.status === "confirmed"
-                      ? "bg-green-950/30 text-green-400 border-green-900/30"
+                      ? "bg-success-tint text-success border-success/30"
                       : selectedLandlordPayment.status === "disputed"
-                        ? "bg-red-950/30 text-red-400 border-red-900/30"
-                        : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                        ? "bg-destructive-tint text-destructive border-destructive/30"
+                        : "bg-warning-tint text-warning border-warning/30"
                       }`}>
                       {paymentStatusLabel[selectedLandlordPayment.status] ?? selectedLandlordPayment.status}
                     </span>
@@ -2499,48 +2499,48 @@ export default function UnitDetailPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Payment Date</span>
-                  <span className="text-neutral-300 mt-1 block">{new Date(selectedLandlordPayment.paymentDate).toLocaleDateString()}</span>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Payment Date</span>
+                  <span className="text-foreground/80 mt-1 block">{new Date(selectedLandlordPayment.paymentDate).toLocaleDateString()}</span>
                 </div>
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Method</span>
-                  <span className="text-neutral-300 mt-1 block capitalize">{selectedLandlordPayment.method.replace('_', ' ')}</span>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Method</span>
+                  <span className="text-foreground/80 mt-1 block capitalize">{selectedLandlordPayment.method.replace('_', ' ')}</span>
                 </div>
               </div>
 
               <div>
-                <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Period Covered</span>
-                <span className="text-neutral-300 mt-1 block">
+                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Period Covered</span>
+                <span className="text-foreground/80 mt-1 block">
                   {new Date(selectedLandlordPayment.periodStart).toLocaleDateString()} – {new Date(selectedLandlordPayment.periodEnd).toLocaleDateString()}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Logged By</span>
-                  <span className="text-neutral-300 mt-1 block capitalize">
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Logged By</span>
+                  <span className="text-foreground/80 mt-1 block capitalize">
                     {selectedLandlordPayment.recorder?.fullName || "System"} ({selectedLandlordPayment.recordedByRole})
                   </span>
                 </div>
                 {selectedLandlordPayment.confirmedAt && (
                   <div>
-                    <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Confirmed At</span>
-                    <span className="text-neutral-300 mt-1 block">{new Date(selectedLandlordPayment.confirmedAt).toLocaleDateString()}</span>
+                    <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Confirmed At</span>
+                    <span className="text-foreground/80 mt-1 block">{new Date(selectedLandlordPayment.confirmedAt).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
 
               {selectedLandlordPayment.notes && (
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Notes</span>
-                  <p className="text-neutral-300 mt-1 bg-neutral-900/50 p-2.5 rounded-lg border border-neutral-800 text-xs">{selectedLandlordPayment.notes}</p>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Notes</span>
+                  <p className="text-foreground/80 mt-1 bg-muted p-2.5 rounded-lg border border-border text-xs">{selectedLandlordPayment.notes}</p>
                 </div>
               )}
 
               {selectedLandlordPayment.disputeReason && (
                 <div>
-                  <span className="block text-xs font-semibold text-red-400 uppercase tracking-wider">Rejection Reason</span>
-                  <p className="text-red-400 mt-1 bg-red-950/10 p-2.5 rounded-lg border border-red-900/20 text-xs">{selectedLandlordPayment.disputeReason}</p>
+                  <span className="block text-xs font-semibold text-destructive uppercase tracking-wider">Rejection Reason</span>
+                  <p className="text-destructive mt-1 bg-destructive-tint p-2.5 rounded-lg border border-destructive/20 text-xs">{selectedLandlordPayment.disputeReason}</p>
                 </div>
               )}
 
@@ -2553,12 +2553,12 @@ export default function UnitDetailPage() {
 
               {selectedLandlordPayment.proofUrl ? (
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Proof Document</span>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Proof Document</span>
                   <div className="mt-2 flex flex-col items-start gap-1.5">
                     <button
                       type="button"
                       onClick={() => handleViewPaymentProof(selectedLandlordPayment.proofUrl!)}
-                      className="inline-flex items-center text-xs text-white hover:underline bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-neutral-800"
+                      className="inline-flex items-center text-xs text-foreground hover:underline bg-card border border-border px-3 py-1.5 rounded-lg font-medium transition-colors hover:bg-accent"
                     >
                       View / Download Proof
                     </button>
@@ -2566,12 +2566,12 @@ export default function UnitDetailPage() {
                       <button
                         type="button"
                         onClick={() => setIsDeletePaymentProofConfirmOpen(true)}
-                        className="text-xs text-red-500 hover:text-red-400 hover:underline transition-colors mt-0.5"
+                        className="text-xs text-destructive hover:underline transition-colors mt-0.5"
                       >
                         Remove proof
                       </button>
                     ) : (
-                      <p className="text-xs text-neutral-500 italic mt-0.5">
+                      <p className="text-xs text-subtle-foreground italic mt-0.5">
                         Proof is locked because this payment is confirmed.
                       </p>
                     )}
@@ -2579,7 +2579,7 @@ export default function UnitDetailPage() {
                 </div>
               ) : selectedLandlordPayment.status === "pending" ? (
                 <div>
-                  <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Proof Document</span>
+                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Proof Document</span>
                   <div className="mt-2">
                     <label className="block">
                       <span className="sr-only">Upload proof document</span>
@@ -2588,23 +2588,23 @@ export default function UnitDetailPage() {
                         accept=".pdf, image/*"
                         onChange={handleLandlordProofUpload}
                         disabled={uploadingPaymentProof}
-                        className="block w-full text-xs text-neutral-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white file:text-neutral-950 hover:file:bg-neutral-200 file:cursor-pointer disabled:opacity-50"
+                        className="block w-full text-xs text-muted-foreground file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer disabled:opacity-50"
                       />
                     </label>
-                    {uploadingPaymentProof && <p className="text-xs text-neutral-400 mt-1 animate-pulse">Uploading file...</p>}
+                    {uploadingPaymentProof && <p className="text-xs text-muted-foreground mt-1 animate-pulse">Uploading file...</p>}
                   </div>
                 </div>
               ) : null}
             </div>
 
-            <div className="pt-4 border-t border-neutral-800 space-y-3">
+            <div className="pt-4 border-t border-border space-y-3">
               {/* Inline Confirm/Reject — shown only for pending payments */}
               {selectedLandlordPayment.status === 'pending' && (
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     onClick={() => confirmPayment.mutate({ paymentId: selectedLandlordPayment.id })}
                     disabled={confirmPayment.isPending || rejectPayment.isPending}
-                    className="w-full sm:flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold h-[38px] text-sm"
+                    className="w-full sm:flex-1 bg-success hover:bg-success/90 text-success-foreground font-semibold h-[38px] text-sm"
                   >
                     {confirmPayment.isPending ? 'Confirming…' : 'Confirm Payment'}
                   </Button>
@@ -2617,7 +2617,7 @@ export default function UnitDetailPage() {
                     }}
                     disabled={confirmPayment.isPending || rejectPayment.isPending}
                     variant="outline"
-                    className="w-full sm:flex-1 border-neutral-800 text-red-400 hover:bg-red-950/20 hover:border-red-900/30 font-semibold h-[38px] text-sm"
+                    className="w-full sm:flex-1 border-border text-destructive hover:bg-destructive-tint hover:border-destructive/30 font-semibold h-[38px] text-sm"
                   >
                     Reject
                   </Button>
@@ -2625,7 +2625,7 @@ export default function UnitDetailPage() {
               )}
               <Button
                 onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
-                className="w-full bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-[38px]"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-[38px]"
               >
                 Close
               </Button>
@@ -2637,15 +2637,15 @@ export default function UnitDetailPage() {
       {/* Edit/Resolve Dispute Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
-              <h2 className="text-lg font-bold text-white font-sans">Resolve Payment Dispute</h2>
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground font-sans">Resolve Payment Dispute</h2>
               <button
                 onClick={() => {
                   setIsEditOpen(false);
                   resetEditForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2653,7 +2653,7 @@ export default function UnitDetailPage() {
 
             <form onSubmit={handleEditPaymentSubmit} className="space-y-4">
               <div>
-                <label htmlFor="editAction" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label htmlFor="editAction" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Resolution Action
                 </label>
                 <Select
@@ -2670,7 +2670,7 @@ export default function UnitDetailPage() {
               {editAction === "edit" ? (
                 <>
                   <div>
-                    <label htmlFor="editAmount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Corrected Amount (₦)
                     </label>
                     <input
@@ -2680,11 +2680,11 @@ export default function UnitDetailPage() {
                       required
                       value={editAmount}
                       onChange={(e) => setEditAmount(formatInputNumber(e.target.value))}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                     />
                   </div>
                   <div>
-                    <label htmlFor="editPaymentDate" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editPaymentDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Corrected Date
                     </label>
                     <input
@@ -2693,11 +2693,11 @@ export default function UnitDetailPage() {
                       required
                       value={editPaymentDate}
                       onChange={(e) => setEditPaymentDate(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-10"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
                     />
                   </div>
                   <div>
-                    <label htmlFor="editMethod" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editMethod" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Corrected Method
                     </label>
                     <Select
@@ -2714,7 +2714,7 @@ export default function UnitDetailPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-neutral-400 bg-red-950/20 border border-red-900/30 p-2.5 rounded">
+                <p className="text-xs text-muted-foreground bg-destructive-tint border border-destructive/30 p-2.5 rounded">
                   ⚠️ Voiding this payment marks it as disputed and removes it from outstanding balance calculations.
                 </p>
               )}
@@ -2727,14 +2727,14 @@ export default function UnitDetailPage() {
                     resetEditForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-[38px]"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-[38px]"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={resolvePayment.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-[38px]"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-[38px]"
                 >
                   {resolvePayment.isPending ? "Saving..." : "Apply Resolution"}
                 </Button>
@@ -2867,17 +2867,17 @@ export default function UnitDetailPage() {
 
       {/* Edit Placeholder Tenant Modal */}
       {isEditTenantOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-white">Edit Tenant Details</h2>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Edit Tenant Details</h2>
               <button
                 type="button"
                 onClick={() => {
                   setIsEditTenantOpen(false);
                   setEditTenantError(null);
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -2906,15 +2906,15 @@ export default function UnitDetailPage() {
               className="space-y-4"
             >
               {editTenantError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {editTenantError}
                 </div>
               )}
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="editTenantFullName" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Full Name <span className="text-red-500">*</span>
+                  <label htmlFor="editTenantFullName" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                    Full Name <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="editTenantFullName"
@@ -2925,14 +2925,14 @@ export default function UnitDetailPage() {
                       setEditTenantFullName(e.target.value);
                       if (editTenantError) setEditTenantError(null);
                     }}
-                    className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                    className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                     placeholder="e.g. John Doe"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="editTenantEmail" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                    Email <span className="text-red-500">*</span>
+                  <label htmlFor="editTenantEmail" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                    Email <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="editTenantEmail"
@@ -2943,7 +2943,7 @@ export default function UnitDetailPage() {
                       setEditTenantEmail(e.target.value);
                       if (editTenantError) setEditTenantError(null);
                     }}
-                    className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                    className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                     placeholder="e.g. john@example.com"
                   />
                 </div>
@@ -2957,14 +2957,14 @@ export default function UnitDetailPage() {
                     setIsEditTenantOpen(false);
                     setEditTenantError(null);
                   }}
-                  className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900"
+                  className="border-border text-foreground/80 hover:text-foreground hover:bg-accent"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updatePlaceholderTenantMutation.isPending}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                 >
                   {updatePlaceholderTenantMutation.isPending ? "Saving..." : "Save"}
                 </Button>

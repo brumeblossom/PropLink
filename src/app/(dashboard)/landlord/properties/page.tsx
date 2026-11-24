@@ -173,7 +173,7 @@ export default function PropertiesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title="Properties" />
 
         {/* Main Container */}
@@ -181,7 +181,7 @@ export default function PropertiesPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight">Properties</h1>
-              <p className="text-neutral-400 mt-1 text-sm">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Manage your portfolio of residential, commercial, and mixed-use properties.
               </p>
             </div>
@@ -192,7 +192,7 @@ export default function PropertiesPage() {
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-4"
+                className="rounded-xl border border-border bg-card/30 p-6 backdrop-blur-sm space-y-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -201,7 +201,7 @@ export default function PropertiesPage() {
                   </div>
                   <Skeleton className="h-5 w-20 rounded-md" />
                 </div>
-                <div className="pt-4 border-t border-neutral-800/60 flex items-center justify-between">
+                <div className="pt-4 border-t border-border/60 flex items-center justify-between">
                   <Skeleton className="h-4 w-28" />
                   <Skeleton className="h-8 w-24 rounded-lg" />
                 </div>
@@ -214,7 +214,7 @@ export default function PropertiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title="Properties" />
 
       {/* Main Content */}
@@ -227,7 +227,7 @@ export default function PropertiesPage() {
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => setIsModalOpen(true)}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
                   aria-label="Add Property"
                 >
                   <Plus className="w-4 h-4 sm:mr-1.5" />
@@ -247,16 +247,16 @@ export default function PropertiesPage() {
               <div
                 key={property.id}
                 onClick={() => router.push(`/landlord/properties/${property.id}`)}
-                className="group relative rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 hover:bg-neutral-900/60 hover:border-neutral-700 transition-all duration-200 backdrop-blur-sm flex flex-col justify-between cursor-pointer"
+                className="group relative rounded-xl border border-border bg-card/40 p-6 hover:bg-card hover:border-border transition-all duration-200 backdrop-blur-sm flex flex-col justify-between cursor-pointer"
               >
                 <div>
                   {/* Top row: Name on left, Tag & ⋯ menu right-aligned on same line */}
                   <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-xl font-bold text-white group-hover:text-neutral-100 transition-colors break-words flex-1">
+                    <h2 className="text-xl font-bold text-foreground transition-colors break-words flex-1">
                       {property.name}
                     </h2>
                     <div className="flex items-center space-x-2 flex-shrink-0">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 text-neutral-300 capitalize">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground capitalize">
                         {property.propertyType}
                       </span>
 
@@ -280,25 +280,25 @@ export default function PropertiesPage() {
                     </div>
                   </div>
 
-                  <p className="text-sm text-neutral-400 mt-2 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                     {property.address}, {property.city}, {property.state}
                   </p>
                 </div>
 
                 {/* Card stats: Total Units, Occupied Units, Vacant Units */}
-                <div className="mt-6 pt-4 border-t border-neutral-800/60 flex items-center text-sm">
+                <div className="mt-6 pt-4 border-t border-border/60 flex items-center text-sm">
                   <div className="flex space-x-6">
                     <div>
-                      <span className="block text-xs text-neutral-500 font-medium uppercase tracking-wider">Total Units</span>
-                      <span className="text-base font-semibold text-neutral-200">{property.stats.totalUnits}</span>
+                      <span className="block text-xs text-muted-foreground font-medium uppercase tracking-wider">Total Units</span>
+                      <span className="text-base font-semibold text-foreground">{property.stats.totalUnits}</span>
                     </div>
                     <div>
-                      <span className="block text-xs text-neutral-500 font-medium uppercase tracking-wider">Occupied Units</span>
-                      <span className="text-base font-semibold text-green-400">{property.stats.occupiedUnits}</span>
+                      <span className="block text-xs text-muted-foreground font-medium uppercase tracking-wider">Occupied Units</span>
+                      <span className="text-base font-semibold text-success">{property.stats.occupiedUnits}</span>
                     </div>
                     <div>
-                      <span className="block text-xs text-neutral-500 font-medium uppercase tracking-wider">Vacant Units</span>
-                      <span className="text-base font-semibold text-yellow-400">{property.stats.vacantUnits}</span>
+                      <span className="block text-xs text-muted-foreground font-medium uppercase tracking-wider">Vacant Units</span>
+                      <span className="text-base font-semibold text-warning">{property.stats.vacantUnits}</span>
                     </div>
                   </div>
                 </div>
@@ -306,14 +306,14 @@ export default function PropertiesPage() {
             ))}
           </div>
         ) : (
-          <div className="mt-12 rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center max-w-xl mx-auto">
-            <h3 className="text-lg font-medium text-white">No properties found</h3>
-            <p className="text-neutral-400 text-sm mt-2">
+          <div className="mt-12 rounded-xl border border-border bg-card/20 p-12 text-center max-w-xl mx-auto">
+            <h3 className="text-lg font-medium text-foreground">No properties found</h3>
+            <p className="text-muted-foreground text-sm mt-2">
               You haven&apos;t logged any properties yet. Add your first building to start managing leasable units.
             </p>
             <Button
               onClick={() => setIsModalOpen(true)}
-              className="bg-white text-neutral-950 hover:bg-neutral-200 mt-6"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-6"
             >
               Add Your First Property
             </Button>
@@ -323,8 +323,8 @@ export default function PropertiesPage() {
 
       {/* Add Property Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Add New Property</h2>
               <button
@@ -332,7 +332,7 @@ export default function PropertiesPage() {
                   setIsModalOpen(false);
                   resetForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -340,14 +340,14 @@ export default function PropertiesPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
                   {error}
                 </div>
               )}
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="name" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="name" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Property Name
                   </label>
                   <input
@@ -356,13 +356,13 @@ export default function PropertiesPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. Alaba Plaza"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="address" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="address" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Street Address
                   </label>
                   <input
@@ -371,14 +371,14 @@ export default function PropertiesPage() {
                     required
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. 15 Kingsway Road"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="state" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="state" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       State
                     </label>
                     <Select
@@ -400,7 +400,7 @@ export default function PropertiesPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="city" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Local Government Area
                     </label>
                     <Select
@@ -423,7 +423,7 @@ export default function PropertiesPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="propertyType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="propertyType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Property Type
                   </label>
                   <Select
@@ -440,7 +440,7 @@ export default function PropertiesPage() {
 
                 {propertyType !== PropertyType.residential && (
                   <div>
-                    <label htmlFor="expectedUnits" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="expectedUnits" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Expected Number of Units
                     </label>
                     <input
@@ -450,13 +450,13 @@ export default function PropertiesPage() {
                       value={expectedUnits}
                       onChange={(e) => setExpectedUnits(e.target.value)}
                       placeholder="e.g. 20"
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -464,14 +464,14 @@ export default function PropertiesPage() {
                     resetForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createProperty.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm"
                 >
                   {createProperty.isPending ? "Creating..." : "Save Property"}
                 </Button>
@@ -483,8 +483,8 @@ export default function PropertiesPage() {
 
       {/* Edit Property Modal */}
       {isEditModalOpen && propertyToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Edit Property</h2>
               <button
@@ -492,7 +492,7 @@ export default function PropertiesPage() {
                   setIsEditModalOpen(false);
                   setPropertyToEdit(null);
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -500,14 +500,14 @@ export default function PropertiesPage() {
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               {editError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
                   {editError}
                 </div>
               )}
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="edit-name" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="edit-name" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Property Name
                   </label>
                   <input
@@ -516,12 +516,12 @@ export default function PropertiesPage() {
                     required
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="edit-address" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="edit-address" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Street Address
                   </label>
                   <input
@@ -530,13 +530,13 @@ export default function PropertiesPage() {
                     required
                     value={editAddress}
                     onChange={(e) => setEditAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="edit-state" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="edit-state" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       State
                     </label>
                     <Select
@@ -558,7 +558,7 @@ export default function PropertiesPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="edit-city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="edit-city" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Local Government Area
                     </label>
                     <Select
@@ -581,7 +581,7 @@ export default function PropertiesPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Property Type
                   </label>
                   <Select
@@ -598,7 +598,7 @@ export default function PropertiesPage() {
 
                 {editPropertyType !== PropertyType.residential && (
                   <div>
-                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Expected Number of Units
                     </label>
                     <input
@@ -607,13 +607,13 @@ export default function PropertiesPage() {
                       min="1"
                       value={editExpectedUnits}
                       onChange={(e) => setEditExpectedUnits(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -621,14 +621,14 @@ export default function PropertiesPage() {
                     setPropertyToEdit(null);
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateProperty.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm"
                 >
                   {updateProperty.isPending ? "Saving..." : "Save Changes"}
                 </Button>
@@ -655,13 +655,13 @@ export default function PropertiesPage() {
 
       {/* Property Onboarding Nudge Modal */}
       {isNudgeOpen && createdPropertyInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-2 font-sans">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-foreground mb-2 font-sans">
               Property Created!
             </h2>
-            <p className="text-sm text-neutral-400 mb-6 font-sans">
-              Would you like to add units to <span className="text-white font-medium">{createdPropertyInfo.name}</span> now? You can generate multiple units at once using our bulk tools.
+            <p className="text-sm text-muted-foreground mb-6 font-sans">
+              Would you like to add units to <span className="text-foreground font-medium">{createdPropertyInfo.name}</span> now? You can generate multiple units at once using our bulk tools.
             </p>
             <div className="flex space-x-3">
               <Button
@@ -670,7 +670,7 @@ export default function PropertiesPage() {
                   router.push(`/landlord/properties/${createdPropertyInfo.id}`);
                 }}
                 variant="outline"
-                className="w-1/2 border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 h-10 text-sm"
+                className="w-1/2 border-border text-muted-foreground hover:text-foreground hover:bg-accent h-10 text-sm"
               >
                 I&apos;ll do this later
               </Button>
@@ -679,7 +679,7 @@ export default function PropertiesPage() {
                   setIsNudgeOpen(false);
                   router.push(`/landlord/properties/${createdPropertyInfo.id}?bulkAdd=true`);
                 }}
-                className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+                className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
               >
                 Add Units
               </Button>

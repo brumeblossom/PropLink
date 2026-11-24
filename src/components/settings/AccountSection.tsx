@@ -152,27 +152,27 @@ export function AccountSection({ user }: AccountSectionProps) {
   return (
     <>
       {/* Account Section Card */}
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm space-y-6">
-        <div className="flex items-center space-x-2 border-b border-neutral-800 pb-3">
-          <Shield className="w-5 h-5 text-neutral-400" />
-          <h2 className="text-lg font-bold text-white">Account</h2>
+      <div className="rounded-xl border border-border bg-card/40 p-6 backdrop-blur-sm space-y-6">
+        <div className="flex items-center space-x-2 border-b border-border pb-3">
+          <Shield className="w-5 h-5 text-muted-foreground" />
+          <h2 className="text-lg font-bold text-foreground">Account</h2>
         </div>
 
-        <div className="divide-y divide-neutral-800/60">
+        <div className="divide-y divide-border">
           {/* Name Row */}
           <div className="py-4 first:pt-0 flex items-center justify-between">
             <div className="space-y-0.5">
-              <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+              <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Full Name
               </span>
-              <span className="text-white font-medium text-sm block">
+              <span className="text-foreground font-medium text-sm block">
                 {user.fullName || "—"}
               </span>
             </div>
             <button
               type="button"
               onClick={handleOpenEditName}
-              className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800/80 transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               aria-label="Edit name"
             >
               <Pencil className="w-4 h-4" />
@@ -182,29 +182,29 @@ export function AccountSection({ user }: AccountSectionProps) {
           {/* Email Row */}
           <div className="py-4 flex items-center justify-between">
             <div className="space-y-0.5">
-              <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+              <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Email Address
               </span>
-              <span className="text-neutral-300 font-medium text-sm block">
+              <span className="text-foreground/80 font-medium text-sm block">
                 {user.email || "—"}
               </span>
             </div>
-            <span className="text-xs text-neutral-500 font-medium">Read-only</span>
+            <span className="text-xs text-subtle-foreground font-medium">Read-only</span>
           </div>
 
           {/* Password Row */}
           <div className="py-4 last:pb-0 flex items-center justify-between">
             <div className="space-y-0.5">
-              <span className="block text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+              <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Password
               </span>
-              <span className="text-neutral-400 text-sm block">••••••••••••</span>
+              <span className="text-muted-foreground text-sm block">••••••••••••</span>
             </div>
             <Button
               type="button"
               variant="outline"
               onClick={handleOpenChangePassword}
-              className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-850 h-9 px-3.5 text-xs flex items-center space-x-1.5"
+              className="border-border text-foreground/80 hover:text-foreground hover:bg-muted h-9 px-3.5 text-xs flex items-center space-x-1.5"
             >
               <Key className="w-4 h-4" />
               <span>Change password</span>
@@ -215,14 +215,14 @@ export function AccountSection({ user }: AccountSectionProps) {
 
       {/* Edit Name Modal */}
       {isEditNameOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-white">Edit name</h2>
+              <h2 className="text-xl font-bold tracking-tight text-foreground font-sans">Edit name</h2>
               <button
                 type="button"
                 onClick={() => setIsEditNameOpen(false)}
-                className="text-neutral-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -231,7 +231,7 @@ export function AccountSection({ user }: AccountSectionProps) {
 
             <form onSubmit={handleSaveName} className="space-y-4">
               {nameError && (
-                <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-xs text-red-400">
+                <div className="rounded-lg bg-destructive-tint border border-destructive/30 p-3 text-xs text-destructive">
                   {nameError}
                 </div>
               )}
@@ -239,7 +239,7 @@ export function AccountSection({ user }: AccountSectionProps) {
               <div>
                 <label
                   htmlFor="edit-full-name"
-                  className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider"
+                  className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider"
                 >
                   Full Name
                 </label>
@@ -254,15 +254,15 @@ export function AccountSection({ user }: AccountSectionProps) {
                     if (nameError) setNameError(null);
                   }}
                   placeholder="Enter full name"
-                  className="mt-1.5 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                  className="mt-1.5 block w-full rounded-lg border border-input bg-card px-3.5 py-2 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
                 />
                 <div className="mt-1.5 flex justify-end">
                   <span
                     className={cn(
                       "text-xs transition-colors",
                       nameValue.length >= 40
-                        ? "text-red-500 font-medium"
-                        : "text-neutral-500"
+                        ? "text-destructive font-medium"
+                        : "text-muted-foreground"
                     )}
                   >
                     {nameValue.length}/40
@@ -270,19 +270,19 @@ export function AccountSection({ user }: AccountSectionProps) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-neutral-800/80">
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-border">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditNameOpen(false)}
-                  className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 h-9 px-4 text-xs"
+                  className="border-border text-foreground/80 hover:text-foreground hover:bg-muted h-9 px-4 text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={!nameValue.trim() || updateProfile.isPending}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-5 text-xs"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-5 text-xs"
                 >
                   {updateProfile.isPending ? "Saving..." : "Save"}
                 </Button>
@@ -294,14 +294,14 @@ export function AccountSection({ user }: AccountSectionProps) {
 
       {/* Change Password Modal */}
       {isChangePasswordOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-white">Change password</h2>
+              <h2 className="text-xl font-bold tracking-tight text-foreground font-sans">Change password</h2>
               <button
                 type="button"
                 onClick={() => setIsChangePasswordOpen(false)}
-                className="text-neutral-400 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -310,14 +310,14 @@ export function AccountSection({ user }: AccountSectionProps) {
 
             <form onSubmit={handleChangePassword} className="space-y-4">
               {passwordModalGeneralError && (
-                <div className="rounded-lg bg-red-950/20 border border-red-900/30 p-3 text-xs text-red-400">
+                <div className="rounded-lg bg-destructive-tint border border-destructive/30 p-3 text-xs text-destructive">
                   {passwordModalGeneralError}
                 </div>
               )}
 
               {/* Current Password */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Current Password
                 </label>
                 <div className="relative mt-1.5">
@@ -329,13 +329,13 @@ export function AccountSection({ user }: AccountSectionProps) {
                       setCurrentPassword(e.target.value);
                       if (currentPasswordError) setCurrentPasswordError(null);
                     }}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2 pr-10 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="block w-full rounded-lg border border-input bg-card px-3.5 py-2 pr-10 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
                     placeholder="Enter current password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-white"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showCurrentPassword ? (
@@ -346,7 +346,7 @@ export function AccountSection({ user }: AccountSectionProps) {
                   </button>
                 </div>
                 {currentPasswordError && (
-                  <p className="mt-1.5 text-xs text-red-500">
+                  <p className="mt-1.5 text-xs text-destructive">
                     {currentPasswordError}
                   </p>
                 )}
@@ -354,7 +354,7 @@ export function AccountSection({ user }: AccountSectionProps) {
 
               {/* New Password */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   New Password
                 </label>
                 <div className="relative mt-1.5">
@@ -363,13 +363,13 @@ export function AccountSection({ user }: AccountSectionProps) {
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2 pr-10 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="block w-full rounded-lg border border-input bg-card px-3.5 py-2 pr-10 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
                     placeholder="Enter new password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-white"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showNewPassword ? (
@@ -384,7 +384,7 @@ export function AccountSection({ user }: AccountSectionProps) {
 
               {/* Confirm New Password */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                   Confirm New Password
                 </label>
                 <div className="relative mt-1.5">
@@ -393,13 +393,13 @@ export function AccountSection({ user }: AccountSectionProps) {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2 pr-10 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="block w-full rounded-lg border border-input bg-card px-3.5 py-2 pr-10 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
                     placeholder="Repeat new password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-white"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                     tabIndex={-1}
                   >
                     {showConfirmPassword ? (
@@ -410,25 +410,25 @@ export function AccountSection({ user }: AccountSectionProps) {
                   </button>
                 </div>
                 {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-                  <p className="mt-1.5 text-xs text-red-500">
+                  <p className="mt-1.5 text-xs text-destructive">
                     Passwords don&apos;t match
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-neutral-800/80">
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-border">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsChangePasswordOpen(false)}
-                  className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 h-9 px-4 text-xs"
+                  className="border-border text-foreground/80 hover:text-foreground hover:bg-muted h-9 px-4 text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isUpdatingPassword || !isPasswordReady}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-5 text-xs"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-5 text-xs"
                 >
                   {isUpdatingPassword ? "Updating..." : "Change password"}
                 </Button>

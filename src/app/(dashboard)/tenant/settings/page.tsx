@@ -11,7 +11,7 @@ export default function TenantSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title="Settings" />
         <PageContainer width="narrow">
           <div className="space-y-4">
@@ -31,13 +31,13 @@ export default function TenantSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title="Settings" />
 
       <PageContainer width="narrow">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Account Settings</h1>
-          <p className="text-neutral-400 mt-1 text-sm">
+          <p className="text-muted-foreground mt-1 text-sm">
             Manage your personal details and security preferences.
           </p>
         </div>

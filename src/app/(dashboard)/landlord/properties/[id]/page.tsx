@@ -518,7 +518,7 @@ export default function PropertyDetailPage() {
 
   if (isLoadingProperty || isLoadingUnits) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title={<Skeleton className="h-6 w-36" />} />
 
         {/* Main Container */}
@@ -532,7 +532,7 @@ export default function PropertyDetailPage() {
           </div>
 
           {/* Property Overview Card */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm space-y-3">
+          <div className="rounded-xl border border-border bg-card p-6 backdrop-blur-sm space-y-3">
             <Skeleton className="h-5 w-24 rounded-full" />
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-64" />
@@ -553,7 +553,7 @@ export default function PropertyDetailPage() {
 
   if (!property) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-950 text-white">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground">
         <p className="text-lg">Property not found.</p>
         <Link href="/landlord/properties" className="text-sm underline mt-2">
           Back to properties
@@ -563,7 +563,7 @@ export default function PropertyDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Sticky header shows only property title and notification bell */}
       <PageHeader title={property.name} />
 
@@ -590,18 +590,18 @@ export default function PropertyDetailPage() {
         />
 
         {deleteError && (
-          <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-4 text-sm text-red-400">
+          <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-4 text-sm text-destructive">
             {deleteError}
           </div>
         )}
 
         {/* Property Info Header card (Total Units removed) */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-6 backdrop-blur-sm">
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 text-neutral-300 capitalize inline-block">
+        <div className="rounded-xl border border-border bg-card p-6 backdrop-blur-sm">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground/80 capitalize inline-block">
             {property.propertyType}
           </span>
           <h1 className="text-3xl font-extrabold tracking-tight mt-2">{property.name}</h1>
-          <p className="text-neutral-400 mt-2 text-sm">
+          <p className="text-muted-foreground mt-2 text-sm">
             {property.address}, {property.city}, {property.state}
           </p>
         </div>
@@ -612,12 +612,12 @@ export default function PropertyDetailPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <h2 className="text-xl font-bold tracking-tight">All Units</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 text-neutral-400">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
                 {units?.length || 0}
               </span>
               <Link
                 href={`/landlord/tenants?propertyId=${propertyId}&status=all`}
-                className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800/80 hover:bg-neutral-800 text-neutral-300 hover:text-white transition-colors border border-neutral-700/60 inline-flex items-center gap-1"
+                className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted hover:bg-accent text-foreground/80 hover:text-foreground transition-colors border border-border inline-flex items-center gap-1"
               >
                 <span>{property.tenantsSoFarCount ?? 0} tenants so far</span>
               </Link>
@@ -627,7 +627,7 @@ export default function PropertyDetailPage() {
             <div className="relative" ref={dropdownRef}>
               <Button
                 onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
-                className="bg-white text-neutral-950 hover:bg-neutral-200 h-9 px-4 text-sm font-semibold flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-400"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 text-sm font-semibold flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
                 aria-expanded={isAddDropdownOpen}
                 aria-haspopup="menu"
               >
@@ -642,7 +642,7 @@ export default function PropertyDetailPage() {
               </Button>
               {isAddDropdownOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-800 bg-neutral-950 p-1.5 shadow-2xl z-50 animate-in fade-in duration-100"
+                  className="absolute right-0 mt-2 w-48 rounded-xl border border-border bg-card p-1.5 shadow-2xl z-50 animate-in fade-in duration-100"
                   role="menu"
                 >
                   <button
@@ -650,7 +650,7 @@ export default function PropertyDetailPage() {
                       setIsAddDropdownOpen(false);
                       setIsAddUnitOpen(true);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors focus:outline-none focus:bg-neutral-900"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-foreground/80 hover:text-foreground hover:bg-accent transition-colors focus:outline-none focus:bg-accent"
                     role="menuitem"
                   >
                     Add Single Unit
@@ -660,7 +660,7 @@ export default function PropertyDetailPage() {
                       setIsAddDropdownOpen(false);
                       setIsBulkAddOpen(true);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors focus:outline-none focus:bg-neutral-900"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm text-foreground/80 hover:text-foreground hover:bg-accent transition-colors focus:outline-none focus:bg-accent"
                     role="menuitem"
                   >
                     Add Bulk Units
@@ -674,15 +674,15 @@ export default function PropertyDetailPage() {
           {units && units.length > 0 && (
             selectedUnitIds.length > 0 ? (
               /* Desktop: replaces search/filter toolbar at same height (h-9 or matching container) */
-              <div className="hidden md:flex items-center justify-between h-9 px-3 rounded-lg border border-neutral-800 bg-neutral-900 mb-4 animate-in fade-in duration-150">
+              <div className="hidden md:flex items-center justify-between h-9 px-3 rounded-lg border border-border bg-card mb-4 animate-in fade-in duration-150">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-white">
+                  <span className="text-sm font-semibold text-foreground">
                     {selectedUnitIds.length} selected
                   </span>
                   <button
                     type="button"
                     onClick={handleClearSelection}
-                    className="text-xs font-medium text-neutral-400 hover:text-white px-2 py-1 rounded hover:bg-neutral-800 transition-colors"
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
                   >
                     Clear
                   </button>
@@ -690,7 +690,7 @@ export default function PropertyDetailPage() {
                 <Button
                   type="button"
                   onClick={() => setIsBulkDeleteConfirmOpen(true)}
-                  className="h-7 px-2.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 transition-colors"
+                  className="h-7 px-2.5 text-xs font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground flex items-center gap-1.5 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete</span>
@@ -701,13 +701,13 @@ export default function PropertyDetailPage() {
                 <div className="flex flex-col md:flex-row md:items-center gap-2.5 flex-1">
                   {/* Search Input */}
                   <div className="relative w-full md:w-[280px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-subtle-foreground" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => updateFilters(e.target.value, statusFilter, typeFilter)}
                       placeholder="Search unit or tenant"
-                      className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-9 pr-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 h-9"
+                      className="w-full rounded-lg border border-input bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring h-9"
                     />
                   </div>
 
@@ -743,7 +743,7 @@ export default function PropertyDetailPage() {
                     <button
                       type="button"
                       onClick={clearFilters}
-                      className="text-xs text-neutral-400 hover:text-white underline py-1 px-1 transition-colors self-start md:self-auto"
+                      className="text-xs text-muted-foreground hover:text-foreground underline py-1 px-1 transition-colors self-start md:self-auto"
                     >
                       Clear
                     </button>
@@ -752,7 +752,7 @@ export default function PropertyDetailPage() {
 
                 {/* Filtered count on right: only when filtering */}
                 {isFiltering && (
-                  <span className="text-xs text-neutral-500 font-medium whitespace-nowrap self-end md:self-auto">
+                  <span className="text-xs text-subtle-foreground font-medium whitespace-nowrap self-end md:self-auto">
                     {filteredUnits.length} of {units.length} units
                   </span>
                 )}
@@ -765,9 +765,9 @@ export default function PropertyDetailPage() {
             filteredUnits.length > 0 ? (
               <>
                 {/* Desktop Table: Checkbox (44px) | Unit Name/Number | Unit Type | Current Tenant | Lease Range | Status | Actions */}
-                <div className="hidden md:block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm">
-                  <table className="min-w-full divide-y divide-neutral-800">
-                    <thead className="bg-neutral-900/50">
+                <div className="hidden md:block overflow-hidden rounded-xl border border-border bg-card backdrop-blur-sm">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-muted">
                       <tr>
                         <th
                           scope="col"
@@ -779,8 +779,8 @@ export default function PropertyDetailPage() {
                                 isAllDeletableSelected
                                   ? true
                                   : isSomeDeletableSelected
-                                  ? "indeterminate"
-                                  : false
+                                    ? "indeterminate"
+                                    : false
                               }
                               onCheckedChange={handleSelectAllToggle}
                               disabled={deletableUnitIds.length === 0}
@@ -790,43 +790,43 @@ export default function PropertyDetailPage() {
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider"
+                          className="px-6 py-3.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           Unit Name/Number
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider"
+                          className="px-6 py-3.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           Unit Type
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider"
+                          className="px-6 py-3.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           Current Tenant
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider"
+                          className="px-6 py-3.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           Lease Range
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider"
+                          className="px-6 py-3.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           Status
                         </th>
                         <th
                           scope="col"
-                          className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-400 uppercase tracking-wider"
+                          className="px-6 py-3.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider"
                         >
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-800/60 bg-transparent">
+                    <tbody className="divide-y divide-border/60 bg-transparent">
                       {filteredUnits.map((unit) => {
                         const isOccupiedOrReserved = unit.status === "occupied" || unit.status === "reserved";
                         const isSelected = selectedUnitIds.includes(unit.id);
@@ -837,8 +837,8 @@ export default function PropertyDetailPage() {
                             className={cn(
                               "transition-colors cursor-pointer",
                               isSelected
-                                ? "bg-neutral-800/40 hover:bg-neutral-800/60"
-                                : "hover:bg-neutral-900/30"
+                                ? "bg-muted hover:bg-muted/80"
+                                : "hover:bg-accent"
                             )}
                             onClick={() => router.push(`/landlord/properties/${propertyId}/units/${unit.id}`)}
                           >
@@ -871,18 +871,18 @@ export default function PropertyDetailPage() {
                                 )}
                               </div>
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-white">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-foreground">
                               {unit.unitNumber}
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300 capitalize">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground/80 capitalize">
                               {unit.unitType}
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground/80">
                               {unit.activeLease?.tenantName || (
-                                <span className="text-neutral-500">Vacant</span>
+                                <span className="text-subtle-foreground">Vacant</span>
                               )}
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-400">
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
                               {unit.activeLease
                                 ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
                                 : "—"}
@@ -892,10 +892,10 @@ export default function PropertyDetailPage() {
                                 className={cn(
                                   "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
                                   unit.status === "occupied"
-                                    ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                                    ? "bg-success-tint text-success border border-success/20"
                                     : unit.status === "reserved"
-                                    ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
-                                    : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                                    ? "bg-primary-tint text-primary border border-primary/20"
+                                    : "bg-warning-tint text-warning border border-warning/20"
                                 )}
                               >
                                 {unit.status}
@@ -911,7 +911,7 @@ export default function PropertyDetailPage() {
                                   onClick={() => handleOpenEditUnit(unit)}
                                   title="Edit unit"
                                   aria-label="Edit unit"
-                                  className="p-1.5 text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg transition-colors"
+                                  className="p-1.5 text-muted-foreground hover:text-foreground bg-card border border-border hover:border-border/80 rounded-lg transition-colors"
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </button>
@@ -920,7 +920,7 @@ export default function PropertyDetailPage() {
                                   onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
                                   title="Delete unit"
                                   aria-label="Delete unit"
-                                  className="p-1.5 text-rose-400 hover:text-rose-300 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg transition-colors"
+                                  className="p-1.5 text-destructive hover:text-destructive/80 bg-card border border-border hover:border-border/80 rounded-lg transition-colors"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
@@ -946,8 +946,8 @@ export default function PropertyDetailPage() {
                         className={cn(
                           "rounded-xl border p-4 space-y-3 cursor-pointer transition-colors flex items-start gap-3",
                           isSelected
-                            ? "bg-neutral-850/80 border-neutral-700 hover:bg-neutral-850"
-                            : "border-neutral-800 bg-neutral-900/20 hover:bg-neutral-900/40 hover:border-neutral-700"
+                            ? "bg-muted border-border hover:bg-muted/80"
+                            : "border-border bg-card hover:bg-accent hover:border-border/80"
                         )}
                       >
                         {/* Checkbox on left of unit card */}
@@ -983,32 +983,32 @@ export default function PropertyDetailPage() {
                         <div className="flex-1 min-w-0 space-y-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
-                              <span className="font-bold text-white text-base">{unit.unitNumber}</span>
-                              <span className="text-xs text-neutral-400 capitalize">· {unit.unitType}</span>
+                              <span className="font-bold text-foreground text-base">{unit.unitNumber}</span>
+                              <span className="text-xs text-muted-foreground capitalize">· {unit.unitType}</span>
                             </div>
                             <span
                               className={cn(
                                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
                                 unit.status === "occupied"
-                                  ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                                  ? "bg-success-tint text-success border border-success/20"
                                   : unit.status === "reserved"
-                                  ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
-                                  : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                                  ? "bg-primary-tint text-primary border border-primary/20"
+                                  : "bg-warning-tint text-warning border border-warning/20"
                               )}
                             >
                               {unit.status}
                             </span>
                           </div>
 
-                          <div className="text-xs space-y-1 text-neutral-400 pt-1 border-t border-neutral-800/60">
+                          <div className="text-xs space-y-1 text-muted-foreground pt-1 border-t border-border/60">
                             <div>
-                              <span className="text-neutral-500">Tenant: </span>
-                              <span className="text-neutral-300 font-medium">
+                              <span className="text-subtle-foreground">Tenant: </span>
+                              <span className="text-foreground/80 font-medium">
                                 {unit.activeLease?.tenantName || "Vacant"}
                               </span>
                             </div>
                             <div>
-                              <span className="text-neutral-500">Lease: </span>
+                              <span className="text-subtle-foreground">Lease: </span>
                               <span>
                                 {unit.activeLease
                                   ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
@@ -1018,7 +1018,7 @@ export default function PropertyDetailPage() {
                           </div>
 
                           <div
-                            className="flex items-center justify-end space-x-2 pt-2 border-t border-neutral-800/40"
+                            className="flex items-center justify-end space-x-2 pt-2 border-t border-border/40"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
@@ -1026,7 +1026,7 @@ export default function PropertyDetailPage() {
                               onClick={() => handleOpenEditUnit(unit)}
                               title="Edit unit"
                               aria-label="Edit unit"
-                              className="p-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-850 transition-colors"
+                              className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
@@ -1035,7 +1035,7 @@ export default function PropertyDetailPage() {
                               onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
                               title="Delete unit"
                               aria-label="Delete unit"
-                              className="p-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-colors"
+                              className="p-1.5 rounded-lg border border-border bg-card text-destructive hover:text-destructive/80 hover:bg-destructive-tint transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1047,32 +1047,32 @@ export default function PropertyDetailPage() {
                 </div>
               </>
             ) : (
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center">
-                <p className="text-sm text-neutral-400">No units match your search.</p>
+              <div className="rounded-xl border border-border bg-card p-12 text-center">
+                <p className="text-sm text-muted-foreground">No units match your search.</p>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={clearFilters}
-                  className="mt-4 border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-850 h-9 px-4 text-xs"
+                  className="mt-4 border-border text-foreground/80 hover:text-foreground hover:bg-accent h-9 px-4 text-xs"
                 >
                   Clear filters
                 </Button>
               </div>
             )
           ) : (
-            <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center">
-              <p className="text-neutral-400 text-sm">This property has no units yet.</p>
+            <div className="mt-6 rounded-xl border border-border bg-card p-12 text-center">
+              <p className="text-muted-foreground text-sm">This property has no units yet.</p>
               <div className="mt-4 flex justify-center space-x-3">
                 <Button
                   onClick={() => setIsAddUnitOpen(true)}
                   variant="outline"
-                  className="border-neutral-800 text-white hover:bg-neutral-900"
+                  className="border-border text-foreground hover:bg-accent"
                 >
                   Add Your First Unit
                 </Button>
                 <Button
                   onClick={() => setIsBulkAddOpen(true)}
-                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                 >
                   Bulk Add Units
                 </Button>
@@ -1084,15 +1084,15 @@ export default function PropertyDetailPage() {
 
       {/* Floating Selection Bar on Phones (< 768px) */}
       {selectedUnitIds.length > 0 && (
-        <div className="md:hidden fixed bottom-3 left-3 right-3 z-40 flex items-center justify-between px-4 py-2.5 rounded-xl border border-neutral-800 bg-neutral-900/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom-2 duration-150">
+        <div className="md:hidden fixed bottom-3 left-3 right-3 z-40 flex items-center justify-between px-4 py-2.5 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom-2 duration-150">
           <div className="flex items-center gap-2.5">
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-foreground">
               {selectedUnitIds.length} selected
             </span>
             <button
               type="button"
               onClick={handleClearSelection}
-              className="text-xs font-medium text-neutral-400 hover:text-white px-2 py-1 rounded hover:bg-neutral-800 transition-colors"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent transition-colors"
             >
               Clear
             </button>
@@ -1100,7 +1100,7 @@ export default function PropertyDetailPage() {
           <Button
             type="button"
             onClick={() => setIsBulkDeleteConfirmOpen(true)}
-            className="h-8 px-3 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 transition-colors"
+            className="h-8 px-3 text-xs font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground flex items-center gap-1.5 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Delete</span>
@@ -1110,11 +1110,11 @@ export default function PropertyDetailPage() {
 
       {/* Edit Property Modal */}
       {isEditPropertyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Edit Property</h2>
-              <button onClick={() => setIsEditPropertyOpen(false)} className="text-neutral-400 hover:text-white">
+              <button onClick={() => setIsEditPropertyOpen(false)} className="text-muted-foreground hover:text-foreground">
                 &times;
               </button>
             </div>
@@ -1122,7 +1122,7 @@ export default function PropertyDetailPage() {
             <form onSubmit={handleUpdateProperty} className="space-y-4">
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="edit-name" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="edit-name" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Property Name
                   </label>
                   <input
@@ -1131,12 +1131,12 @@ export default function PropertyDetailPage() {
                     required
                     value={propertyName}
                     onChange={(e) => setPropertyName(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="edit-address" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="edit-address" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Street Address
                   </label>
                   <input
@@ -1145,13 +1145,13 @@ export default function PropertyDetailPage() {
                     required
                     value={propertyAddress}
                     onChange={(e) => setPropertyAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="edit-state" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="edit-state" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       State
                     </label>
                     <Select
@@ -1173,7 +1173,7 @@ export default function PropertyDetailPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="edit-city" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="edit-city" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Local Government Area
                     </label>
                     <Select
@@ -1196,7 +1196,7 @@ export default function PropertyDetailPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Property Type
                   </label>
                   <Select
@@ -1213,7 +1213,7 @@ export default function PropertyDetailPage() {
 
                 {propertyType !== PropertyType.residential && (
                   <div>
-                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Expected Number of Units
                     </label>
                     <input
@@ -1222,25 +1222,25 @@ export default function PropertyDetailPage() {
                       min="1"
                       value={expectedUnits}
                       onChange={(e) => setExpectedUnits(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => setIsEditPropertyOpen(false)}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateProperty.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {updateProperty.isPending ? "Saving..." : "Save Changes"}
                 </Button>
@@ -1291,8 +1291,8 @@ export default function PropertyDetailPage() {
 
       {/* Add Unit Modal */}
       {isAddUnitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Add Single Unit</h2>
               <button
@@ -1300,7 +1300,7 @@ export default function PropertyDetailPage() {
                   setIsAddUnitOpen(false);
                   resetUnitForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -1308,14 +1308,14 @@ export default function PropertyDetailPage() {
 
             <form onSubmit={handleCreateUnit} className="space-y-4">
               {unitError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {unitError}
                 </div>
               )}
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="unitNumber" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="unitNumber" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Unit Name / Number
                   </label>
                   <input
@@ -1324,13 +1324,13 @@ export default function PropertyDetailPage() {
                     required
                     value={unitNumber}
                     onChange={(e) => setUnitNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. Flat 1, Shop 4B"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="unitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="unitType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Unit Type
                   </label>
                   <Select
@@ -1349,7 +1349,7 @@ export default function PropertyDetailPage() {
 
                 {isResidentialUnitType(unitType) && (
                   <div>
-                    <label htmlFor="roomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="roomsCount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Number of Rooms (Optional)
                     </label>
                     <input
@@ -1358,14 +1358,14 @@ export default function PropertyDetailPage() {
                       min="1"
                       value={roomsCount}
                       onChange={(e) => setRoomsCount(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                       placeholder="e.g. 2"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label htmlFor="sizeSqm" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="sizeSqm" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Floor Area in SQM (Optional)
                   </label>
                   <input
@@ -1375,13 +1375,13 @@ export default function PropertyDetailPage() {
                     step="0.1"
                     value={sizeSqm}
                     onChange={(e) => setSizeSqm(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     placeholder="e.g. 75.5"
                   />
                 </div>
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -1389,14 +1389,14 @@ export default function PropertyDetailPage() {
                     resetUnitForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createUnit.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {createUnit.isPending ? "Creating..." : "Save Unit"}
                 </Button>
@@ -1408,8 +1408,8 @@ export default function PropertyDetailPage() {
 
       {/* Edit Unit Modal */}
       {isEditUnitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Edit Unit</h2>
               <button
@@ -1417,7 +1417,7 @@ export default function PropertyDetailPage() {
                   setIsEditUnitOpen(false);
                   resetEditUnitForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
@@ -1425,14 +1425,14 @@ export default function PropertyDetailPage() {
 
             <form onSubmit={handleUpdateUnitSubmit} className="space-y-4">
               {editUnitError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {editUnitError}
                 </div>
               )}
 
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Unit Name / Number
                   </label>
                   <input
@@ -1441,12 +1441,12 @@ export default function PropertyDetailPage() {
                     required
                     value={editUnitNumber}
                     onChange={(e) => setEditUnitNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
+                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                     Unit Type
                   </label>
                   <Select
@@ -1465,7 +1465,7 @@ export default function PropertyDetailPage() {
 
                 {isResidentialUnitType(editUnitType) && (
                   <div>
-                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                       Number of Rooms (Optional)
                     </label>
                     <input
@@ -1474,13 +1474,13 @@ export default function PropertyDetailPage() {
                       min="1"
                       value={editRoomsCount}
                       onChange={(e) => setEditRoomsCount(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-4 py-2 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm h-[38px]"
+                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -1488,14 +1488,14 @@ export default function PropertyDetailPage() {
                     resetEditUnitForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={updateUnit.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {updateUnit.isPending ? "Saving..." : "Save Changes"}
                 </Button>
@@ -1507,8 +1507,8 @@ export default function PropertyDetailPage() {
 
       {/* Bulk Add Units Modal */}
       {isBulkAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-          <div className="w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-950 p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold tracking-tight">Bulk Add Units</h2>
               <button
@@ -1516,20 +1516,20 @@ export default function PropertyDetailPage() {
                   setIsBulkAddOpen(false);
                   resetBulkForm();
                 }}
-                className="text-neutral-400 hover:text-white"
+                className="text-muted-foreground hover:text-foreground"
               >
                 &times;
               </button>
             </div>
 
             {/* Mode Toggle */}
-            <div className="flex bg-neutral-900 p-1 rounded-lg border border-neutral-800">
+            <div className="flex bg-muted p-1 rounded-lg border border-border">
               <button
                 type="button"
                 onClick={() => setBulkMode("range")}
                 className={cn(
                   "flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors",
-                  bulkMode === "range" ? "bg-white text-neutral-950 shadow" : "text-neutral-400 hover:text-white"
+                  bulkMode === "range" ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Auto-Generate Range
@@ -1539,7 +1539,7 @@ export default function PropertyDetailPage() {
                 onClick={() => setBulkMode("manual")}
                 className={cn(
                   "flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors",
-                  bulkMode === "manual" ? "bg-white text-neutral-950 shadow" : "text-neutral-400 hover:text-white"
+                  bulkMode === "manual" ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Manual List
@@ -1548,7 +1548,7 @@ export default function PropertyDetailPage() {
 
             <form onSubmit={handleBulkSubmit} className="space-y-4">
               {bulkError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
                   {bulkError}
                 </div>
               )}
@@ -1557,7 +1557,7 @@ export default function PropertyDetailPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                         Prefix
                       </label>
                       <input
@@ -1565,11 +1565,11 @@ export default function PropertyDetailPage() {
                         value={rangePrefix}
                         onChange={(e) => setRangePrefix(e.target.value)}
                         placeholder="e.g. Flat"
-                        className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-white text-sm"
+                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                         Unit Type
                       </label>
                       <Select
@@ -1588,7 +1588,7 @@ export default function PropertyDetailPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                         Start Number
                       </label>
                       <input
@@ -1597,11 +1597,11 @@ export default function PropertyDetailPage() {
                         required
                         value={rangeStart}
                         onChange={(e) => setRangeStart(e.target.value)}
-                        className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-white text-sm"
+                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                         End Number
                       </label>
                       <input
@@ -1610,14 +1610,14 @@ export default function PropertyDetailPage() {
                         required
                         value={rangeEnd}
                         onChange={(e) => setRangeEnd(e.target.value)}
-                        className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-white text-sm"
+                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       />
                     </div>
                   </div>
 
                   {isResidentialUnitType(rangeType) && (
                     <div>
-                      <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
+                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
                         Rooms (Optional)
                       </label>
                       <input
@@ -1626,14 +1626,14 @@ export default function PropertyDetailPage() {
                         value={rangeRoomsCount}
                         onChange={(e) => setRangeRoomsCount(e.target.value)}
                         placeholder="e.g. 2"
-                        className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-white text-sm"
+                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       />
                     </div>
                   )}
 
-                  <div className="p-3 bg-neutral-900/50 border border-neutral-800 rounded-lg text-xs text-neutral-400">
+                  <div className="p-3 bg-muted border border-border rounded-lg text-xs text-muted-foreground">
                     Will create{" "}
-                    <span className="text-white font-semibold">
+                    <span className="text-foreground font-semibold">
                       {Math.max(0, (parseInt(rangeEnd, 10) || 0) - (parseInt(rangeStart, 10) || 0) + 1)}
                     </span>{" "}
                     units: {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeStart}` : rangeStart} to {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeEnd}` : rangeEnd}
@@ -1653,7 +1653,7 @@ export default function PropertyDetailPage() {
                             setManualRows(newRows);
                           }}
                           placeholder={`Unit #${index + 1}`}
-                          className="flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-white text-sm"
+                          className="flex-1 rounded-lg border border-input bg-card px-3 py-1.5 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                         />
                         <Select
                           value={row.unitType}
@@ -1681,7 +1681,7 @@ export default function PropertyDetailPage() {
                               setManualRows(newRows);
                             }}
                             placeholder="Rooms"
-                            className="w-20 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-white text-sm"
+                            className="w-20 rounded-lg border border-input bg-card px-2 py-1.5 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                           />
                         )}
                         {manualRows.length > 1 && (
@@ -1690,7 +1690,7 @@ export default function PropertyDetailPage() {
                             onClick={() => {
                               setManualRows(manualRows.filter((_, i) => i !== index));
                             }}
-                            className="text-neutral-500 hover:text-red-400 p-1"
+                            className="text-muted-foreground hover:text-destructive p-1"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1705,7 +1705,7 @@ export default function PropertyDetailPage() {
                     onClick={() => {
                       setManualRows([...manualRows, { unitNumber: "", unitType: defaultUnitType, roomsCount: "" }]);
                     }}
-                    className="w-full border-neutral-800 text-neutral-400 hover:text-white text-xs h-8 flex items-center justify-center gap-1.5"
+                    className="w-full border-border text-muted-foreground hover:text-foreground text-xs h-8 flex items-center justify-center gap-1.5 hover:bg-accent"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add another row
@@ -1713,7 +1713,7 @@ export default function PropertyDetailPage() {
                 </div>
               )}
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-neutral-800">
+              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
                   onClick={() => {
@@ -1721,14 +1721,14 @@ export default function PropertyDetailPage() {
                     resetBulkForm();
                   }}
                   variant="outline"
-                  className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createBulkUnits.isPending}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {createBulkUnits.isPending ? "Generating..." : "Generate Units"}
                 </Button>

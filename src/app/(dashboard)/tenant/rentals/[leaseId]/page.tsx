@@ -60,26 +60,26 @@ function StatusBadge({
   switch (status) {
     case "active":
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950/40 border border-emerald-900/40 text-emerald-400">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-tint border border-success/20 text-success">
           Active
         </span>
       );
     case "upcoming":
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-950/40 border border-blue-900/40 text-blue-400">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-tint border border-primary/20 text-primary">
           Upcoming
         </span>
       );
     case "moved_out":
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-850 border border-neutral-800 text-neutral-400">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
           Moved out
         </span>
       );
     case "ended":
     default:
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-850 border border-neutral-800 text-neutral-400">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
           Ended
         </span>
       );
@@ -373,7 +373,7 @@ export default function TenantRentalDetailsPage({
 
   if (isLoadingRental) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title="Rental Details" />
         <PageContainer className="space-y-6">
           <Skeleton className="h-9 w-28" />
@@ -391,18 +391,18 @@ export default function TenantRentalDetailsPage({
 
   if (isRentalError || !lease) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title="Rental Not Found" />
         <PageContainer className="py-16 text-center space-y-4">
-          <h1 className="text-xl font-bold text-white">Rental not found</h1>
-          <p className="text-sm text-neutral-400 max-w-sm mx-auto">
+          <h1 className="text-xl font-bold text-foreground">Rental not found</h1>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
             This rental does not exist or you do not have permission to view it.
           </p>
           <div className="pt-2">
             <Button
               onClick={() => router.push("/tenant")}
               variant="outline"
-              className="text-xs h-9 px-4 border-neutral-800 text-neutral-300 hover:text-white"
+              className="text-xs h-9 px-4 border-border text-foreground hover:bg-accent"
             >
               ← Back to Home
             </Button>
@@ -427,7 +427,7 @@ export default function TenantRentalDetailsPage({
     : null;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title={`Unit ${unit.unitNumber}`} />
 
       <PageContainer className="space-y-6">
@@ -446,28 +446,28 @@ export default function TenantRentalDetailsPage({
         />
 
         {/* Title Box */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 backdrop-blur-sm">
+        <div className="rounded-xl border border-border bg-card/40 p-6 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-white font-sans">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">
                   Unit {unit.unitNumber}
                 </h1>
                 <StatusBadge status={leaseStatus} />
               </div>
-              <p className="text-sm text-neutral-400 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {property.name} · {property.address}, {property.city}
               </p>
             </div>
 
             <div className="sm:text-right shrink-0">
-              <span className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+              <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Landlord
               </span>
-              <span className="text-sm font-semibold text-white block mt-0.5">
+              <span className="text-sm font-semibold text-foreground block mt-0.5">
                 {landlord.fullName}
               </span>
-              <span className="text-xs text-neutral-400 block mt-0.5">
+              <span className="text-xs text-muted-foreground block mt-0.5">
                 {landlord.email}
               </span>
             </div>
@@ -477,45 +477,45 @@ export default function TenantRentalDetailsPage({
         {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
           {/* Lease Details Card (3fr) */}
-          <div className="lg:col-span-3 rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 space-y-4 h-full flex flex-col justify-between">
+          <div className="lg:col-span-3 rounded-xl border border-border bg-card/20 p-5 space-y-4 h-full flex flex-col justify-between">
             <div>
               <div>
-                <h3 className="font-bold text-white text-lg">Lease</h3>
-                <p className="text-neutral-500 text-xs mt-0.5">
+                <h3 className="font-bold text-foreground text-lg">Lease</h3>
+                <p className="text-muted-foreground text-xs mt-0.5">
                   Tenancy terms and duration.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2 text-xs">
                 <div>
-                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
                     Period
                   </span>
-                  <span className="text-neutral-200 font-medium block mt-1">
+                  <span className="text-foreground font-medium block mt-1">
                     {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
                     Rent
                   </span>
-                  <span className="text-white font-semibold block mt-1">
+                  <span className="text-foreground font-semibold block mt-1">
                     {formatCurrency(lease.rentAmount)} / {formatRentFrequency(lease.rentFrequency)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
                     Deposit
                   </span>
-                  <span className="text-neutral-200 font-medium block mt-1">
+                  <span className="text-foreground font-medium block mt-1">
                     {lease.depositAmount ? formatCurrency(lease.depositAmount) : "—"}
                   </span>
                 </div>
                 <div>
-                  <span className="text-neutral-500 block uppercase tracking-wider text-[10px] font-bold">
+                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
                     Unit type
                   </span>
-                  <span className="text-neutral-200 font-medium block mt-1">
+                  <span className="text-foreground font-medium block mt-1">
                     {formatUnitType(unit.unitType)}
                   </span>
                 </div>
@@ -529,43 +529,43 @@ export default function TenantRentalDetailsPage({
 
         {/* Billing Summary Card */}
         {billingSummary && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 space-y-4">
+          <div className="rounded-xl border border-border bg-card/20 p-5 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   RENT DUE TO DATE
                 </span>
-                <span className="text-[22px] font-semibold text-white block leading-tight">
+                <span className="text-[22px] font-semibold text-foreground block leading-tight">
                   {formatCurrency(billingSummary.rentDueToDate)}
                 </span>
-                <span className="block text-xs text-neutral-400">
+                <span className="block text-xs text-muted-foreground">
                   {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} finished
                 </span>
               </div>
 
               <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   PAID (CONFIRMED)
                 </span>
-                <span className="text-[22px] font-semibold text-white block leading-tight">
+                <span className="text-[22px] font-semibold text-foreground block leading-tight">
                   {formatCurrency(billingSummary.paidToDate)}
                 </span>
               </div>
 
               <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                   OUTSTANDING
                 </span>
                 {billingSummary.credit > 0 ? (
-                  <span className="text-[22px] font-semibold text-emerald-400 block leading-tight">
+                  <span className="text-[22px] font-semibold text-success block leading-tight">
                     Credit {formatCurrency(billingSummary.credit)}
                   </span>
                 ) : billingSummary.outstanding > 0 ? (
-                  <span className="text-[22px] font-semibold text-red-400 block leading-tight">
+                  <span className="text-[22px] font-semibold text-destructive block leading-tight">
                     {formatCurrency(billingSummary.outstanding)}
                   </span>
                 ) : (
-                  <span className="text-[22px] font-semibold text-emerald-400 block leading-tight">
+                  <span className="text-[22px] font-semibold text-success block leading-tight">
                     ₦0
                   </span>
                 )}
@@ -574,22 +574,22 @@ export default function TenantRentalDetailsPage({
 
             {/* Overdue / Paid-to-end / Status line */}
             {dueStatus && (
-              <div className="pt-3 border-t border-neutral-800/60 text-xs sm:text-sm text-neutral-300">
+              <div className="pt-3 border-t border-border/60 text-xs sm:text-sm text-foreground/80">
                 <span
                   className={cn(
                     dueStatus.status === "overdue"
-                      ? "text-red-400 font-medium"
+                      ? "text-destructive font-medium"
                       : dueStatus.status === "today"
-                      ? "text-amber-400 font-medium"
+                      ? "text-warning font-medium"
                       : dueStatus.status === "paid_in_full"
-                      ? "text-emerald-400 font-medium"
-                      : "text-neutral-300"
+                      ? "text-success font-medium"
+                      : "text-muted-foreground"
                   )}
                 >
                   {dueStatus.text}
                 </span>
                 {billingSummary.pendingAmount > 0 && (
-                  <span className="text-amber-400 font-medium ml-1">
+                  <span className="text-warning font-medium ml-1">
                     • {formatCurrency(billingSummary.pendingAmount)} waiting for landlord confirmation
                   </span>
                 )}
@@ -601,11 +601,11 @@ export default function TenantRentalDetailsPage({
         {/* Payment History */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <h3 className="font-bold text-white text-lg">Payment history</h3>
+            <h3 className="font-bold text-foreground text-lg">Payment history</h3>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
               <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-                <div className="sm:hidden text-sm font-semibold text-neutral-400">
+                <div className="sm:hidden text-sm font-semibold text-muted-foreground">
                   Payment history
                 </div>
                 {/* Add payment button */}
@@ -616,7 +616,7 @@ export default function TenantRentalDetailsPage({
                         <span className="inline-flex cursor-not-allowed">
                           <Button
                             disabled
-                            className="bg-white text-neutral-950 font-semibold text-xs h-9 px-3 flex items-center gap-1.5 opacity-50 pointer-events-none"
+                            className="bg-muted text-muted-foreground font-semibold text-xs h-9 px-3 flex items-center gap-1.5 opacity-50 pointer-events-none"
                           >
                             <Plus className="w-4 h-4" />
                             Add payment
@@ -630,7 +630,7 @@ export default function TenantRentalDetailsPage({
                   ) : (
                     <Button
                       onClick={handleOpenAddPayment}
-                      className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-9 px-3 flex items-center gap-1.5"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs h-9 px-3 flex items-center gap-1.5"
                     >
                       <Plus className="w-4 h-4" />
                       Add payment
@@ -652,9 +652,9 @@ export default function TenantRentalDetailsPage({
           </div>
 
           {/* Desktop Payments Table (>= 640px) */}
-          <div className="hidden sm:block rounded-xl border border-neutral-800 bg-neutral-900/20 overflow-hidden">
-            <table className="w-full table-fixed divide-y divide-neutral-800/80 text-left text-sm">
-              <thead className="bg-neutral-900/60 text-xs font-medium text-neutral-400 uppercase tracking-wider">
+          <div className="hidden sm:block rounded-xl border border-border bg-card/20 overflow-hidden">
+            <table className="w-full table-fixed divide-y divide-border/80 text-left text-sm">
+              <thead className="bg-muted/60 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <tr>
                   <th scope="col" className="w-[20%] px-4 py-3">
                     Date logged
@@ -676,7 +676,7 @@ export default function TenantRentalDetailsPage({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-800/60">
+              <tbody className="divide-y divide-border/60">
                 {isLoadingPayments ? (
                   [...Array(3)].map((_, i) => (
                     <tr key={i}>
@@ -687,7 +687,7 @@ export default function TenantRentalDetailsPage({
                   ))
                 ) : filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-neutral-500">
+                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
                       <p className="text-xs">No payments recorded for this lease yet.</p>
                     </td>
                   </tr>
@@ -737,14 +737,14 @@ export default function TenantRentalDetailsPage({
                     ];
 
                     return (
-                      <tr key={p.id} className="hover:bg-neutral-900/40 transition-colors">
-                        <td className="px-4 py-3 text-xs text-neutral-300">
+                      <tr key={p.id} className="hover:bg-accent/50 transition-colors">
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
                           {formatDateGB(p.paymentDate)}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-white">
+                        <td className="px-4 py-3 font-semibold text-foreground">
                           {formatCurrency(p.amount)}
                         </td>
-                        <td className="px-4 py-3 text-xs text-neutral-300 capitalize">
+                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize">
                           {p.method.replace(/_/g, " ")}
                         </td>
                         <td className="px-4 py-3 text-xs truncate">
@@ -752,7 +752,7 @@ export default function TenantRentalDetailsPage({
                             <button
                               type="button"
                               onClick={() => handleViewReceipt(p.proofUrl!)}
-                              className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:underline"
+                              className="inline-flex items-center gap-1.5 text-primary hover:underline"
                             >
                               <Paperclip className="w-3.5 h-3.5 shrink-0" />
                               <span className="truncate max-w-[120px]">
@@ -760,20 +760,20 @@ export default function TenantRentalDetailsPage({
                               </span>
                             </button>
                           ) : (
-                            <span className="text-neutral-500">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           {isPending ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-950/40 border border-amber-900/40 text-amber-400">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint border border-warning/20 text-warning">
                               Pending
                             </span>
                           ) : isFlagged ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-950/40 border border-rose-900/40 text-rose-400">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-destructive-tint border border-destructive/20 text-destructive">
                               Disputed
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-950/40 border border-emerald-900/40 text-emerald-400">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint border border-success/20 text-success">
                               Confirmed
                             </span>
                           )}
@@ -793,13 +793,13 @@ export default function TenantRentalDetailsPage({
           <div className="sm:hidden space-y-3">
             {isLoadingPayments ? (
               [...Array(2)].map((_, i) => (
-                <div key={i} className="rounded-xl border border-neutral-800 p-4 space-y-2">
+                <div key={i} className="rounded-xl border border-border p-4 space-y-2">
                   <Skeleton className="h-5 w-28" />
                   <Skeleton className="h-4 w-40" />
                 </div>
               ))
             ) : filteredPayments.length === 0 ? (
-              <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-6 text-center text-neutral-500">
+              <div className="rounded-xl border border-border bg-card/20 p-6 text-center text-muted-foreground">
                 <p className="text-xs">No payments recorded for this lease yet.</p>
               </div>
             ) : (
@@ -850,32 +850,32 @@ export default function TenantRentalDetailsPage({
                 return (
                   <div
                     key={p.id}
-                    className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-4 space-y-3"
+                    className="rounded-xl border border-border bg-card/40 p-4 space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold text-white">
+                      <span className="text-base font-semibold text-foreground">
                         {formatCurrency(p.amount)}
                       </span>
                       <ActionMenu items={actions} />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-neutral-400">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{formatDateGB(p.paymentDate)}</span>
                       <span className="capitalize">{p.method.replace(/_/g, " ")}</span>
                     </div>
 
-                    <div className="pt-2 border-t border-neutral-800/60 flex items-center justify-between text-xs">
+                    <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
                       <div>
                         {isPending ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-950/40 border border-amber-900/40 text-amber-400">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning-tint border border-warning/20 text-warning">
                             Pending
                           </span>
                         ) : isFlagged ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-950/40 border border-rose-900/40 text-rose-400">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive-tint border border-destructive/20 text-destructive">
                             Disputed
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-950/40 border border-emerald-900/40 text-emerald-400">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-success-tint border border-success/20 text-success">
                             Confirmed
                           </span>
                         )}
@@ -885,7 +885,7 @@ export default function TenantRentalDetailsPage({
                         <button
                           type="button"
                           onClick={() => handleViewReceipt(p.proofUrl!)}
-                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
                         >
                           <Paperclip className="w-3.5 h-3.5" />
                           <span>Receipt</span>
@@ -902,10 +902,10 @@ export default function TenantRentalDetailsPage({
 
       {/* Add / Edit Payment Modal (bottom sheet on phones, dialog on desktop) */}
       {isAddPaymentOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
-          <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-neutral-800">
-              <h2 className="text-lg font-bold text-white font-sans">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
+          <div className="w-full sm:max-w-lg rounded-t-xl sm:rounded-xl border border-border bg-card p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-5 pb-3 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground font-sans">
                 {editingPaymentId ? "Edit Payment" : "Add Payment"}
               </h2>
               <button
@@ -914,7 +914,7 @@ export default function TenantRentalDetailsPage({
                   setIsAddPaymentOpen(false);
                   resetPaymentForm();
                 }}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors"
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -922,24 +922,24 @@ export default function TenantRentalDetailsPage({
 
             <form onSubmit={handlePaymentSubmit} className="space-y-4">
               {paymentError && (
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-xs text-red-400">
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-xs text-destructive">
                   {paymentError}
                 </div>
               )}
 
               {/* Rental shown read-only */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Rental
                 </label>
-                <div className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 select-none">
+                <div className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground select-none">
                   Unit {unit.unitNumber} · {property.name}
                 </div>
               </div>
 
               {/* Amount */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Amount (₦)
                 </label>
                 <input
@@ -951,10 +951,10 @@ export default function TenantRentalDetailsPage({
                     setAmountInput(formatInputNumber(e.target.value));
                     setPaymentError(null);
                   }}
-                  className="w-full bg-neutral-900/60 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full bg-card border border-input rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                 />
                 {billingSummary && billingSummary.isRentSet && (
-                  <p className="text-[11px] text-neutral-500 mt-1">
+                  <p className="text-[11px] text-muted-foreground mt-1">
                     {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
                   </p>
                 )}
@@ -962,7 +962,7 @@ export default function TenantRentalDetailsPage({
 
               {/* Date Paid */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Date paid
                 </label>
                 <input
@@ -971,13 +971,13 @@ export default function TenantRentalDetailsPage({
                   max={todayStr}
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full bg-neutral-900/60 border border-neutral-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full bg-card border border-input rounded-lg px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                 />
               </div>
 
               {/* Method */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Payment method
                 </label>
                 <Select
@@ -994,11 +994,11 @@ export default function TenantRentalDetailsPage({
 
               {/* Receipt Upload */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Receipt / Proof (optional)
                 </label>
                 <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-800 bg-neutral-900 hover:bg-neutral-850 text-xs font-medium text-neutral-200 transition-colors">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium text-foreground transition-colors">
                     {isUploadingProof ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
@@ -1014,20 +1014,20 @@ export default function TenantRentalDetailsPage({
                     />
                   </label>
                   {proofFileName && (
-                    <span className="text-xs text-neutral-300 truncate max-w-[200px]" title={proofFileName}>
+                    <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={proofFileName}>
                       {proofFileName}
                     </span>
                   )}
                 </div>
                 {uploadError && (
-                  <p className="text-[11px] text-red-400 mt-1">{uploadError}</p>
+                  <p className="text-[11px] text-destructive mt-1">{uploadError}</p>
                 )}
-                <p className="text-[11px] text-neutral-500 mt-1">PDF, JPG or PNG up to 10MB.</p>
+                <p className="text-[11px] text-muted-foreground mt-1">PDF, JPG or PNG up to 10MB.</p>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Notes (optional)
                 </label>
                 <textarea
@@ -1035,12 +1035,12 @@ export default function TenantRentalDetailsPage({
                   placeholder="Optional reference or description"
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
-                  className="w-full bg-neutral-900/60 border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                  className="w-full bg-card border border-input rounded-lg p-2.5 text-xs text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring resize-none"
                 />
               </div>
 
               {/* Buttons: Cancel / Save */}
-              <div className="flex gap-3 pt-3 border-t border-neutral-800">
+              <div className="flex gap-3 pt-3 border-t border-border">
                 <Button
                   type="button"
                   variant="outline"
@@ -1048,14 +1048,14 @@ export default function TenantRentalDetailsPage({
                     setIsAddPaymentOpen(false);
                     resetPaymentForm();
                   }}
-                  className="w-1/2 border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 h-10 text-sm"
+                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createPaymentMutation.isPending || updatePendingMutation.isPending || isUploadingProof}
-                  className="w-1/2 bg-white text-neutral-950 hover:bg-neutral-200 h-10 text-sm font-semibold"
+                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
                 >
                   {createPaymentMutation.isPending || updatePendingMutation.isPending
                     ? "Saving..."
@@ -1069,14 +1069,14 @@ export default function TenantRentalDetailsPage({
 
       {/* Payment Details Modal */}
       {selectedPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-neutral-800">
-              <h2 className="text-lg font-bold text-white font-sans">Payment details</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground font-sans">Payment details</h2>
               <button
                 type="button"
                 onClick={() => setSelectedPayment(null)}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900"
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1084,34 +1084,34 @@ export default function TenantRentalDetailsPage({
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between">
-                <span className="text-neutral-500">Amount</span>
-                <span className="font-semibold text-white text-sm">
+                <span className="text-muted-foreground">Amount</span>
+                <span className="font-semibold text-foreground text-sm">
                   {formatCurrency(selectedPayment.amount)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Date paid</span>
-                <span className="text-neutral-200">{formatDateGB(selectedPayment.paymentDate)}</span>
+                <span className="text-muted-foreground">Date paid</span>
+                <span className="text-foreground">{formatDateGB(selectedPayment.paymentDate)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Method</span>
-                <span className="text-neutral-200 capitalize">
+                <span className="text-muted-foreground">Method</span>
+                <span className="text-foreground capitalize">
                   {selectedPayment.method.replace(/_/g, " ")}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-neutral-500">Status</span>
+                <span className="text-muted-foreground">Status</span>
                 <span>
                   {selectedPayment.status === "pending" ? (
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-950/40 border border-amber-900/40 text-amber-400">
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning-tint border border-warning/20 text-warning">
                       Pending confirmation
                     </span>
                   ) : selectedPayment.status === "disputed" || selectedPayment.disputedByTenant ? (
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-950/40 border border-rose-900/40 text-rose-400">
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive-tint border border-destructive/20 text-destructive">
                       Disputed
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-950/40 border border-emerald-900/40 text-emerald-400">
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-success-tint border border-success/20 text-success">
                       Confirmed
                     </span>
                   )}
@@ -1119,23 +1119,23 @@ export default function TenantRentalDetailsPage({
               </div>
 
               {selectedPayment.notes && (
-                <div className="pt-2 border-t border-neutral-800/80">
-                  <span className="text-neutral-500 block mb-1">Notes</span>
-                  <p className="text-neutral-300 bg-neutral-900/40 p-2.5 rounded-lg border border-neutral-800/60 text-xs">
+                <div className="pt-2 border-t border-border/80">
+                  <span className="text-muted-foreground block mb-1">Notes</span>
+                  <p className="text-foreground bg-muted/40 p-2.5 rounded-lg border border-border/60 text-xs">
                     {selectedPayment.notes}
                   </p>
                 </div>
               )}
 
               {selectedPayment.proofUrl && (
-                <div className="pt-2 border-t border-neutral-800/80 flex justify-between items-center">
-                  <span className="text-neutral-500">Receipt</span>
+                <div className="pt-2 border-t border-border/80 flex justify-between items-center">
+                  <span className="text-muted-foreground">Receipt</span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => handleViewReceipt(selectedPayment.proofUrl!)}
-                    className="h-7 px-2.5 text-xs border-neutral-800 text-blue-400 hover:text-blue-300"
+                    className="h-7 px-2.5 text-xs border-border text-primary hover:underline"
                   >
                     <Paperclip className="w-3.5 h-3.5 mr-1" />
                     View receipt
@@ -1144,11 +1144,11 @@ export default function TenantRentalDetailsPage({
               )}
             </div>
 
-            <div className="pt-3 border-t border-neutral-800">
+            <div className="pt-3 border-t border-border">
               <Button
                 type="button"
                 onClick={() => setSelectedPayment(null)}
-                className="w-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 h-9 text-xs"
+                className="w-full bg-card hover:bg-accent border border-border text-foreground h-9 text-xs"
               >
                 Close
               </Button>
@@ -1159,10 +1159,10 @@ export default function TenantRentalDetailsPage({
 
       {/* Dispute Payment Dialog */}
       {isDisputeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-neutral-800">
-              <h2 className="text-lg font-bold text-white font-sans">Dispute payment</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-border">
+              <h2 className="text-lg font-bold text-foreground font-sans">Dispute payment</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -1170,19 +1170,19 @@ export default function TenantRentalDetailsPage({
                   setDisputeReason("");
                   setDisputePaymentId(null);
                 }}
-                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900"
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs text-neutral-400 leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 If you believe this payment entry is inaccurate or was logged in error, explain the issue below. Your landlord will be notified to review and resolve the dispute.
               </p>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                <label className="block text-xs font-medium text-foreground/80 mb-1">
                   Reason for dispute
                 </label>
                 <textarea
@@ -1191,12 +1191,12 @@ export default function TenantRentalDetailsPage({
                   placeholder="Explain why this payment record is incorrect..."
                   value={disputeReason}
                   onChange={(e) => setDisputeReason(e.target.value)}
-                  className="w-full bg-neutral-900/60 border border-neutral-800 rounded-lg p-2.5 text-xs text-white placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                  className="w-full bg-card border border-input rounded-lg p-2.5 text-xs text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 pt-3 border-t border-neutral-800">
+            <div className="flex gap-3 pt-3 border-t border-border">
               <Button
                 type="button"
                 variant="outline"
@@ -1205,7 +1205,7 @@ export default function TenantRentalDetailsPage({
                   setDisputeReason("");
                   setDisputePaymentId(null);
                 }}
-                className="w-1/2 border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 h-9 text-xs"
+                className="w-1/2 border-border text-foreground hover:bg-accent h-9 text-xs"
               >
                 Cancel
               </Button>
@@ -1220,7 +1220,7 @@ export default function TenantRentalDetailsPage({
                     });
                   }
                 }}
-                className="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-semibold h-9 text-xs"
+                className="w-1/2 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold h-9 text-xs"
               >
                 {flagPaymentMutation.isPending ? "Submitting..." : "Submit dispute"}
               </Button>

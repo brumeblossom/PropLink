@@ -203,8 +203,8 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
         }
       }}
       className={cn(
-        "rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 flex flex-col justify-between transition-colors space-y-4",
-        isDragging && "border-emerald-500/50 bg-emerald-950/10 ring-2 ring-emerald-500/20",
+        "rounded-xl border border-border bg-card/40 p-5 flex flex-col justify-between transition-colors space-y-4",
+        isDragging && "border-success/50 bg-success-tint/20 ring-2 ring-success/20",
         className
       )}
     >
@@ -212,8 +212,8 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-bold text-white text-lg">Documents</h3>
-            <p className="text-neutral-500 text-xs mt-0.5">
+            <h3 className="font-bold text-foreground text-lg">Documents</h3>
+            <p className="text-muted-foreground text-xs mt-0.5">
               Store and view lease agreements, inventory or receipts.
             </p>
           </div>
@@ -223,7 +223,7 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs h-8 px-2.5 border-neutral-700 hover:bg-neutral-800 text-neutral-200 shrink-0 flex items-center gap-1.5"
+              className="text-xs h-8 px-2.5 border-border hover:bg-muted text-foreground shrink-0 flex items-center gap-1.5"
             >
               <Upload className="w-3.5 h-3.5" />
               Upload
@@ -245,7 +245,7 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
 
         {/* Drag overlay hint */}
         {isDragging && (
-          <div className="mt-3 rounded-lg border border-dashed border-emerald-500/40 bg-emerald-950/20 p-3 text-center text-xs text-emerald-400 font-medium">
+          <div className="mt-3 rounded-lg border border-dashed border-success/40 bg-success-tint/30 p-3 text-center text-xs text-success font-medium">
             Drop files here to upload
           </div>
         )}
@@ -255,15 +255,15 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
           {isLoading ? (
             <div className="space-y-2.5">
               {[...Array(2)].map((_, i) => (
-                <div key={i} className="h-12 rounded-lg bg-neutral-900/40 animate-pulse border border-neutral-800/40" />
+                <div key={i} className="h-12 rounded-lg bg-muted/40 animate-pulse border border-border/40" />
               ))}
             </div>
           ) : totalFiles === 0 ? (
             <div className="py-6 text-center">
               {mode === "landlord" ? (
                 <div className="flex flex-col items-center justify-center space-y-3">
-                  <FileText className="w-5 h-5 text-neutral-500" />
-                  <p className="text-xs text-neutral-400">
+                  <FileText className="w-5 h-5 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">
                     No documents yet.
                   </p>
                   <Button
@@ -271,14 +271,14 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
                     variant="outline"
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-xs h-8 px-3 border-neutral-700 hover:bg-neutral-800 text-neutral-200"
+                    className="text-xs h-8 px-3 border-border hover:bg-muted text-foreground"
                   >
                     <Upload className="w-3.5 h-3.5 mr-1.5" />
                     Upload
                   </Button>
                 </div>
               ) : (
-                <p className="text-xs text-neutral-500 italic">
+                <p className="text-xs text-muted-foreground italic">
                   Your landlord has not uploaded any documents for this lease yet.
                 </p>
               )}
@@ -289,17 +289,17 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
               {uploadingFiles.map((up) => (
                 <div
                   key={up.id}
-                  className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-neutral-800 bg-neutral-900/60"
+                  className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border bg-muted/40"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-neutral-800/80 border border-neutral-700/60 flex items-center justify-center text-neutral-400 shrink-0">
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                      <Loader2 className="w-4 h-4 animate-spin text-success" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium text-neutral-200 truncate" title={up.name}>
+                      <div className="text-xs font-medium text-foreground truncate" title={up.name}>
                         {up.name}
                       </div>
-                      <div className="text-[11px] text-neutral-400 animate-pulse">
+                      <div className="text-[11px] text-muted-foreground animate-pulse">
                         Uploading... ({formatFileSize(up.size)})
                       </div>
                     </div>
@@ -314,25 +314,25 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
                 return (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-neutral-800/70 bg-neutral-900/40 hover:bg-neutral-850/40 transition-colors"
+                    className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-border/70 bg-card/60 hover:bg-muted/40 transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="shrink-0">
                         {isPdf ? (
-                          <div className="w-8 h-8 rounded-lg bg-red-950/30 border border-red-900/30 flex items-center justify-center text-red-400">
+                          <div className="w-8 h-8 rounded-lg bg-destructive-tint border border-destructive/30 flex items-center justify-center text-destructive">
                             <FileText className="w-4 h-4" />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 rounded-lg bg-blue-950/30 border border-blue-900/30 flex items-center justify-center text-blue-400">
+                          <div className="w-8 h-8 rounded-lg bg-kpi-navy-tint border border-kpi-navy/30 flex items-center justify-center text-kpi-navy">
                             <ImageIcon className="w-4 h-4" />
                           </div>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-medium text-neutral-200 truncate" title={doc.name}>
+                        <div className="text-xs font-medium text-foreground truncate" title={doc.name}>
                           {doc.name}
                         </div>
-                        <div className="text-[11px] text-neutral-500">
+                        <div className="text-[11px] text-muted-foreground">
                           {doc.sizeBytes > 0 ? `${formatFileSize(doc.sizeBytes)} · ` : ""}
                           {formatDateGB(doc.createdAt)}
                         </div>
@@ -362,7 +362,7 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewDoc(doc.id)}
-                          className="text-xs h-7 px-2.5 border-neutral-800 hover:bg-neutral-800 text-neutral-200"
+                          className="text-xs h-7 px-2.5 border-border hover:bg-muted text-foreground"
                         >
                           View
                         </Button>

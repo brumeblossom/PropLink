@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ActionMenu, type ActionMenuItem } from "@/components/ui/action-menu";
 import { useToast } from "@/components/ui/toast";
 import { formatDateGB } from "@/lib/billing";
+import { cn } from "@/lib/utils";
 
 export interface InviteCardProps {
   type: "code" | "in_app";
@@ -132,17 +133,18 @@ export function InviteCard({
 
   return (
     <div
-      className={`rounded-xl border border-neutral-800 bg-neutral-900/20 p-5 sm:p-6 space-y-4 ${
-        className || ""
-      }`}
+      className={cn(
+        "rounded-xl border border-border bg-card/40 p-5 sm:p-6 space-y-4",
+        className
+      )}
     >
       {/* Header row: Title & Subtitle on left, Button + ⋯ ActionMenu on right */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-semibold text-white truncate">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground truncate">
             {title}
           </h3>
-          <p className="text-xs sm:text-sm text-neutral-400 truncate">
+          <p className="text-xs sm:text-sm text-muted-foreground truncate">
             {subtitle}
           </p>
         </div>
@@ -155,7 +157,7 @@ export function InviteCard({
               disabled={isLoading}
               variant="outline"
               size="sm"
-              className="border-neutral-800 text-xs h-8 px-2.5 sm:px-3 text-neutral-200 hover:text-white hover:bg-neutral-800"
+              className="border-border text-xs h-8 px-2.5 sm:px-3 text-foreground hover:bg-muted"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               <span>New code</span>
@@ -169,7 +171,7 @@ export function InviteCard({
               disabled={isLoading}
               variant="outline"
               size="sm"
-              className="border-neutral-800 text-xs h-8 px-2.5 sm:px-3 text-neutral-200 hover:text-white hover:bg-neutral-800"
+              className="border-border text-xs h-8 px-2.5 sm:px-3 text-foreground hover:bg-muted"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               <span>Resend invitation</span>
@@ -184,12 +186,12 @@ export function InviteCard({
       {type === "code" && !isExpired && code && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           {/* Invite Code */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3 flex items-center justify-between gap-3 min-w-0">
+          <div className="rounded-lg border border-border bg-muted/50 p-3 flex items-center justify-between gap-3 min-w-0">
             <div className="min-w-0">
-              <span className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
+              <span className="block text-[10px] font-semibold text-subtle-foreground uppercase tracking-wider">
                 Invite Code
               </span>
-              <span className="font-mono text-base font-bold text-white block truncate tracking-wider">
+              <span className="font-mono text-base font-bold text-foreground block truncate tracking-wider">
                 {code}
               </span>
             </div>
@@ -198,7 +200,7 @@ export function InviteCard({
               variant="outline"
               size="sm"
               onClick={handleCopyCode}
-              className="shrink-0 h-8 w-8 p-0 border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800"
+              className="shrink-0 h-8 w-8 p-0 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
               aria-label="Copy code"
               title="Copy code"
             >
@@ -207,13 +209,13 @@ export function InviteCard({
           </div>
 
           {/* Signup Link */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3 flex items-center justify-between gap-3 min-w-0">
+          <div className="rounded-lg border border-border bg-muted/50 p-3 flex items-center justify-between gap-3 min-w-0">
             <div className="min-w-0">
-              <span className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
+              <span className="block text-[10px] font-semibold text-subtle-foreground uppercase tracking-wider">
                 Signup Link
               </span>
               <span
-                className="text-xs text-neutral-400 block truncate"
+                className="text-xs text-muted-foreground block truncate"
                 title={signupLink}
               >
                 {signupLink}
@@ -224,7 +226,7 @@ export function InviteCard({
               variant="outline"
               size="sm"
               onClick={handleCopyLink}
-              className="shrink-0 h-8 w-8 p-0 border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-800"
+              className="shrink-0 h-8 w-8 p-0 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
               aria-label="Copy link"
               title="Copy link"
             >

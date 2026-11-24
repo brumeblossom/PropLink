@@ -37,25 +37,25 @@ export function LeasePeriodDropdown({
     switch (status) {
       case "current":
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-950/40 border border-emerald-900/40 text-emerald-400">
+          <span className="shrink-0 inline-flex items-center px-2.5 h-[22px] rounded-full text-xs font-semibold bg-success-tint text-success">
             Current
           </span>
         );
       case "ended":
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-800 border border-neutral-700 text-neutral-400">
+          <span className="shrink-0 inline-flex items-center px-2.5 h-[22px] rounded-full text-xs font-semibold bg-destructive-tint text-destructive">
             Ended
           </span>
         );
       case "moved_out":
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-800 border border-neutral-700 text-neutral-400">
+          <span className="shrink-0 inline-flex items-center px-2.5 h-[22px] rounded-full text-xs font-semibold bg-muted text-muted-foreground">
             Moved out
           </span>
         );
       case "upcoming":
         return (
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-950/40 border border-blue-900/40 text-blue-400">
+          <span className="shrink-0 inline-flex items-center px-2.5 h-[22px] rounded-full text-xs font-semibold bg-warning-tint text-warning">
             Upcoming
           </span>
         );
@@ -77,20 +77,20 @@ export function LeasePeriodDropdown({
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-sm text-neutral-200 transition-colors w-full sm:w-auto min-w-[220px] focus:outline-none focus:ring-1 focus:ring-neutral-700"
+          className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-lg bg-card border border-border hover:bg-accent text-sm text-foreground transition-colors w-full sm:w-auto min-w-[220px] focus:outline-none focus:ring-1 focus:ring-ring"
           aria-label="Select lease period"
         >
           <div className="flex items-center gap-2 min-w-0 truncate">
             {selectedLease && (
               <>
-                <span className="font-medium text-white truncate">
+                <span className="font-medium text-foreground truncate">
                   {formatOptionLabel(selectedLease)}
                 </span>
                 {getStatusBadge(selectedLease.status)}
               </>
             )}
           </div>
-          <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
         </button>
       </DropdownMenu.Trigger>
 
@@ -98,10 +98,10 @@ export function LeasePeriodDropdown({
         <DropdownMenu.Content
           align="start"
           sideOffset={6}
-          className="z-50 min-w-[280px] max-w-[92vw] sm:max-w-md rounded-xl border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl shadow-black/50 text-neutral-200 text-sm focus:outline-none animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+          className="z-50 min-w-[280px] max-w-[92vw] sm:max-w-md rounded-xl border border-border bg-card p-1.5 shadow-xl text-foreground text-sm focus:outline-none animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
           {isLandlord && (
-            <div className="px-3 py-2 text-xs font-medium text-neutral-500 border-b border-neutral-800/80 mb-1">
+            <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border mb-1">
               {totalLeasesCount ?? leases.length} leases · {totalTenantsCount ?? new Set(leases.map((l) => l.tenantName).filter(Boolean)).size} tenants
             </div>
           )}
@@ -116,13 +116,13 @@ export function LeasePeriodDropdown({
                   className={cn(
                     "flex items-center justify-between gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors outline-none",
                     isSelected
-                      ? "bg-neutral-800/70 text-white font-medium"
-                      : "hover:bg-neutral-800/50 hover:text-white"
+                      ? "bg-muted text-foreground font-medium"
+                      : "hover:bg-muted/60 text-foreground/80 hover:text-foreground"
                   )}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <div className="w-4 h-4 shrink-0 flex items-center justify-center">
-                      {isSelected && <Check className="w-4 h-4 text-emerald-400" />}
+                      {isSelected && <Check className="w-4 h-4 text-success" />}
                     </div>
                     <span className="truncate">{formatOptionLabel(lease)}</span>
                   </div>

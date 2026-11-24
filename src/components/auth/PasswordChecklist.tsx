@@ -24,14 +24,14 @@ export function PasswordChecklist({
       {rules.map((rule) => (
         <div key={rule.label} className="flex items-center space-x-2 text-xs">
           {rule.valid ? (
-            <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+            <Check className="w-3.5 h-3.5 text-success flex-shrink-0" />
           ) : (
-            <Circle className="w-3.5 h-3.5 text-neutral-600 flex-shrink-0" />
+            <Circle className="w-3.5 h-3.5 text-subtle-foreground flex-shrink-0" />
           )}
           <span
             className={cn(
               "transition-colors",
-              rule.valid ? "text-neutral-300" : "text-neutral-500"
+              rule.valid ? "text-foreground/80" : "text-muted-foreground"
             )}
           >
             {rule.label}

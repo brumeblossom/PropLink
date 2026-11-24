@@ -31,10 +31,10 @@ const noticeTypeLabels: Record<NoticeType, string> = {
 };
 
 const noticeTypeStyles: Record<NoticeType, string> = {
-  general: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  maintenance: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  rent_reminder: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  rent_increment: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  general: "bg-primary-tint text-primary border border-primary/20",
+  maintenance: "bg-warning-tint text-warning border border-warning/20",
+  rent_reminder: "bg-kpi-gold-tint text-kpi-gold border border-kpi-gold/20",
+  rent_increment: "bg-destructive-tint text-destructive border border-destructive/20",
 };
 
 interface NoticeRecipientItem {
@@ -230,7 +230,7 @@ function NoticesContent() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title="Announcements" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
@@ -243,7 +243,7 @@ function NoticesContent() {
               {/* Desktop primary button */}
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="hidden sm:flex bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-4 text-sm items-center gap-1.5 shrink-0"
+                className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-4 text-sm items-center gap-1.5 shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 Create message
@@ -254,7 +254,7 @@ function NoticesContent() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => setIsCreateOpen(true)}
-                    className="sm:hidden w-9 h-9 rounded-lg bg-white text-neutral-950 hover:bg-neutral-200 flex items-center justify-center shrink-0 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+                    className="sm:hidden w-9 h-9 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center shrink-0 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label="Create message"
                   >
                     <Plus className="w-5 h-5" />
@@ -272,18 +272,18 @@ function NoticesContent() {
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           {/* Search Input: full width on mobile, 280px on desktop */}
           <div className="relative w-full md:w-[280px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search messages"
-              className="w-full pl-9 pr-8 py-2 rounded-lg bg-neutral-900 border border-neutral-800 text-sm text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-700 focus:ring-1 focus:ring-neutral-700"
+              className="w-full pl-9 pr-8 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
             />
             {searchInput && (
               <button
                 onClick={() => setSearchInput("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
@@ -333,7 +333,7 @@ function NoticesContent() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="col-span-2 md:col-span-1 text-xs text-neutral-400 hover:text-white transition-colors underline underline-offset-2 py-1 md:py-0 text-left md:text-center"
+                className="col-span-2 md:col-span-1 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 py-1 md:py-0 text-left md:text-center"
               >
                 Clear
               </button>
@@ -343,9 +343,9 @@ function NoticesContent() {
 
         {/* Content Table / Cards */}
         {isLoadingNotices ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 space-y-4">
+          <div className="rounded-xl border border-border bg-card/30 p-6 space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-neutral-800/40 last:border-0">
+              <div key={i} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
                 <div className="space-y-1">
                   <Skeleton className="h-5 w-48" />
                   <Skeleton className="h-3 w-32" />
@@ -355,18 +355,18 @@ function NoticesContent() {
             ))}
           </div>
         ) : total === 0 ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 py-16 px-4 text-center">
+          <div className="rounded-xl border border-border bg-card/20 py-16 px-4 text-center">
             {hasActiveFilters ? (
               <div className="max-w-md mx-auto space-y-3">
-                <Search className="w-10 h-10 text-neutral-500 mx-auto" />
-                <h3 className="text-base font-semibold text-white">No messages match your search.</h3>
-                <p className="text-sm text-neutral-400">
+                <Search className="w-10 h-10 text-muted-foreground mx-auto" />
+                <h3 className="text-base font-semibold text-foreground">No messages match your search.</h3>
+                <p className="text-sm text-muted-foreground">
                   Try adjusting your search terms or clearing your property and category filters.
                 </p>
                 <div className="pt-2">
                   <Button
                     onClick={clearFilters}
-                    className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm h-9 px-4 rounded-lg font-medium"
+                    className="bg-card border border-border hover:bg-accent text-foreground text-sm h-9 px-4 rounded-lg font-medium"
                   >
                     Clear filters
                   </Button>
@@ -374,15 +374,15 @@ function NoticesContent() {
               </div>
             ) : (
               <div className="max-w-md mx-auto space-y-3">
-                <Inbox className="w-10 h-10 text-neutral-500 mx-auto" />
-                <h3 className="text-base font-semibold text-white">No messages sent yet</h3>
-                <p className="text-sm text-neutral-400">
+                <Inbox className="w-10 h-10 text-muted-foreground mx-auto" />
+                <h3 className="text-base font-semibold text-foreground">No messages sent yet</h3>
+                <p className="text-sm text-muted-foreground">
                   Messages you send appear in your tenants&apos; notifications.
                 </p>
                 <div className="pt-2">
                   <Button
                     onClick={() => setIsCreateOpen(true)}
-                    className="bg-white hover:bg-neutral-200 text-neutral-950 text-sm h-9 px-4 rounded-lg font-semibold flex items-center gap-1.5 mx-auto"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm h-9 px-4 rounded-lg font-semibold flex items-center gap-1.5 mx-auto"
                   >
                     <Plus className="w-4 h-4" />
                     Create message
@@ -394,7 +394,7 @@ function NoticesContent() {
         ) : (
           <div className="space-y-4">
             {/* Desktop Table (>=768px) */}
-            <div className="hidden md:block rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+            <div className="hidden md:block rounded-xl border border-border bg-card/40 overflow-hidden">
               <table className="w-full text-left text-sm table-fixed">
                 <colgroup>
                   <col className="w-[32%]" />
@@ -404,7 +404,7 @@ function NoticesContent() {
                   <col className="w-[11%]" />
                   <col className="w-[11%]" />
                 </colgroup>
-                <thead className="border-b border-neutral-800 bg-neutral-900/70 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                <thead className="border-b border-border bg-muted/70 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <tr>
                     <th scope="col" className="px-5 py-3.5">Message title</th>
                     <th scope="col" className="px-5 py-3.5">Date sent</th>
@@ -414,7 +414,7 @@ function NoticesContent() {
                     <th scope="col" className="px-5 py-3.5">Read</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-800/60">
+                <tbody className="divide-y divide-border/60">
                   {notices.map((notice) => {
                     const audience = getAudienceDisplay(notice);
                     const totalRecipients = notice.recipients.length;
@@ -422,13 +422,13 @@ function NoticesContent() {
                     const readPercent = totalRecipients > 0 ? (readCount / totalRecipients) * 100 : 0;
 
                     return (
-                      <tr key={notice.id} className="hover:bg-neutral-850/50 transition-colors">
+                      <tr key={notice.id} className="hover:bg-accent/50 transition-colors">
                         {/* Title: clicking opens full message modal */}
                         <td className="px-5 py-4">
                           <button
                             type="button"
                             onClick={() => setViewingMessageNotice(notice)}
-                            className="text-left font-semibold text-white hover:underline truncate max-w-full block"
+                            className="text-left font-semibold text-foreground hover:underline truncate max-w-full block"
                             title={notice.title}
                           >
                             {notice.title}
@@ -436,16 +436,16 @@ function NoticesContent() {
                         </td>
 
                         {/* Date sent */}
-                        <td className="px-5 py-4 text-neutral-300 whitespace-nowrap">
+                        <td className="px-5 py-4 text-muted-foreground whitespace-nowrap">
                           {formatDateGB(notice.createdAt)}
                         </td>
 
                         {/* Audience: Line 1 + Line 2 */}
                         <td className="px-5 py-4">
-                          <div className="font-medium text-neutral-200 truncate" title={audience.line1}>
+                          <div className="font-medium text-foreground truncate" title={audience.line1}>
                             {audience.line1}
                           </div>
-                          <div className="text-xs text-neutral-400 mt-0.5 truncate" title={audience.line2}>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate" title={audience.line2}>
                             {audience.line2}
                           </div>
                         </td>
@@ -455,7 +455,7 @@ function NoticesContent() {
                           <span
                             className={cn(
                               "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                              noticeTypeStyles[notice.type as NoticeType] || "bg-neutral-800 text-neutral-300"
+                              noticeTypeStyles[notice.type as NoticeType] || "bg-muted text-muted-foreground"
                             )}
                           >
                             {noticeTypeLabels[notice.type as NoticeType] || notice.type}
@@ -465,11 +465,11 @@ function NoticesContent() {
                         {/* Recipients: count + "View recipients" text button */}
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <span className="text-neutral-200 font-medium">{totalRecipients}</span>
+                            <span className="text-foreground font-medium">{totalRecipients}</span>
                             <button
                               type="button"
                               onClick={() => setViewingRecipientsNotice(notice)}
-                              className="text-xs text-neutral-400 hover:text-white underline underline-offset-2 transition-colors"
+                              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
                             >
                               View recipients
                             </button>
@@ -479,13 +479,13 @@ function NoticesContent() {
                         {/* Read: 56px progress bar + count */}
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <div className="w-[56px] h-1.5 rounded-full bg-neutral-800 overflow-hidden shrink-0">
+                            <div className="w-[56px] h-1.5 rounded-full bg-muted overflow-hidden shrink-0">
                               <div
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                className="h-full bg-success rounded-full transition-all duration-300"
                                 style={{ width: `${readPercent}%` }}
                               />
                             </div>
-                            <span className="text-xs text-neutral-300 tabular-nums">
+                            <span className="text-xs text-muted-foreground tabular-nums">
                               {readCount} of {totalRecipients}
                             </span>
                           </div>
@@ -509,15 +509,15 @@ function NoticesContent() {
                   <div
                     key={notice.id}
                     onClick={() => setViewingMessageNotice(notice)}
-                    className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-2.5 cursor-pointer active:bg-neutral-850 hover:border-neutral-700/80 transition-colors"
+                    className="rounded-xl border border-border bg-card/40 p-4 space-y-2.5 cursor-pointer active:bg-accent hover:border-border transition-colors"
                   >
                     {/* Title + Category pill */}
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold text-base text-white truncate">{notice.title}</h3>
+                      <h3 className="font-semibold text-base text-foreground truncate">{notice.title}</h3>
                       <span
                         className={cn(
                           "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0",
-                          noticeTypeStyles[notice.type as NoticeType] || "bg-neutral-800 text-neutral-300"
+                          noticeTypeStyles[notice.type as NoticeType] || "bg-muted text-muted-foreground"
                         )}
                       >
                         {noticeTypeLabels[notice.type as NoticeType] || notice.type}
@@ -525,20 +525,20 @@ function NoticesContent() {
                     </div>
 
                     {/* Muted line: Audience · date */}
-                    <div className="text-xs text-neutral-400 truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {audience.combined} · {formatDateGB(notice.createdAt)}
                     </div>
 
                     {/* Bottom row: Read bar + "3 of 5" on left, "Recipients" text button on right */}
-                    <div className="pt-2 border-t border-neutral-800/60 flex items-center justify-between gap-3 text-xs">
+                    <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3 text-xs">
                       <div className="flex items-center gap-2">
-                        <div className="w-[56px] h-1.5 rounded-full bg-neutral-800 overflow-hidden shrink-0">
+                        <div className="w-[56px] h-1.5 rounded-full bg-muted overflow-hidden shrink-0">
                           <div
-                            className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                            className="h-full bg-success rounded-full transition-all duration-300"
                             style={{ width: `${readPercent}%` }}
                           />
                         </div>
-                        <span className="text-xs text-neutral-300 tabular-nums">
+                        <span className="text-xs text-muted-foreground tabular-nums">
                           {readCount} of {totalRecipients}
                         </span>
                       </div>
@@ -549,7 +549,7 @@ function NoticesContent() {
                           e.stopPropagation();
                           setViewingRecipientsNotice(notice);
                         }}
-                        className="text-xs text-neutral-400 hover:text-white underline underline-offset-2 transition-colors shrink-0"
+                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors shrink-0"
                       >
                         Recipients ({totalRecipients})
                       </button>
@@ -560,8 +560,8 @@ function NoticesContent() {
             </div>
 
             {/* Pagination */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-800/80">
-              <div className="text-sm text-neutral-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/80">
+              <div className="text-sm text-muted-foreground">
                 {total === 0 ? "0 of 0" : `${fromRecord}–${toRecord} of ${total}`}
               </div>
 
@@ -569,7 +569,7 @@ function NoticesContent() {
                 <Button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Previous
@@ -577,7 +577,7 @@ function NoticesContent() {
                 <Button
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page >= totalPages}
-                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
@@ -590,13 +590,13 @@ function NoticesContent() {
         {/* 1. Create Message Modal */}
         <Dialog.Root open={isCreateOpen} onOpenChange={(open) => !open && setIsCreateOpen(false)}>
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl focus:outline-none">
-              <div className="flex items-center justify-between pb-4 border-b border-neutral-800">
-                <Dialog.Title className="text-lg font-bold text-white">Create message</Dialog.Title>
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-2xl focus:outline-none">
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <Dialog.Title className="text-lg font-bold text-foreground">Create message</Dialog.Title>
                 <Dialog.Close asChild>
                   <button
-                    className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     aria-label="Close"
                   >
                     <X className="w-5 h-5" />
@@ -609,14 +609,14 @@ function NoticesContent() {
 
               <form onSubmit={handleCreateSubmit} className="mt-5 space-y-4">
                 {formError && (
-                  <div className="p-3 bg-red-950/40 border border-red-900 rounded-lg text-red-400 text-sm">
+                  <div className="p-3 bg-destructive-tint/20 border border-destructive/30 rounded-lg text-destructive text-sm">
                     {formError}
                   </div>
                 )}
 
                 {/* Audience */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-300">Audience</label>
+                  <label className="text-xs font-medium text-foreground/80">Audience</label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
@@ -624,8 +624,8 @@ function NoticesContent() {
                       className={cn(
                         "py-2 px-3 text-xs rounded-lg border font-medium transition-all text-center",
                         targetType === "all"
-                          ? "bg-white text-neutral-950 border-white shadow"
-                          : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white"
+                          ? "bg-primary text-primary-foreground border-primary shadow"
+                          : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                       )}
                     >
                       All Properties
@@ -636,8 +636,8 @@ function NoticesContent() {
                       className={cn(
                         "py-2 px-3 text-xs rounded-lg border font-medium transition-all text-center",
                         targetType === "property"
-                          ? "bg-white text-neutral-950 border-white shadow"
-                          : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white"
+                          ? "bg-primary text-primary-foreground border-primary shadow"
+                          : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                       )}
                     >
                       Single Property
@@ -648,8 +648,8 @@ function NoticesContent() {
                       className={cn(
                         "py-2 px-3 text-xs rounded-lg border font-medium transition-all text-center",
                         targetType === "unit"
-                          ? "bg-white text-neutral-950 border-white shadow"
-                          : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white"
+                          ? "bg-primary text-primary-foreground border-primary shadow"
+                          : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                       )}
                     >
                       Single Unit
@@ -660,7 +660,7 @@ function NoticesContent() {
                 {/* Property Dropdown (if property or unit selected) */}
                 {targetType !== "all" && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-neutral-300">Select Property</label>
+                    <label className="text-xs font-medium text-foreground/80">Select Property</label>
                     <Select
                       value={formPropertyId}
                       onChange={(e) => {
@@ -682,7 +682,7 @@ function NoticesContent() {
                 {/* Unit Dropdown (if unit selected) */}
                 {targetType === "unit" && formPropertyId && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-neutral-300">Select Unit</label>
+                    <label className="text-xs font-medium text-foreground/80">Select Unit</label>
                     <Select
                       value={formUnitId}
                       onChange={(e) => setFormUnitId(e.target.value)}
@@ -700,7 +700,7 @@ function NoticesContent() {
 
                 {/* Category */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-300">Category</label>
+                  <label className="text-xs font-medium text-foreground/80">Category</label>
                   <Select
                     value={type}
                     onChange={(e) => setType(e.target.value as NoticeType)}
@@ -715,45 +715,45 @@ function NoticesContent() {
 
                 {/* Subject / Title */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-300">Subject / Title</label>
+                  <label className="text-xs font-medium text-foreground/80">Subject / Title</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Water Tank Maintenance This Saturday"
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-700"
+                    className="w-full px-3 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                     required
                   />
                 </div>
 
                 {/* Message */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-neutral-300">Message</label>
+                  <label className="text-xs font-medium text-foreground/80">Message</label>
                   <textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     rows={4}
                     placeholder="Provide details about the announcement..."
-                    className="w-full px-3 py-2 rounded-lg bg-neutral-950 border border-neutral-800 text-sm text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-700"
+                    className="w-full px-3 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                     required
                   />
                 </div>
 
                 {/* Buttons: Cancel & Send */}
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-800">
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsCreateOpen(false)}
                     disabled={isSubmitting}
-                    className="border-neutral-800 hover:bg-neutral-800 text-neutral-300 text-sm h-9 px-4 rounded-lg"
+                    className="border-border hover:bg-accent text-foreground text-sm h-9 px-4 rounded-lg"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-white hover:bg-neutral-200 text-neutral-950 text-sm h-9 px-5 rounded-lg font-semibold"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm h-9 px-5 rounded-lg font-semibold"
                   >
                     {isSubmitting ? "Sending..." : "Send"}
                   </Button>
@@ -769,32 +769,32 @@ function NoticesContent() {
           onOpenChange={(open) => !open && setViewingMessageNotice(null)}
         >
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl focus:outline-none space-y-4">
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-2xl focus:outline-none space-y-4">
               {viewingMessageNotice && (
                 <>
-                  <div className="flex items-start justify-between gap-3 border-b border-neutral-800 pb-4">
+                  <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
                     <div className="space-y-1">
-                      <Dialog.Title className="text-lg font-bold text-white">
+                      <Dialog.Title className="text-lg font-bold text-foreground">
                         {viewingMessageNotice.title}
                       </Dialog.Title>
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                            noticeTypeStyles[viewingMessageNotice.type as NoticeType] || "bg-neutral-800 text-neutral-300"
+                            noticeTypeStyles[viewingMessageNotice.type as NoticeType] || "bg-muted text-muted-foreground"
                           )}
                         >
                           {noticeTypeLabels[viewingMessageNotice.type as NoticeType] || viewingMessageNotice.type}
                         </span>
-                        <span className="text-xs text-neutral-400">
+                        <span className="text-xs text-muted-foreground">
                           {formatDateGB(viewingMessageNotice.createdAt)}
                         </span>
                       </div>
                     </div>
                     <Dialog.Close asChild>
                       <button
-                        className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                         aria-label="Close"
                       >
                         <X className="w-5 h-5" />
@@ -806,17 +806,17 @@ function NoticesContent() {
                   </Dialog.Description>
 
                   {/* Audience details */}
-                  <div className="rounded-lg bg-neutral-950/60 border border-neutral-800/80 p-3 text-xs space-y-1">
-                    <div className="text-neutral-500 font-medium">Audience</div>
-                    <div className="text-neutral-200 font-semibold">
+                  <div className="rounded-lg bg-muted/60 border border-border/80 p-3 text-xs space-y-1">
+                    <div className="text-muted-foreground font-medium">Audience</div>
+                    <div className="text-foreground font-semibold">
                       {getAudienceDisplay(viewingMessageNotice).combined}
                     </div>
                   </div>
 
                   {/* Body */}
                   <div className="space-y-1.5 pt-1">
-                    <div className="text-xs font-medium text-neutral-400">Message:</div>
-                    <p className="text-sm text-neutral-200 whitespace-pre-wrap leading-relaxed bg-neutral-950/40 p-4 rounded-lg border border-neutral-800/60">
+                    <div className="text-xs font-medium text-muted-foreground">Message:</div>
+                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-muted/40 p-4 rounded-lg border border-border/60">
                       {viewingMessageNotice.body}
                     </p>
                   </div>
@@ -824,7 +824,7 @@ function NoticesContent() {
                   <div className="flex justify-end pt-2">
                     <Button
                       onClick={() => setViewingMessageNotice(null)}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm h-8 px-4 rounded-lg"
+                      className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-4 rounded-lg"
                     >
                       Close
                     </Button>
@@ -841,20 +841,20 @@ function NoticesContent() {
           onOpenChange={(open) => !open && setViewingRecipientsNotice(null)}
         >
           <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl focus:outline-none">
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl focus:outline-none">
               {viewingRecipientsNotice && (
                 <>
-                  <div className="flex items-center justify-between p-6 pb-4 border-b border-neutral-800 shrink-0">
+                  <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
                     <div>
-                      <Dialog.Title className="text-lg font-bold text-white">Recipients</Dialog.Title>
-                      <p className="text-xs text-neutral-400 mt-0.5">
+                      <Dialog.Title className="text-lg font-bold text-foreground">Recipients</Dialog.Title>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {viewingRecipientsNotice.title} · {viewingRecipientsNotice.recipients.length} total
                       </p>
                     </div>
                     <Dialog.Close asChild>
                       <button
-                        className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                         aria-label="Close"
                       >
                         <X className="w-5 h-5" />
@@ -867,32 +867,32 @@ function NoticesContent() {
 
                   <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-2">
                     {viewingRecipientsNotice.recipients.length === 0 ? (
-                      <p className="text-xs text-neutral-500 py-6 text-center">No recipients found.</p>
+                      <p className="text-xs text-muted-foreground py-6 text-center">No recipients found.</p>
                     ) : (
                       <table className="w-full text-left text-xs">
-                        <thead className="border-b border-neutral-800 text-neutral-400 uppercase tracking-wider">
+                        <thead className="border-b border-border text-muted-foreground uppercase tracking-wider">
                           <tr>
                             <th scope="col" className="py-2.5 pr-4">Name</th>
                             <th scope="col" className="py-2.5 px-4">Email</th>
                             <th scope="col" className="py-2.5 pl-4 text-right">Status</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-neutral-800/60">
+                        <tbody className="divide-y divide-border/60">
                           {viewingRecipientsNotice.recipients.map((r: NoticeRecipientItem) => (
                             <tr key={r.id}>
-                              <td className="py-2.5 pr-4 font-medium text-white truncate max-w-[120px]">
+                              <td className="py-2.5 pr-4 font-medium text-foreground truncate max-w-[120px]">
                                 {r.tenant?.fullName || "Tenant"}
                               </td>
-                              <td className="py-2.5 px-4 text-neutral-400 truncate max-w-[160px]">
+                              <td className="py-2.5 px-4 text-muted-foreground truncate max-w-[160px]">
                                 {r.tenant?.email || "—"}
                               </td>
                               <td className="py-2.5 pl-4 text-right whitespace-nowrap">
                                 {r.readAt ? (
-                                  <span className="text-emerald-400 font-medium">
+                                  <span className="text-success font-medium">
                                     Read {formatDateGB(r.readAt)}
                                   </span>
                                 ) : (
-                                  <span className="text-neutral-500">Not read yet</span>
+                                  <span className="text-muted-foreground">Not read yet</span>
                                 )}
                               </td>
                             </tr>
@@ -902,10 +902,10 @@ function NoticesContent() {
                     )}
                   </div>
 
-                  <div className="flex justify-end p-4 border-t border-neutral-800 shrink-0">
+                  <div className="flex justify-end p-4 border-t border-border shrink-0">
                     <Button
                       onClick={() => setViewingRecipientsNotice(null)}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm h-8 px-4 rounded-lg"
+                      className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-4 rounded-lg"
                     >
                       Done
                     </Button>
@@ -924,7 +924,7 @@ export default function LandlordNoticesPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-950 text-white">
+        <div className="min-h-screen bg-background text-foreground">
           <PageHeader title="Announcements" />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
             <Skeleton className="h-10 w-48" />

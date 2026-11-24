@@ -49,35 +49,35 @@ function getNotificationIconConfig(type: string) {
     case "payment_logged":
       return {
         icon: <CreditCard className="w-4 h-4" />,
-        color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+        color: "bg-warning-tint text-warning border-warning/20",
       };
     case "payment_flagged":
     case "payment_rejected":
       return {
         icon: <AlertCircle className="w-4 h-4" />,
-        color: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+        color: "bg-destructive-tint text-destructive border-destructive/20",
       };
     case "payment_confirmed":
     case "payment_resolved":
       return {
         icon: <Check className="w-4 h-4" />,
-        color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+        color: "bg-success-tint text-success border-success/20",
       };
     case "invite_redeemed":
       return {
         icon: <UserCheck className="w-4 h-4" />,
-        color: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+        color: "bg-kpi-gold-tint text-kpi-gold border-kpi-gold/20",
       };
     case "message_received":
       return {
         icon: <MessageSquare className="w-4 h-4" />,
-        color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        color: "bg-primary-tint text-primary border-primary/20",
       };
     case "lease_created":
     default:
       return {
         icon: <FileText className="w-4 h-4" />,
-        color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        color: "bg-primary-tint text-primary border-primary/20",
       };
   }
 }
@@ -455,7 +455,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
   }, [selectedMonth, filter, monthsData]);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title="Notifications" />
 
       <PageContainer width="narrow" className="space-y-6">
@@ -470,7 +470,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
             /* Desktop controls (>= 640px) */
             <div className="hidden sm:flex items-center gap-3">
               {/* Segmented Toggle: All / Unread */}
-              <div className="flex rounded-lg bg-neutral-900 border border-neutral-800 p-0.5 text-xs">
+              <div className="flex rounded-lg bg-muted border border-border p-0.5 text-xs">
                 {(["all", "unread"] as const).map((f) => (
                   <button
                     key={f}
@@ -478,8 +478,8 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                     className={cn(
                       "px-3 py-1.5 rounded-md font-medium capitalize transition-all",
                       filter === f
-                        ? "bg-white text-neutral-950 shadow"
-                        : "text-neutral-400 hover:text-white"
+                        ? "bg-primary text-primary-foreground shadow"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {f}
@@ -492,23 +492,23 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                 <DropdownMenu.Trigger asChild>
                   <button
                     type="button"
-                    className="h-8 px-3 rounded-lg border border-neutral-800 bg-neutral-900 text-xs text-neutral-300 hover:text-white hover:border-neutral-700 flex items-center gap-1.5 focus:outline-none transition-colors"
+                    className="h-8 px-3 rounded-lg border border-border bg-card text-xs text-foreground/80 hover:text-foreground hover:border-border flex items-center gap-1.5 focus:outline-none transition-colors"
                   >
                     <span>{selectedMonthLabel}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />
+                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content
                     align="end"
                     sideOffset={4}
-                    className="z-50 min-w-[150px] rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl text-xs animate-in fade-in-0 zoom-in-95"
+                    className="z-50 min-w-[150px] rounded-xl border border-border bg-card p-1 shadow-2xl text-xs animate-in fade-in-0 zoom-in-95"
                   >
                     <DropdownMenu.Item
                       onSelect={() => setSelectedMonth("all")}
                       className={cn(
-                        "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-neutral-300 hover:text-white hover:bg-neutral-900 focus:outline-none transition-colors",
-                        selectedMonth === "all" && "bg-neutral-900 text-white font-medium"
+                        "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-foreground/80 hover:text-foreground hover:bg-accent focus:outline-none transition-colors",
+                        selectedMonth === "all" && "bg-accent text-foreground font-medium"
                       )}
                     >
                       <span>All months</span>
@@ -519,8 +519,8 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                         key={m.key}
                         onSelect={() => setSelectedMonth(m.key)}
                         className={cn(
-                          "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-neutral-300 hover:text-white hover:bg-neutral-900 focus:outline-none transition-colors",
-                          selectedMonth === m.key && "bg-neutral-900 text-white font-medium"
+                          "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-foreground/80 hover:text-foreground hover:bg-accent focus:outline-none transition-colors",
+                          selectedMonth === m.key && "bg-accent text-foreground font-medium"
                         )}
                       >
                         <span>{m.label}</span>
@@ -537,7 +537,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                   onClick={handleMarkAllRead}
                   disabled={markAllRead.isPending}
                   variant="outline"
-                  className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 h-8 px-3 text-xs flex items-center gap-1.5 font-medium"
+                  className="border-border text-foreground/80 hover:text-foreground hover:bg-accent h-8 px-3 text-xs flex items-center gap-1.5 font-medium"
                 >
                   <Check className="w-3.5 h-3.5" />
                   Mark all read
@@ -550,7 +550,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
         {/* Mobile controls (< 640px): one row for filters and icon mark all read */}
         <div className="sm:hidden flex items-center gap-2 w-full">
           {/* Segmented All / Unread */}
-          <div className="flex rounded-lg bg-neutral-900 border border-neutral-800 p-0.5 text-xs shrink-0">
+          <div className="flex rounded-lg bg-muted border border-border p-0.5 text-xs shrink-0">
             {(["all", "unread"] as const).map((f) => (
               <button
                 key={f}
@@ -558,8 +558,8 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                 className={cn(
                   "px-2.5 py-1.5 rounded-md font-medium capitalize text-center transition-all",
                   filter === f
-                    ? "bg-white text-neutral-950 shadow"
-                    : "text-neutral-400 hover:text-white"
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {f}
@@ -573,23 +573,23 @@ export function NotificationsView({ role }: NotificationsViewProps) {
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
-                  className="w-full h-8 px-2.5 rounded-lg border border-neutral-800 bg-neutral-900 text-xs text-neutral-300 hover:text-white hover:border-neutral-700 flex items-center justify-between gap-1.5 focus:outline-none transition-colors"
+                  className="w-full h-8 px-2.5 rounded-lg border border-border bg-card text-xs text-foreground/80 hover:text-foreground hover:border-border flex items-center justify-between gap-1.5 focus:outline-none transition-colors"
                 >
                   <span className="truncate">{selectedMonthLabel}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
                   align="start"
                   sideOffset={4}
-                  className="z-50 min-w-[160px] rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl text-xs animate-in fade-in-0 zoom-in-95"
+                  className="z-50 min-w-[160px] rounded-xl border border-border bg-card p-1 shadow-2xl text-xs animate-in fade-in-0 zoom-in-95"
                 >
                   <DropdownMenu.Item
                     onSelect={() => setSelectedMonth("all")}
                     className={cn(
-                      "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-neutral-300 hover:text-white hover:bg-neutral-900 focus:outline-none transition-colors",
-                      selectedMonth === "all" && "bg-neutral-900 text-white font-medium"
+                      "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-foreground/80 hover:text-foreground hover:bg-accent focus:outline-none transition-colors",
+                      selectedMonth === "all" && "bg-accent text-foreground font-medium"
                     )}
                   >
                     <span>All months</span>
@@ -600,8 +600,8 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                       key={m.key}
                       onSelect={() => setSelectedMonth(m.key)}
                       className={cn(
-                        "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-neutral-300 hover:text-white hover:bg-neutral-900 focus:outline-none transition-colors",
-                        selectedMonth === m.key && "bg-neutral-900 text-white font-medium"
+                        "px-3 py-2 rounded-lg cursor-pointer flex items-center justify-between text-foreground/80 hover:text-foreground hover:bg-accent focus:outline-none transition-colors",
+                        selectedMonth === m.key && "bg-accent text-foreground font-medium"
                       )}
                     >
                       <span>{m.label}</span>
@@ -621,7 +621,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                   type="button"
                   onClick={handleMarkAllRead}
                   disabled={markAllRead.isPending}
-                  className="w-8 h-8 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-300 hover:text-white hover:bg-neutral-800 flex items-center justify-center shrink-0"
+                  className="w-8 h-8 rounded-lg border border-border bg-card text-foreground/80 hover:text-foreground hover:bg-accent flex items-center justify-center shrink-0"
                   aria-label="Mark all read"
                 >
                   <Check className="w-4 h-4" />
@@ -637,7 +637,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
         {/* List Content */}
         {isLoading ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 divide-y divide-neutral-800/60 p-1">
+            <div className="rounded-xl border border-border bg-card divide-y divide-border/60 p-1">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3.5 p-4">
                   <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
@@ -652,13 +652,13 @@ export function NotificationsView({ role }: NotificationsViewProps) {
           </div>
         ) : allNotifications.length === 0 ? (
           /* Empty States */
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 py-16 px-4 text-center">
+          <div className="rounded-xl border border-border bg-card/40 py-16 px-4 text-center">
             <div className="max-w-md mx-auto space-y-2">
-              <Inbox className="w-10 h-10 text-neutral-500 mx-auto mb-2" />
-              <h3 className="text-base font-semibold text-white">
+              <Inbox className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+              <h3 className="text-base font-semibold text-foreground">
                 {emptyState.title}
               </h3>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-muted-foreground">
                 {emptyState.description}
               </p>
             </div>
@@ -668,10 +668,10 @@ export function NotificationsView({ role }: NotificationsViewProps) {
           <div className="space-y-6">
             {groupedSections.map((section) => (
               <div key={section.key} className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 px-1">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
                   {section.label}
                 </div>
-                <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 divide-y divide-neutral-800/60 overflow-hidden">
+                <div className="rounded-xl border border-border bg-card/40 divide-y divide-border/60 overflow-hidden">
                   {section.items.map((n) => {
                     const isUnread = !n.readAt;
                     const iconConfig = getNotificationIconConfig(n.type);
@@ -686,7 +686,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                       <div
                         key={n.id}
                         onClick={() => handleClick(n)}
-                        className="flex items-center gap-3.5 p-4 hover:bg-neutral-850/50 cursor-pointer transition-colors"
+                        className="flex items-center gap-3.5 p-4 hover:bg-accent/50 cursor-pointer transition-colors"
                       >
                         {/* 36px rounded-square icon tinted by type */}
                         <div
@@ -704,8 +704,8 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                             className={cn(
                               "text-sm leading-snug truncate",
                               isUnread
-                                ? "text-white font-medium"
-                                : "text-neutral-400 font-normal"
+                                ? "text-foreground font-medium"
+                                : "text-muted-foreground font-normal"
                             )}
                             title={sentence}
                           >
@@ -713,7 +713,7 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                           </p>
                           {subtitle && (
                             <p
-                              className="text-xs text-neutral-500 truncate"
+                              className="text-xs text-muted-foreground truncate"
                               title={subtitle}
                             >
                               {subtitle}
@@ -726,14 +726,14 @@ export function NotificationsView({ role }: NotificationsViewProps) {
                           <span
                             className={cn(
                               isUnread
-                                ? "text-neutral-300 font-medium"
-                                : "text-neutral-500"
+                                ? "text-foreground/80 font-medium"
+                                : "text-muted-foreground"
                             )}
                           >
                             {timeFormatted}
                           </span>
                           {isUnread && (
-                            <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                            <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
                           )}
                         </div>
                       </div>
@@ -746,8 +746,8 @@ export function NotificationsView({ role }: NotificationsViewProps) {
             {/* Infinite Scroll loading indicator */}
             <div ref={loadMoreRef} className="py-2 flex justify-center">
               {isFetchingNextPage && (
-                <div className="flex items-center gap-2 text-xs text-neutral-400 py-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   <span>Loading more...</span>
                 </div>
               )}

@@ -91,49 +91,49 @@ function LeaseStatusBadge({ status }: { status: string }) {
   switch (status) {
     case "invite_sent":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint text-warning border border-warning/20">
           Invite sent
         </span>
       );
     case "invite_expired":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-destructive-tint text-destructive border border-destructive/20">
           Invite expired
         </span>
       );
     case "pending":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint text-warning border border-warning/20">
           Pending
         </span>
       );
     case "ended":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
           Ended
         </span>
       );
     case "moved_out":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
           Moved out
         </span>
       );
     case "active":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
           Active
         </span>
       );
     case "upcoming":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-tint text-primary border border-primary/20">
           Upcoming
         </span>
       );
     case "terminated":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-400 border border-neutral-700">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border">
           Moved out
         </span>
       );
@@ -144,11 +144,11 @@ function LeaseStatusBadge({ status }: { status: string }) {
 
 function TwoLineRentDue({ data }: { data: RentDueLines }) {
   if (data.status === "expired") {
-    return <span className="text-neutral-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
   if (data.status === "paid_in_full") {
     return (
-      <span className="text-emerald-400 font-medium text-sm block truncate" title={data.line1}>
+      <span className="text-success font-medium text-sm block truncate" title={data.line1}>
         {data.line1}
       </span>
     );
@@ -156,11 +156,11 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
   if (data.status === "overdue") {
     return (
       <div className="leading-tight">
-        <div className="text-red-400 font-medium text-sm truncate" title={data.line1}>
+        <div className="text-destructive font-medium text-sm truncate" title={data.line1}>
           {data.line1}
         </div>
         {data.line2 && (
-          <div className="text-neutral-400 text-xs mt-0.5 truncate" title={data.line2}>
+          <div className="text-muted-foreground text-xs mt-0.5 truncate" title={data.line2}>
             {data.line2}
           </div>
         )}
@@ -169,11 +169,11 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
   }
   return (
     <div className="leading-tight">
-      <div className="text-neutral-200 font-medium text-sm truncate" title={data.line1}>
+      <div className="text-foreground font-medium text-sm truncate" title={data.line1}>
         {data.line1}
       </div>
       {data.line2 && (
-        <div className="text-neutral-400 text-xs mt-0.5 truncate" title={data.line2}>
+        <div className="text-muted-foreground text-xs mt-0.5 truncate" title={data.line2}>
           {data.line2}
         </div>
       )}
@@ -285,14 +285,14 @@ function LandlordTenantsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title="Tenant List" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* Title row: Heading "Your tenants" with count as small muted pill ("7"), 32px gap under */}
         <div className="flex items-center gap-2.5 mb-8">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Your tenants</h1>
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-800 text-neutral-400">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">Your tenants</h1>
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
             {total}
           </span>
         </div>
@@ -301,18 +301,18 @@ function LandlordTenantsContent() {
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
           {/* Search Input: full width on mobile, 280px on desktop */}
           <div className="relative w-full md:w-[280px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search name, email or phone"
-              className="w-full pl-9 pr-8 py-2 rounded-lg bg-neutral-900 border border-neutral-800 text-sm text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-700 focus:ring-1 focus:ring-neutral-700"
+              className="w-full pl-9 pr-8 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
             />
             {searchInput && (
               <button
                 onClick={() => setSearchInput("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
@@ -378,9 +378,9 @@ function LandlordTenantsContent() {
 
         {/* Content Section */}
         {isLoading ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 space-y-4">
+          <div className="rounded-xl border border-border bg-card/30 p-6 space-y-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-neutral-800/40 last:border-0">
+              <div key={i} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
                 <div className="space-y-1">
                   <Skeleton className="h-5 w-40" />
                   <Skeleton className="h-3 w-56" />
@@ -391,18 +391,18 @@ function LandlordTenantsContent() {
           </div>
         ) : total === 0 ? (
           /* Empty States */
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/20 py-16 px-4 text-center">
+          <div className="rounded-xl border border-border bg-card/20 py-16 px-4 text-center">
             {hasActiveFilters ? (
               <div className="max-w-md mx-auto space-y-3">
-                <Search className="w-10 h-10 text-neutral-500 mx-auto" />
-                <h3 className="text-base font-semibold text-white">No tenants match these filters.</h3>
-                <p className="text-sm text-neutral-400">
+                <Search className="w-10 h-10 text-muted-foreground mx-auto" />
+                <h3 className="text-base font-semibold text-foreground">No tenants match these filters.</h3>
+                <p className="text-sm text-muted-foreground">
                   Try adjusting your search query, property, or lease status filters.
                 </p>
                 <div className="pt-2">
                   <Button
                     onClick={clearFilters}
-                    className="bg-neutral-800 hover:bg-neutral-700 text-white text-sm h-9 px-4 rounded-lg font-medium"
+                    className="bg-card border border-border hover:bg-accent text-foreground text-sm h-9 px-4 rounded-lg font-medium"
                   >
                     Clear filters
                   </Button>
@@ -410,14 +410,14 @@ function LandlordTenantsContent() {
               </div>
             ) : (
               <div className="max-w-md mx-auto space-y-3">
-                <Users className="w-10 h-10 text-neutral-500 mx-auto" />
-                <h3 className="text-base font-semibold text-white">No tenants yet.</h3>
-                <p className="text-sm text-neutral-400">
+                <Users className="w-10 h-10 text-muted-foreground mx-auto" />
+                <h3 className="text-base font-semibold text-foreground">No tenants yet.</h3>
+                <p className="text-sm text-muted-foreground">
                   Invite a tenant from a vacant unit to start tracking leases and payments.
                 </p>
                 <div className="pt-2">
                   <Link href="/landlord/properties">
-                    <Button className="bg-white hover:bg-neutral-200 text-neutral-950 text-sm h-9 px-4 rounded-lg font-semibold">
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm h-9 px-4 rounded-lg font-semibold">
                       View Properties
                     </Button>
                   </Link>
@@ -428,7 +428,7 @@ function LandlordTenantsContent() {
         ) : (
           <div className="space-y-4">
             {/* Desktop Table: table-layout: fixed, set column widths, no sideways scroll at 1024px+ */}
-            <div className="hidden md:block rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+            <div className="hidden md:block rounded-xl border border-border bg-card/40 overflow-hidden">
               <table className="w-full table-fixed text-left text-sm">
                 <colgroup>
                   <col className="w-[28%] xl:w-[24%]" />
@@ -438,7 +438,7 @@ function LandlordTenantsContent() {
                   <col className="w-[15%] xl:w-[13%]" />
                   <col className="w-[21%] xl:w-[19%]" />
                 </colgroup>
-                <thead className="border-b border-neutral-800 bg-neutral-900/70 text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                <thead className="border-b border-border bg-muted/70 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <tr>
                     <th scope="col" className="px-5 py-3.5">Tenant</th>
                     <th scope="col" className="hidden xl:table-cell px-5 py-3.5">Phone</th>
@@ -448,7 +448,7 @@ function LandlordTenantsContent() {
                     <th scope="col" className="px-5 py-3.5">Next rent due</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-800/60">
+                <tbody className="divide-y divide-border/60">
                   {tenants.map((tenant) => {
                     const isSelected = selectedTenant?.id === tenant.id;
                     const rentDueLines = formatTwoLineRentDue({
@@ -463,22 +463,22 @@ function LandlordTenantsContent() {
                         key={tenant.id}
                         onClick={() => setSelectedTenant(isSelected ? null : tenant)}
                         className={cn(
-                          "cursor-pointer transition-colors hover:bg-neutral-850/60",
-                          isSelected && "bg-neutral-800/50"
+                          "cursor-pointer transition-colors hover:bg-accent/50",
+                          isSelected && "bg-accent"
                         )}
                       >
                         {/* Tenant: Name + Email (truncated) */}
                         <td className="px-5 py-4">
-                          <div className="font-semibold text-white truncate" title={tenant.fullName}>
+                          <div className="font-semibold text-foreground truncate" title={tenant.fullName}>
                             {tenant.fullName}
                           </div>
-                          <div className="text-xs text-neutral-400 mt-0.5 truncate" title={tenant.email}>
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate" title={tenant.email}>
                             {tenant.email}
                           </div>
                         </td>
 
                         {/* Phone: hidden 768-1279px, shows xl */}
-                        <td className="hidden xl:table-cell px-5 py-4 text-neutral-300">
+                        <td className="hidden xl:table-cell px-5 py-4 text-muted-foreground">
                           <div className="truncate" title={tenant.phone || undefined}>
                             {tenant.phone || "—"}
                           </div>
@@ -487,11 +487,11 @@ function LandlordTenantsContent() {
                         {/* Unit(s) */}
                         <td className="px-5 py-4">
                           <div className="flex items-center min-w-0">
-                            <span className="font-medium text-white truncate" title={tenant.unitDisplay.primaryUnit}>
+                            <span className="font-medium text-foreground truncate" title={tenant.unitDisplay.primaryUnit}>
                               {tenant.unitDisplay.primaryUnit}
                             </span>
                             {tenant.unitDisplay.moreCount > 0 && (
-                              <span className="shrink-0 ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700/60">
+                              <span className="shrink-0 ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border">
                                 +{tenant.unitDisplay.moreCount} more
                               </span>
                             )}
@@ -499,7 +499,7 @@ function LandlordTenantsContent() {
                         </td>
 
                         {/* Property */}
-                        <td className="px-5 py-4 text-neutral-300">
+                        <td className="px-5 py-4 text-muted-foreground">
                           <div className="truncate" title={tenant.propertyDisplay}>
                             {tenant.propertyDisplay}
                           </div>
@@ -535,15 +535,15 @@ function LandlordTenantsContent() {
                   <div
                     key={tenant.id}
                     onClick={() => setSelectedTenant(tenant)}
-                    className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3 cursor-pointer active:bg-neutral-850 hover:border-neutral-700/80 transition-colors"
+                    className="rounded-xl border border-border bg-card/40 p-4 space-y-3 cursor-pointer active:bg-accent hover:border-border transition-colors"
                   >
                     {/* Name, email, status pill top right */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-0.5">
-                        <div className="font-semibold text-base text-white truncate" title={tenant.fullName}>
+                        <div className="font-semibold text-base text-foreground truncate" title={tenant.fullName}>
                           {tenant.fullName}
                         </div>
-                        <div className="text-xs text-neutral-400 truncate" title={tenant.email}>
+                        <div className="text-xs text-muted-foreground truncate" title={tenant.email}>
                           {tenant.email}
                         </div>
                       </div>
@@ -553,27 +553,27 @@ function LandlordTenantsContent() {
                     </div>
 
                     {/* Unit(s) · Property */}
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-300 min-w-0">
-                      <span className="font-medium text-neutral-200 shrink-0">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+                      <span className="font-medium text-foreground shrink-0">
                         {tenant.unitDisplay.primaryUnit}
                       </span>
                       {tenant.unitDisplay.moreCount > 0 && (
-                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700/60">
+                        <span className="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border">
                           +{tenant.unitDisplay.moreCount} more
                         </span>
                       )}
-                      <span className="text-neutral-500 shrink-0">·</span>
-                      <span className="text-neutral-400 truncate" title={tenant.propertyDisplay}>
+                      <span className="text-muted-foreground shrink-0">·</span>
+                      <span className="text-muted-foreground truncate" title={tenant.propertyDisplay}>
                         {tenant.propertyDisplay}
                       </span>
                     </div>
 
                     {/* Divider */}
-                    <div className="h-px bg-neutral-800/60" />
+                    <div className="h-px bg-border/60" />
 
                     {/* Next rent due label left with two-line value right */}
                     <div className="flex items-start justify-between gap-3 text-xs">
-                      <span className="text-neutral-500 shrink-0 pt-0.5">Next rent due</span>
+                      <span className="text-muted-foreground shrink-0 pt-0.5">Next rent due</span>
                       <div className="text-right">
                         <TwoLineRentDue data={rentDueLines} />
                       </div>
@@ -584,8 +584,8 @@ function LandlordTenantsContent() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-800/80">
-              <div className="text-sm text-neutral-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/80">
+              <div className="text-sm text-muted-foreground">
                 {total === 0 ? "0 of 0" : `${fromRecord}–${toRecord} of ${total}`}
               </div>
 
@@ -593,7 +593,7 @@ function LandlordTenantsContent() {
                 <Button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Previous
@@ -601,7 +601,7 @@ function LandlordTenantsContent() {
                 <Button
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page >= totalPages}
-                  className="bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-3 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
@@ -619,18 +619,18 @@ function LandlordTenantsContent() {
           }}
         >
           <Dialog.Portal>
-            {/* Overlay: fixed inset-0, black at 60%, click closes */}
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            {/* Overlay: fixed inset-0, black at 50%, click closes */}
+            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
 
             {/* Content: slides over without pushing or resizing page */}
             <Dialog.Content
               className={cn(
-                "fixed z-50 flex flex-col bg-neutral-900 text-white shadow-2xl focus:outline-none transition-transform duration-200",
+                "fixed z-50 flex flex-col bg-card text-foreground shadow-2xl focus:outline-none transition-transform duration-200",
                 // Mobile bottom sheet (<768px)
-                "bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-2xl border-t border-neutral-800",
+                "bottom-0 left-0 right-0 max-h-[92dvh] rounded-t-2xl border-t border-border",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
                 // Desktop side panel (>=768px)
-                "md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[480px] md:max-w-[100vw] md:h-[100dvh] md:max-h-none md:rounded-none md:border-t-0 md:border-l md:border-neutral-800",
+                "md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[480px] md:max-w-[100vw] md:h-[100dvh] md:max-h-none md:rounded-none md:border-t-0 md:border-l md:border-border",
                 "md:data-[state=closed]:slide-out-to-right md:data-[state=open]:slide-in-from-right"
               )}
             >
@@ -638,15 +638,15 @@ function LandlordTenantsContent() {
                 <>
                   {/* Drag handle for mobile */}
                   <div className="md:hidden pt-3 pb-1 shrink-0">
-                    <div className="w-12 h-1.5 rounded-full bg-neutral-700 mx-auto" />
+                    <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30 mx-auto" />
                   </div>
 
                   {/* Panel Header: flex-shrink-0 and always visible */}
-                  <div className="shrink-0 px-6 pt-5 pb-5 border-b border-neutral-800 space-y-3">
+                  <div className="shrink-0 px-6 pt-5 pb-5 border-b border-border space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-2.5 flex-wrap">
-                          <Dialog.Title className="text-lg font-bold text-white truncate">
+                          <Dialog.Title className="text-lg font-bold text-foreground truncate">
                             {selectedTenant.fullName}
                           </Dialog.Title>
                           <LeaseStatusBadge status={selectedTenant.overallStatus} />
@@ -658,7 +658,7 @@ function LandlordTenantsContent() {
 
                       <Dialog.Close asChild>
                         <button
-                          className="p-1.5 -mr-1.5 -mt-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-700"
+                          className="p-1.5 -mr-1.5 -mt-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                           aria-label="Close"
                         >
                           <X className="w-5 h-5" />
@@ -667,28 +667,28 @@ function LandlordTenantsContent() {
                     </div>
 
                     {/* Email and Phone */}
-                    <div className="space-y-1.5 text-xs text-neutral-400">
+                    <div className="space-y-1.5 text-xs text-muted-foreground">
                       <div className="flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                        <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <a
                           href={`mailto:${selectedTenant.email}`}
-                          className="hover:text-neutral-200 transition-colors truncate"
+                          className="hover:text-foreground transition-colors truncate"
                         >
                           {selectedTenant.email}
                         </a>
                       </div>
                       {selectedTenant.phone ? (
                         <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+                          <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <a
                             href={`tel:${selectedTenant.phone}`}
-                            className="hover:text-neutral-200 transition-colors"
+                            className="hover:text-foreground transition-colors"
                           >
                             {selectedTenant.phone}
                           </a>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 text-neutral-500">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Phone className="w-3.5 h-3.5 shrink-0" />
                           <span>No phone number</span>
                         </div>
@@ -699,7 +699,7 @@ function LandlordTenantsContent() {
                   {/* Body: flex-1 min-h-0 overflow-y-auto overscroll-contain */}
                   <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6 space-y-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                         Units ({selectedTenant.units?.length ?? new Set(selectedTenant.leases.map((l) => l.unitId)).size})
                       </h3>
                     </div>
@@ -725,21 +725,21 @@ function LandlordTenantsContent() {
                       ).map((unitGroup) => (
                         <div
                           key={unitGroup.unitId}
-                          className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3.5"
+                          className="rounded-xl border border-border bg-muted/40 p-4 space-y-3.5"
                         >
                           {/* Unit Card Header */}
-                          <div className="flex items-center justify-between gap-2 border-b border-neutral-800/60 pb-3">
+                          <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
                             <div>
-                              <span className="font-semibold text-sm text-white block">
+                              <span className="font-semibold text-sm text-foreground block">
                                 Unit {unitGroup.unitName}
                               </span>
-                              <span className="text-xs text-neutral-400 block mt-0.5">
+                              <span className="text-xs text-muted-foreground block mt-0.5">
                                 {unitGroup.propertyName}
                               </span>
                             </div>
                             <Link
                               href={`/landlord/properties/${unitGroup.propertyId}/units/${unitGroup.unitId}`}
-                              className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+                              className="text-xs font-medium text-primary hover:underline transition-colors"
                             >
                               View unit ↗
                             </Link>
@@ -755,29 +755,29 @@ function LandlordTenantsContent() {
                               return (
                                 <div
                                   key={lease.id}
-                                  className="rounded-lg border border-neutral-800/80 bg-neutral-900/40 p-3 space-y-2 text-xs"
+                                  className="rounded-lg border border-border/80 bg-card/60 p-3 space-y-2 text-xs"
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-medium text-neutral-200">
+                                      <span className="font-medium text-foreground">
                                         {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
                                       </span>
                                       <LeaseStatusBadge status={lease.leaseStatus} />
                                     </div>
                                     <Link
                                       href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}?lease=${lease.id}`}
-                                      className="text-emerald-400 hover:text-emerald-300 font-medium shrink-0"
+                                      className="text-primary hover:underline font-medium shrink-0"
                                     >
                                       View
                                     </Link>
                                   </div>
 
-                                  <div className="flex items-center justify-between gap-2 text-neutral-400">
+                                  <div className="flex items-center justify-between gap-2 text-muted-foreground">
                                     <span>
                                       Paid {formatCurrency(paid)} of {formatCurrency(totalRent)}
                                     </span>
                                     {outstanding > 0 && (
-                                      <span className="text-red-400 font-medium">
+                                      <span className="text-destructive font-medium">
                                         {formatCurrency(outstanding)} outstanding
                                       </span>
                                     )}
@@ -838,17 +838,17 @@ function LandlordTenantsContent() {
 
         {/* Edit Placeholder Tenant Modal */}
         {leaseToEditTenant && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
-            <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold tracking-tight text-white">Edit Tenant Details</h2>
+                <h2 className="text-xl font-bold tracking-tight text-foreground">Edit Tenant Details</h2>
                 <button
                   type="button"
                   onClick={() => {
                     setLeaseToEditTenant(null);
                     setEditTenantError(null);
                   }}
-                  className="text-neutral-400 hover:text-white"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   &times;
                 </button>
@@ -877,15 +877,15 @@ function LandlordTenantsContent() {
                 className="space-y-4"
               >
                 {editTenantError && (
-                  <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
+                  <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
                     {editTenantError}
                   </div>
                 )}
 
                 <div className="space-y-3">
                   <div>
-                    <label htmlFor="editTenantListFullName" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Full Name <span className="text-red-500">*</span>
+                    <label htmlFor="editTenantListFullName" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Full Name <span className="text-destructive">*</span>
                     </label>
                     <input
                       id="editTenantListFullName"
@@ -896,14 +896,14 @@ function LandlordTenantsContent() {
                         setEditTenantFullName(e.target.value);
                         if (editTenantError) setEditTenantError(null);
                       }}
-                      className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                       placeholder="e.g. John Doe"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="editTenantListEmail" className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider">
-                      Email <span className="text-red-500">*</span>
+                    <label htmlFor="editTenantListEmail" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                      Email <span className="text-destructive">*</span>
                     </label>
                     <input
                       id="editTenantListEmail"
@@ -914,7 +914,7 @@ function LandlordTenantsContent() {
                         setEditTenantEmail(e.target.value);
                         if (editTenantError) setEditTenantError(null);
                       }}
-                      className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none focus:ring-1 focus:ring-white"
+                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
                       placeholder="e.g. john@example.com"
                     />
                   </div>
@@ -928,14 +928,14 @@ function LandlordTenantsContent() {
                       setLeaseToEditTenant(null);
                       setEditTenantError(null);
                     }}
-                    className="border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900"
+                    className="border-border text-foreground hover:bg-accent"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={updatePlaceholderTenantMutation.isPending}
-                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                   >
                     {updatePlaceholderTenantMutation.isPending ? "Saving..." : "Save"}
                   </Button>
@@ -953,10 +953,10 @@ export default function LandlordTenantsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-neutral-950 text-white">
+        <div className="min-h-screen bg-background text-foreground">
           <PageHeader title="Tenant List" />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-6 space-y-4">
+            <div className="rounded-xl border border-border bg-card/30 p-6 space-y-4">
               <Skeleton className="h-8 w-48" />
               <Skeleton className="h-10 w-full" />
             </div>
