@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField, ModalSegmentedControl } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
@@ -575,13 +576,13 @@ export default function PropertyDetailPage() {
           backLabel="Back to Properties"
           actions={[
             {
-              label: "Edit Property",
+              label: "Edit property",
               onClick: handleOpenEdit,
               icon: <Pencil className="w-4 h-4" />,
               variant: "outline",
             },
             {
-              label: "Delete Property",
+              label: "Delete property",
               onClick: () => setIsDeletePropertyConfirmOpen(true),
               icon: <Trash2 className="w-4 h-4" />,
               variant: "danger",
@@ -627,12 +628,13 @@ export default function PropertyDetailPage() {
             <div className="relative" ref={dropdownRef}>
               <Button
                 onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 text-sm font-semibold flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
+                size="action"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring"
                 aria-expanded={isAddDropdownOpen}
                 aria-haspopup="menu"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Unit</span>
+                <span>Add unit</span>
                 <ChevronDown
                   className={cn(
                     "w-4 h-4 transition-transform duration-200",
@@ -894,8 +896,8 @@ export default function PropertyDetailPage() {
                                   unit.status === "occupied"
                                     ? "bg-success-tint text-success border border-success/20"
                                     : unit.status === "reserved"
-                                    ? "bg-primary-tint text-primary border border-primary/20"
-                                    : "bg-warning-tint text-warning border border-warning/20"
+                                      ? "bg-primary-tint text-primary border border-primary/20"
+                                      : "bg-warning-tint text-warning border border-warning/20"
                                 )}
                               >
                                 {unit.status}
@@ -992,8 +994,8 @@ export default function PropertyDetailPage() {
                                 unit.status === "occupied"
                                   ? "bg-success-tint text-success border border-success/20"
                                   : unit.status === "reserved"
-                                  ? "bg-primary-tint text-primary border border-primary/20"
-                                  : "bg-warning-tint text-warning border border-warning/20"
+                                    ? "bg-primary-tint text-primary border border-primary/20"
+                                    : "bg-warning-tint text-warning border border-warning/20"
                               )}
                             >
                               {unit.status}
@@ -1109,146 +1111,116 @@ export default function PropertyDetailPage() {
       )}
 
       {/* Edit Property Modal */}
-      {isEditPropertyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Edit Property</h2>
-              <button onClick={() => setIsEditPropertyOpen(false)} className="text-muted-foreground hover:text-foreground">
-                &times;
-              </button>
+      <Modal
+        open={isEditPropertyOpen}
+        onOpenChange={setIsEditPropertyOpen}
+        isSaving={updateProperty.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Edit Property"
+          onClose={() => setIsEditPropertyOpen(false)}
+          isSaving={updateProperty.isPending}
+        />
+        <form onSubmit={handleUpdateProperty} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            <ModalField label="Property Name" htmlFor="edit-name" required>
+              <input
+                id="edit-name"
+                type="text"
+                required
+                value={propertyName}
+                onChange={(e) => setPropertyName(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+            </ModalField>
+
+            <ModalField label="Street Address" htmlFor="edit-address" required>
+              <input
+                id="edit-address"
+                type="text"
+                required
+                value={propertyAddress}
+                onChange={(e) => setPropertyAddress(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+            </ModalField>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ModalField label="State" htmlFor="edit-state" required>
+                <Select
+                  id="edit-state"
+                  required
+                  value={propertyState}
+                  onChange={(e) => {
+                    setPropertyState(e.target.value);
+                    setPropertyCity("");
+                  }}
+                  className="h-12"
+                >
+                  <option value="">Select State</option>
+                  {NIGERIA_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+              </ModalField>
+
+              <ModalField label="Local Government Area" htmlFor="edit-city" required>
+                <Select
+                  id="edit-city"
+                  required
+                  value={propertyCity}
+                  onChange={(e) => setPropertyCity(e.target.value)}
+                  disabled={!propertyState}
+                  className="h-12"
+                >
+                  <option value="">Select LGA</option>
+                  {propertyState &&
+                    NIGERIA_LGAS[propertyState as keyof typeof NIGERIA_LGAS]?.map((lga) => (
+                      <option key={lga} value={lga}>
+                        {lga}
+                      </option>
+                    ))}
+                </Select>
+              </ModalField>
             </div>
 
-            <form onSubmit={handleUpdateProperty} className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="edit-name" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Property Name
-                  </label>
-                  <input
-                    id="edit-name"
-                    type="text"
-                    required
-                    value={propertyName}
-                    onChange={(e) => setPropertyName(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                  />
-                </div>
+            <ModalField label="Property Type" htmlFor="edit-propertyType">
+              <Select
+                id="edit-propertyType"
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value as PropertyType)}
+                className="h-12"
+              >
+                <option value={PropertyType.residential}>Residential</option>
+                <option value={PropertyType.commercial}>Commercial</option>
+                <option value={PropertyType.mixed}>Mixed-Use</option>
+              </Select>
+            </ModalField>
 
-                <div>
-                  <label htmlFor="edit-address" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Street Address
-                  </label>
-                  <input
-                    id="edit-address"
-                    type="text"
-                    required
-                    value={propertyAddress}
-                    onChange={(e) => setPropertyAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                  />
-                </div>
+            {propertyType !== PropertyType.residential && (
+              <ModalField label="Expected Number of Units" htmlFor="edit-expectedUnits">
+                <input
+                  id="edit-expectedUnits"
+                  type="number"
+                  min="1"
+                  value={expectedUnits}
+                  onChange={(e) => setExpectedUnits(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                />
+              </ModalField>
+            )}
+          </ModalBody>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="edit-state" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      State
-                    </label>
-                    <Select
-                      id="edit-state"
-                      required
-                      value={propertyState}
-                      onChange={(e) => {
-                        setPropertyState(e.target.value);
-                        setPropertyCity("");
-                      }}
-                      className="mt-1"
-                    >
-                      <option value="">Select State</option>
-                      {NIGERIA_STATES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div>
-                    <label htmlFor="edit-city" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Local Government Area
-                    </label>
-                    <Select
-                      id="edit-city"
-                      required
-                      value={propertyCity}
-                      onChange={(e) => setPropertyCity(e.target.value)}
-                      disabled={!propertyState}
-                      className="mt-1"
-                    >
-                      <option value="">Select LGA</option>
-                      {propertyState &&
-                        NIGERIA_LGAS[propertyState as keyof typeof NIGERIA_LGAS]?.map((lga) => (
-                          <option key={lga} value={lga}>
-                            {lga}
-                          </option>
-                        ))}
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Property Type
-                  </label>
-                  <Select
-                    id="edit-propertyType"
-                    value={propertyType}
-                    onChange={(e) => setPropertyType(e.target.value as PropertyType)}
-                    className="mt-1"
-                  >
-                    <option value={PropertyType.residential}>Residential</option>
-                    <option value={PropertyType.commercial}>Commercial</option>
-                    <option value={PropertyType.mixed}>Mixed-Use</option>
-                  </Select>
-                </div>
-
-                {propertyType !== PropertyType.residential && (
-                  <div>
-                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Expected Number of Units
-                    </label>
-                    <input
-                      id="edit-expectedUnits"
-                      type="number"
-                      min="1"
-                      value={expectedUnits}
-                      onChange={(e) => setExpectedUnits(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => setIsEditPropertyOpen(false)}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateProperty.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {updateProperty.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter
+            onCancel={() => setIsEditPropertyOpen(false)}
+            primaryText="Save Changes"
+            isSaving={updateProperty.isPending}
+          />
+        </form>
+      </Modal>
 
       {/* Delete Property Confirm Dialog */}
       <ConfirmDialog
@@ -1290,292 +1262,304 @@ export default function PropertyDetailPage() {
       />
 
       {/* Add Unit Modal */}
-      {isAddUnitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Add Single Unit</h2>
-              <button
-                onClick={() => {
-                  setIsAddUnitOpen(false);
-                  resetUnitForm();
-                }}
-                className="text-muted-foreground hover:text-foreground"
+      <Modal
+        open={isAddUnitOpen}
+        onOpenChange={(open) => {
+          setIsAddUnitOpen(open);
+          if (!open) resetUnitForm();
+        }}
+        isSaving={createUnit.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Add Single Unit"
+          onClose={() => {
+            setIsAddUnitOpen(false);
+            resetUnitForm();
+          }}
+          isSaving={createUnit.isPending}
+        />
+        <form onSubmit={handleCreateUnit} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            {unitError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                {unitError}
+              </div>
+            )}
+
+            <ModalField label="Unit Name / Number" htmlFor="unitNumber" required>
+              <input
+                id="unitNumber"
+                type="text"
+                required
+                value={unitNumber}
+                onChange={(e) => setUnitNumber(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                placeholder="e.g. Flat 1, Shop 4B"
+              />
+            </ModalField>
+
+            <ModalField label="Unit Type" htmlFor="unitType">
+              <Select
+                id="unitType"
+                value={unitType}
+                onChange={(e) => setUnitType(e.target.value)}
+                className="h-12 capitalize"
               >
-                &times;
-              </button>
-            </div>
+                {availableTypes.map((type) => (
+                  <option key={type} value={type} className="capitalize">
+                    {type}
+                  </option>
+                ))}
+              </Select>
+            </ModalField>
 
-            <form onSubmit={handleCreateUnit} className="space-y-4">
-              {unitError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {unitError}
-                </div>
-              )}
+            {isResidentialUnitType(unitType) && (
+              <ModalField label="Number of Rooms (Optional)" htmlFor="roomsCount">
+                <input
+                  id="roomsCount"
+                  type="number"
+                  min="1"
+                  value={roomsCount}
+                  onChange={(e) => setRoomsCount(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  placeholder="e.g. 2"
+                />
+              </ModalField>
+            )}
 
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="unitNumber" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Unit Name / Number
-                  </label>
-                  <input
-                    id="unitNumber"
-                    type="text"
-                    required
-                    value={unitNumber}
-                    onChange={(e) => setUnitNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                    placeholder="e.g. Flat 1, Shop 4B"
-                  />
-                </div>
+            <ModalField label="Floor Area in SQM (Optional)" htmlFor="sizeSqm">
+              <input
+                id="sizeSqm"
+                type="number"
+                min="1"
+                step="0.1"
+                value={sizeSqm}
+                onChange={(e) => setSizeSqm(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                placeholder="e.g. 75.5"
+              />
+            </ModalField>
+          </ModalBody>
 
-                <div>
-                  <label htmlFor="unitType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Unit Type
-                  </label>
-                  <Select
-                    id="unitType"
-                    value={unitType}
-                    onChange={(e) => setUnitType(e.target.value)}
-                    className="mt-1 capitalize"
-                  >
-                    {availableTypes.map((type) => (
-                      <option key={type} value={type} className="capitalize">
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {isResidentialUnitType(unitType) && (
-                  <div>
-                    <label htmlFor="roomsCount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Number of Rooms (Optional)
-                    </label>
-                    <input
-                      id="roomsCount"
-                      type="number"
-                      min="1"
-                      value={roomsCount}
-                      onChange={(e) => setRoomsCount(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                      placeholder="e.g. 2"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label htmlFor="sizeSqm" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Floor Area in SQM (Optional)
-                  </label>
-                  <input
-                    id="sizeSqm"
-                    type="number"
-                    min="1"
-                    step="0.1"
-                    value={sizeSqm}
-                    onChange={(e) => setSizeSqm(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                    placeholder="e.g. 75.5"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsAddUnitOpen(false);
-                    resetUnitForm();
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createUnit.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {createUnit.isPending ? "Creating..." : "Save Unit"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter
+            onCancel={() => {
+              setIsAddUnitOpen(false);
+              resetUnitForm();
+            }}
+            primaryText="Save Unit"
+            isSaving={createUnit.isPending}
+          />
+        </form>
+      </Modal>
 
       {/* Edit Unit Modal */}
-      {isEditUnitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Edit Unit</h2>
-              <button
-                onClick={() => {
-                  setIsEditUnitOpen(false);
-                  resetEditUnitForm();
-                }}
-                className="text-muted-foreground hover:text-foreground"
+      <Modal
+        open={isEditUnitOpen}
+        onOpenChange={(open) => {
+          setIsEditUnitOpen(open);
+          if (!open) resetEditUnitForm();
+        }}
+        isSaving={updateUnit.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Edit Unit"
+          onClose={() => {
+            setIsEditUnitOpen(false);
+            resetEditUnitForm();
+          }}
+          isSaving={updateUnit.isPending}
+        />
+        <form onSubmit={handleUpdateUnitSubmit} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            {editUnitError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                {editUnitError}
+              </div>
+            )}
+
+            <ModalField label="Unit Name / Number" htmlFor="editUnitNumber" required>
+              <input
+                id="editUnitNumber"
+                type="text"
+                required
+                value={editUnitNumber}
+                onChange={(e) => setEditUnitNumber(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+            </ModalField>
+
+            <ModalField label="Unit Type" htmlFor="editUnitType">
+              <Select
+                id="editUnitType"
+                value={editUnitType}
+                onChange={(e) => setEditUnitType(e.target.value)}
+                className="h-12 capitalize"
               >
-                &times;
-              </button>
-            </div>
+                {availableTypes.map((type) => (
+                  <option key={type} value={type} className="capitalize">
+                    {type}
+                  </option>
+                ))}
+              </Select>
+            </ModalField>
 
-            <form onSubmit={handleUpdateUnitSubmit} className="space-y-4">
-              {editUnitError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {editUnitError}
-                </div>
-              )}
+            {isResidentialUnitType(editUnitType) && (
+              <ModalField label="Number of Rooms (Optional)" htmlFor="editRoomsCount">
+                <input
+                  id="editRoomsCount"
+                  type="number"
+                  min="1"
+                  value={editRoomsCount}
+                  onChange={(e) => setEditRoomsCount(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                />
+              </ModalField>
+            )}
+          </ModalBody>
 
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Unit Name / Number
-                  </label>
-                  <input
-                    id="editUnitNumber"
-                    type="text"
-                    required
-                    value={editUnitNumber}
-                    onChange={(e) => setEditUnitNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Unit Type
-                  </label>
-                  <Select
-                    id="editUnitType"
-                    value={editUnitType}
-                    onChange={(e) => setEditUnitType(e.target.value)}
-                    className="mt-1 capitalize"
-                  >
-                    {availableTypes.map((type) => (
-                      <option key={type} value={type} className="capitalize">
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {isResidentialUnitType(editUnitType) && (
-                  <div>
-                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Number of Rooms (Optional)
-                    </label>
-                    <input
-                      id="editRoomsCount"
-                      type="number"
-                      min="1"
-                      value={editRoomsCount}
-                      onChange={(e) => setEditRoomsCount(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsEditUnitOpen(false);
-                    resetEditUnitForm();
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateUnit.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {updateUnit.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter
+            onCancel={() => {
+              setIsEditUnitOpen(false);
+              resetEditUnitForm();
+            }}
+            primaryText="Save Changes"
+            isSaving={updateUnit.isPending}
+          />
+        </form>
+      </Modal>
 
       {/* Bulk Add Units Modal */}
-      {isBulkAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Bulk Add Units</h2>
-              <button
-                onClick={() => {
-                  setIsBulkAddOpen(false);
-                  resetBulkForm();
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                &times;
-              </button>
-            </div>
+      <Modal
+        open={isBulkAddOpen}
+        onOpenChange={(open) => {
+          setIsBulkAddOpen(open);
+          if (!open) resetBulkForm();
+        }}
+        isSaving={createBulkUnits.isPending}
+        size="lg"
+      >
+        <ModalHeader
+          title="Bulk Add Units"
+          onClose={() => {
+            setIsBulkAddOpen(false);
+            resetBulkForm();
+          }}
+          isSaving={createBulkUnits.isPending}
+        />
+        <form onSubmit={handleBulkSubmit} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            <ModalSegmentedControl
+              value={bulkMode}
+              onChange={(val) => setBulkMode(val as "range" | "manual")}
+              options={[
+                { value: "range", label: "Auto-Generate Range" },
+                { value: "manual", label: "Manual List" },
+              ]}
+            />
 
-            {/* Mode Toggle */}
-            <div className="flex bg-muted p-1 rounded-lg border border-border">
-              <button
-                type="button"
-                onClick={() => setBulkMode("range")}
-                className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors",
-                  bulkMode === "range" ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Auto-Generate Range
-              </button>
-              <button
-                type="button"
-                onClick={() => setBulkMode("manual")}
-                className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors",
-                  bulkMode === "manual" ? "bg-card text-foreground shadow" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Manual List
-              </button>
-            </div>
+            {bulkError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                {bulkError}
+              </div>
+            )}
 
-            <form onSubmit={handleBulkSubmit} className="space-y-4">
-              {bulkError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {bulkError}
+            {bulkMode === "range" ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalField label="Prefix">
+                    <input
+                      type="text"
+                      value={rangePrefix}
+                      onChange={(e) => setRangePrefix(e.target.value)}
+                      placeholder="e.g. Flat"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    />
+                  </ModalField>
+                  <ModalField label="Unit Type">
+                    <Select
+                      value={rangeType}
+                      onChange={(e) => setRangeType(e.target.value)}
+                      className="h-12 capitalize"
+                    >
+                      {availableTypes.map((type) => (
+                        <option key={type} value={type} className="capitalize">
+                          {type}
+                        </option>
+                      ))}
+                    </Select>
+                  </ModalField>
                 </div>
-              )}
 
-              {bulkMode === "range" ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                        Prefix
-                      </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalField label="Start Number" required>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(e.target.value)}
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    />
+                  </ModalField>
+                  <ModalField label="End Number" required>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(e.target.value)}
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    />
+                  </ModalField>
+                </div>
+
+                {isResidentialUnitType(rangeType) && (
+                  <ModalField label="Rooms (Optional)">
+                    <input
+                      type="number"
+                      min="1"
+                      value={rangeRoomsCount}
+                      onChange={(e) => setRangeRoomsCount(e.target.value)}
+                      placeholder="e.g. 2"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    />
+                  </ModalField>
+                )}
+
+                <div className="p-3 bg-muted border border-border rounded-lg text-xs text-muted-foreground">
+                  Will create{" "}
+                  <span className="text-foreground font-semibold">
+                    {Math.max(0, (parseInt(rangeEnd, 10) || 0) - (parseInt(rangeStart, 10) || 0) + 1)}
+                  </span>{" "}
+                  units: {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeStart}` : rangeStart} to {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeEnd}` : rangeEnd}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                  {manualRows.map((row, index) => (
+                    <div key={index} className="flex gap-2 items-center">
                       <input
                         type="text"
-                        value={rangePrefix}
-                        onChange={(e) => setRangePrefix(e.target.value)}
-                        placeholder="e.g. Flat"
-                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                        value={row.unitNumber}
+                        onChange={(e) => {
+                          const newRows = [...manualRows];
+                          newRows[index].unitNumber = e.target.value;
+                          setManualRows(newRows);
+                        }}
+                        placeholder={`Unit #${index + 1}`}
+                        className="flex-1 rounded-lg border border-input bg-card px-3 h-10 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                        Unit Type
-                      </label>
                       <Select
-                        value={rangeType}
-                        onChange={(e) => setRangeType(e.target.value)}
-                        className="mt-1 capitalize"
+                        value={row.unitType}
+                        onChange={(e) => {
+                          const newRows = [...manualRows];
+                          newRows[index].unitType = e.target.value;
+                          setManualRows(newRows);
+                        }}
+                        className="w-32 h-10 capitalize"
                       >
                         {availableTypes.map((type) => (
                           <option key={type} value={type} className="capitalize">
@@ -1583,160 +1567,60 @@ export default function PropertyDetailPage() {
                           </option>
                         ))}
                       </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                        Start Number
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={rangeStart}
-                        onChange={(e) => setRangeStart(e.target.value)}
-                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                        End Number
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={rangeEnd}
-                        onChange={(e) => setRangeEnd(e.target.value)}
-                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {isResidentialUnitType(rangeType) && (
-                    <div>
-                      <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                        Rooms (Optional)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={rangeRoomsCount}
-                        onChange={(e) => setRangeRoomsCount(e.target.value)}
-                        placeholder="e.g. 2"
-                        className="mt-1 block w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                      />
-                    </div>
-                  )}
-
-                  <div className="p-3 bg-muted border border-border rounded-lg text-xs text-muted-foreground">
-                    Will create{" "}
-                    <span className="text-foreground font-semibold">
-                      {Math.max(0, (parseInt(rangeEnd, 10) || 0) - (parseInt(rangeStart, 10) || 0) + 1)}
-                    </span>{" "}
-                    units: {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeStart}` : rangeStart} to {rangePrefix.trim() ? `${rangePrefix.trim()} ${rangeEnd}` : rangeEnd}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                    {manualRows.map((row, index) => (
-                      <div key={index} className="flex gap-2 items-center">
+                      {isResidentialUnitType(row.unitType) && (
                         <input
-                          type="text"
-                          value={row.unitNumber}
+                          type="number"
+                          min="1"
+                          value={row.roomsCount}
                           onChange={(e) => {
                             const newRows = [...manualRows];
-                            newRows[index].unitNumber = e.target.value;
+                            newRows[index].roomsCount = e.target.value;
                             setManualRows(newRows);
                           }}
-                          placeholder={`Unit #${index + 1}`}
-                          className="flex-1 rounded-lg border border-input bg-card px-3 py-1.5 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                          placeholder="Rooms"
+                          className="w-20 rounded-lg border border-input bg-card px-2 h-10 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                         />
-                        <Select
-                          value={row.unitType}
-                          onChange={(e) => {
-                            const newRows = [...manualRows];
-                            newRows[index].unitType = e.target.value;
-                            setManualRows(newRows);
+                      )}
+                      {manualRows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setManualRows(manualRows.filter((_, i) => i !== index));
                           }}
-                          className="w-32 capitalize"
+                          className="text-muted-foreground hover:text-destructive p-1"
                         >
-                          {availableTypes.map((type) => (
-                            <option key={type} value={type} className="capitalize">
-                              {type}
-                            </option>
-                          ))}
-                        </Select>
-                        {isResidentialUnitType(row.unitType) && (
-                          <input
-                            type="number"
-                            min="1"
-                            value={row.roomsCount}
-                            onChange={(e) => {
-                              const newRows = [...manualRows];
-                              newRows[index].roomsCount = e.target.value;
-                              setManualRows(newRows);
-                            }}
-                            placeholder="Rooms"
-                            className="w-20 rounded-lg border border-input bg-card px-2 py-1.5 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                          />
-                        )}
-                        {manualRows.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setManualRows(manualRows.filter((_, i) => i !== index));
-                            }}
-                            className="text-muted-foreground hover:text-destructive p-1"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setManualRows([...manualRows, { unitNumber: "", unitType: defaultUnitType, roomsCount: "" }]);
-                    }}
-                    className="w-full border-border text-muted-foreground hover:text-foreground text-xs h-8 flex items-center justify-center gap-1.5 hover:bg-accent"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add another row
-                  </Button>
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
 
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
                 <Button
                   type="button"
-                  onClick={() => {
-                    setIsBulkAddOpen(false);
-                    resetBulkForm();
-                  }}
                   variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
+                  onClick={() => {
+                    setManualRows([...manualRows, { unitNumber: "", unitType: defaultUnitType, roomsCount: "" }]);
+                  }}
+                  className="w-full border-border text-muted-foreground hover:text-foreground text-xs h-9 flex items-center justify-center gap-1.5 hover:bg-accent"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createBulkUnits.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {createBulkUnits.isPending ? "Generating..." : "Generate Units"}
+                  <Plus className="w-3.5 h-3.5" />
+                  Add another row
                 </Button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            )}
+          </ModalBody>
+
+          <ModalFooter
+            onCancel={() => {
+              setIsBulkAddOpen(false);
+              resetBulkForm();
+            }}
+            primaryText={createBulkUnits.isPending ? "Generating..." : "Generate Units"}
+            isSaving={createBulkUnits.isPending}
+          />
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -10,10 +10,11 @@ import { PageTitleRow } from "@/components/layout/PageTitleRow";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function PropertiesPage() {
@@ -227,15 +228,16 @@ export default function PropertiesPage() {
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => setIsModalOpen(true)}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
-                  aria-label="Add Property"
+                  size="action"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center shrink-0"
+                  aria-label="Add property"
                 >
                   <Plus className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Add Property</span>
+                  <span className="hidden sm:inline">Add property</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" align="center" className="sm:hidden">
-                Add Property
+                Add property
               </TooltipContent>
             </Tooltip>
           }
@@ -322,321 +324,291 @@ export default function PropertiesPage() {
       </main>
 
       {/* Add Property Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Add New Property</h2>
-              <button
+      <Modal
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) resetForm();
+        }}
+        size="md"
+        isSaving={createProperty.isPending}
+      >
+        <ModalHeader
+          title="Add property"
+          onClose={() => {
+            setIsModalOpen(false);
+            resetForm();
+          }}
+          isSaving={createProperty.isPending}
+        />
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <ModalBody>
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <ModalField label="Property Name" htmlFor="name" required>
+              <input
+                id="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                placeholder="e.g. Alaba Plaza"
+              />
+            </ModalField>
+
+            <ModalField label="Street Address" htmlFor="address" required>
+              <input
+                id="address"
+                type="text"
+                required
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                placeholder="e.g. 15 Kingsway Road"
+              />
+            </ModalField>
+
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-4">
+              <ModalField label="State" htmlFor="state" required>
+                <Select
+                  id="state"
+                  required
+                  value={state}
+                  onChange={(e) => {
+                    setState(e.target.value);
+                    setCity("");
+                  }}
+                  className="h-12"
+                >
+                  <option value="">Select State</option>
+                  {NIGERIA_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+              </ModalField>
+              <ModalField label="Local Government Area" htmlFor="city" required>
+                <Select
+                  id="city"
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  disabled={!state}
+                  className="h-12"
+                >
+                  <option value="">Select LGA</option>
+                  {state &&
+                    NIGERIA_LGAS[state as keyof typeof NIGERIA_LGAS]?.map((lga) => (
+                      <option key={lga} value={lga}>
+                        {lga}
+                      </option>
+                    ))}
+                </Select>
+              </ModalField>
+            </div>
+
+            <ModalField label="Property Type" htmlFor="propertyType">
+              <Select
+                id="propertyType"
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value as PropertyType)}
+                className="h-12"
+              >
+                <option value={PropertyType.residential}>Residential</option>
+                <option value={PropertyType.commercial}>Commercial</option>
+                <option value={PropertyType.mixed}>Mixed-Use</option>
+              </Select>
+            </ModalField>
+
+            {propertyType !== PropertyType.residential && (
+              <ModalField label="Expected Number of Units" htmlFor="expectedUnits">
+                <input
+                  id="expectedUnits"
+                  type="number"
+                  min="1"
+                  value={expectedUnits}
+                  onChange={(e) => setExpectedUnits(e.target.value)}
+                  placeholder="e.g. 20"
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                />
+              </ModalField>
+            )}
+          </ModalBody>
+
+          <ModalFooter>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setIsModalOpen(false);
                   resetForm();
                 }}
-                className="text-muted-foreground hover:text-foreground"
+                disabled={createProperty.isPending}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold border-border hover:bg-muted"
               >
-                &times;
-              </button>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createProperty.isPending}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
+              >
+                {createProperty.isPending && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                Save property
+              </Button>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="name" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Property Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                    placeholder="e.g. Alaba Plaza"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="address" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Street Address
-                  </label>
-                  <input
-                    id="address"
-                    type="text"
-                    required
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                    placeholder="e.g. 15 Kingsway Road"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="state" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      State
-                    </label>
-                    <Select
-                      id="state"
-                      required
-                      value={state}
-                      onChange={(e) => {
-                        setState(e.target.value);
-                        setCity("");
-                      }}
-                      className="mt-1"
-                    >
-                      <option value="">Select State</option>
-                      {NIGERIA_STATES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div>
-                    <label htmlFor="city" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Local Government Area
-                    </label>
-                    <Select
-                      id="city"
-                      required
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      disabled={!state}
-                      className="mt-1"
-                    >
-                      <option value="">Select LGA</option>
-                      {state &&
-                        NIGERIA_LGAS[state as keyof typeof NIGERIA_LGAS]?.map((lga) => (
-                          <option key={lga} value={lga}>
-                            {lga}
-                          </option>
-                        ))}
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="propertyType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Property Type
-                  </label>
-                  <Select
-                    id="propertyType"
-                    value={propertyType}
-                    onChange={(e) => setPropertyType(e.target.value as PropertyType)}
-                    className="mt-1"
-                  >
-                    <option value={PropertyType.residential}>Residential</option>
-                    <option value={PropertyType.commercial}>Commercial</option>
-                    <option value={PropertyType.mixed}>Mixed-Use</option>
-                  </Select>
-                </div>
-
-                {propertyType !== PropertyType.residential && (
-                  <div>
-                    <label htmlFor="expectedUnits" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Expected Number of Units
-                    </label>
-                    <input
-                      id="expectedUnits"
-                      type="number"
-                      min="1"
-                      value={expectedUnits}
-                      onChange={(e) => setExpectedUnits(e.target.value)}
-                      placeholder="e.g. 20"
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    resetForm();
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createProperty.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm"
-                >
-                  {createProperty.isPending ? "Creating..." : "Save Property"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Edit Property Modal */}
-      {isEditModalOpen && propertyToEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Edit Property</h2>
-              <button
+      <Modal
+        open={isEditModalOpen && Boolean(propertyToEdit)}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) setPropertyToEdit(null);
+        }}
+        size="md"
+        isSaving={updateProperty.isPending}
+      >
+        <ModalHeader
+          title="Edit property"
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setPropertyToEdit(null);
+          }}
+          isSaving={updateProperty.isPending}
+        />
+        <form onSubmit={handleEditSubmit} className="flex-1 flex flex-col min-h-0">
+          <ModalBody>
+            {editError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
+                {editError}
+              </div>
+            )}
+
+            <ModalField label="Property Name" htmlFor="edit-name" required>
+              <input
+                id="edit-name"
+                type="text"
+                required
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+              />
+            </ModalField>
+
+            <ModalField label="Street Address" htmlFor="edit-address" required>
+              <input
+                id="edit-address"
+                type="text"
+                required
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+              />
+            </ModalField>
+
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-4">
+              <ModalField label="State" htmlFor="edit-state" required>
+                <Select
+                  id="edit-state"
+                  required
+                  value={editState}
+                  onChange={(e) => {
+                    setEditState(e.target.value);
+                    setEditCity("");
+                  }}
+                  className="h-12"
+                >
+                  <option value="">Select State</option>
+                  {NIGERIA_STATES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </Select>
+              </ModalField>
+              <ModalField label="Local Government Area" htmlFor="edit-city" required>
+                <Select
+                  id="edit-city"
+                  required
+                  value={editCity}
+                  onChange={(e) => setEditCity(e.target.value)}
+                  disabled={!editState}
+                  className="h-12"
+                >
+                  <option value="">Select LGA</option>
+                  {editState &&
+                    NIGERIA_LGAS[editState as keyof typeof NIGERIA_LGAS]?.map((lga) => (
+                      <option key={lga} value={lga}>
+                        {lga}
+                      </option>
+                    ))}
+                </Select>
+              </ModalField>
+            </div>
+
+            <ModalField label="Property Type" htmlFor="edit-propertyType">
+              <Select
+                id="edit-propertyType"
+                value={editPropertyType}
+                onChange={(e) => setEditPropertyType(e.target.value as PropertyType)}
+                className="h-12"
+              >
+                <option value={PropertyType.residential}>Residential</option>
+                <option value={PropertyType.commercial}>Commercial</option>
+                <option value={PropertyType.mixed}>Mixed-Use</option>
+              </Select>
+            </ModalField>
+
+            {editPropertyType !== PropertyType.residential && (
+              <ModalField label="Expected Number of Units" htmlFor="edit-expectedUnits">
+                <input
+                  id="edit-expectedUnits"
+                  type="number"
+                  min="1"
+                  value={editExpectedUnits}
+                  onChange={(e) => setEditExpectedUnits(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                />
+              </ModalField>
+            )}
+          </ModalBody>
+
+          <ModalFooter>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => {
                   setIsEditModalOpen(false);
                   setPropertyToEdit(null);
                 }}
-                className="text-muted-foreground hover:text-foreground"
+                disabled={updateProperty.isPending}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold border-border hover:bg-muted"
               >
-                &times;
-              </button>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateProperty.isPending}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
+              >
+                {updateProperty.isPending && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                Save changes
+              </Button>
             </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              {editError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
-                  {editError}
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="edit-name" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Property Name
-                  </label>
-                  <input
-                    id="edit-name"
-                    type="text"
-                    required
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="edit-address" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Street Address
-                  </label>
-                  <input
-                    id="edit-address"
-                    type="text"
-                    required
-                    value={editAddress}
-                    onChange={(e) => setEditAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="edit-state" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      State
-                    </label>
-                    <Select
-                      id="edit-state"
-                      required
-                      value={editState}
-                      onChange={(e) => {
-                        setEditState(e.target.value);
-                        setEditCity("");
-                      }}
-                      className="mt-1"
-                    >
-                      <option value="">Select State</option>
-                      {NIGERIA_STATES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div>
-                    <label htmlFor="edit-city" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Local Government Area
-                    </label>
-                    <Select
-                      id="edit-city"
-                      required
-                      value={editCity}
-                      onChange={(e) => setEditCity(e.target.value)}
-                      disabled={!editState}
-                      className="mt-1"
-                    >
-                      <option value="">Select LGA</option>
-                      {editState &&
-                        NIGERIA_LGAS[editState as keyof typeof NIGERIA_LGAS]?.map((lga) => (
-                          <option key={lga} value={lga}>
-                            {lga}
-                          </option>
-                        ))}
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="edit-propertyType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Property Type
-                  </label>
-                  <Select
-                    id="edit-propertyType"
-                    value={editPropertyType}
-                    onChange={(e) => setEditPropertyType(e.target.value as PropertyType)}
-                    className="mt-1"
-                  >
-                    <option value={PropertyType.residential}>Residential</option>
-                    <option value={PropertyType.commercial}>Commercial</option>
-                    <option value={PropertyType.mixed}>Mixed-Use</option>
-                  </Select>
-                </div>
-
-                {editPropertyType !== PropertyType.residential && (
-                  <div>
-                    <label htmlFor="edit-expectedUnits" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Expected Number of Units
-                    </label>
-                    <input
-                      id="edit-expectedUnits"
-                      type="number"
-                      min="1"
-                      value={editExpectedUnits}
-                      onChange={(e) => setEditExpectedUnits(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setPropertyToEdit(null);
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateProperty.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm"
-                >
-                  {updateProperty.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Delete Property Confirm Dialog */}
       <ConfirmDialog
@@ -654,39 +626,50 @@ export default function PropertiesPage() {
       />
 
       {/* Property Onboarding Nudge Modal */}
-      {isNudgeOpen && createdPropertyInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-foreground mb-2 font-sans">
-              Property Created!
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6 font-sans">
-              Would you like to add units to <span className="text-foreground font-medium">{createdPropertyInfo.name}</span> now? You can generate multiple units at once using our bulk tools.
-            </p>
-            <div className="flex space-x-3">
-              <Button
-                onClick={() => {
-                  setIsNudgeOpen(false);
+      <Modal
+        open={isNudgeOpen && Boolean(createdPropertyInfo)}
+        onOpenChange={setIsNudgeOpen}
+        size="sm"
+      >
+        <ModalHeader
+          title="Property created"
+          onClose={() => setIsNudgeOpen(false)}
+        />
+        <ModalBody>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Would you like to add units to <span className="text-foreground font-semibold">{createdPropertyInfo?.name}</span> now? You can generate multiple units at once using our bulk tools.
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsNudgeOpen(false);
+                if (createdPropertyInfo) {
                   router.push(`/landlord/properties/${createdPropertyInfo.id}`);
-                }}
-                variant="outline"
-                className="w-1/2 border-border text-muted-foreground hover:text-foreground hover:bg-accent h-10 text-sm"
-              >
-                I&apos;ll do this later
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsNudgeOpen(false);
+                }
+              }}
+              className="w-full h-12 rounded-lg text-[15px] font-semibold border-border hover:bg-muted"
+            >
+              Later
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setIsNudgeOpen(false);
+                if (createdPropertyInfo) {
                   router.push(`/landlord/properties/${createdPropertyInfo.id}?bulkAdd=true`);
-                }}
-                className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-              >
-                Add Units
-              </Button>
-            </div>
+                }
+              }}
+              className="w-full h-12 rounded-lg text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Add units
+            </Button>
           </div>
-        </div>
-      )}
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

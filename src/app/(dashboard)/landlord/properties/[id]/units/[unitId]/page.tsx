@@ -21,6 +21,7 @@ import { getCurrentLease, getRenewEligibility } from "@/lib/leases";
 import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { InviteCard } from "@/components/leases/InviteCard";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
@@ -991,7 +992,7 @@ export default function UnitDetailPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12 space-y-6">
         <DetailActionRow
           backHref={`/landlord/properties/${propertyId}`}
-          backLabel="Back to Property"
+          backLabel="Back to property"
           phonePrimaryAction={
             isLeaseEndedState ? undefined : activeLease
               ? {
@@ -1037,13 +1038,13 @@ export default function UnitDetailPage() {
               ]
               : []),
             {
-              label: "Edit Unit",
+              label: "Edit unit",
               onClick: handleOpenEditUnit,
               icon: <Pencil className="w-4 h-4" />,
               variant: "outline" as const,
             },
             {
-              label: "Delete Unit",
+              label: "Delete unit",
               onClick: handleDeleteUnit,
               icon: <Trash2 className="w-4 h-4" />,
               variant: "danger" as const,
@@ -1056,10 +1057,11 @@ export default function UnitDetailPage() {
           <div className="grid grid-cols-2 gap-2 sm:hidden w-full -mt-2">
             <Button
               variant="outline"
+              size="action"
               onClick={() => setIsMovedOutConfirmOpen(true)}
-              className="w-full justify-center text-xs h-9"
+              className="w-full justify-center"
             >
-              <LogOut className="w-4 h-4 mr-1.5" />
+              <LogOut className="w-4 h-4" />
               Mark as moved out
             </Button>
             <div className="w-full">
@@ -1069,11 +1071,12 @@ export default function UnitDetailPage() {
                     <span className="block w-full cursor-not-allowed">
                       <Button
                         variant="default"
+                        size="action"
                         onClick={handleOpenRenewLease}
                         disabled
-                        className="w-full justify-center text-xs h-9 bg-success text-success-foreground font-semibold opacity-50 pointer-events-none"
+                        className="w-full justify-center bg-success text-success-foreground opacity-50 pointer-events-none"
                       >
-                        <RefreshCw className="w-4 h-4 mr-1.5" />
+                        <RefreshCw className="w-4 h-4" />
                         Renew
                       </Button>
                     </span>
@@ -1085,11 +1088,12 @@ export default function UnitDetailPage() {
               ) : (
                 <Button
                   variant="default"
+                  size="action"
                   onClick={handleOpenRenewLease}
                   disabled={!renewEligibility.eligible}
-                  className="w-full justify-center text-xs h-9 bg-success hover:bg-success/90 text-success-foreground font-semibold disabled:opacity-50"
+                  className="w-full justify-center bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50"
                 >
-                  <RefreshCw className="w-4 h-4 mr-1.5" />
+                  <RefreshCw className="w-4 h-4" />
                   Renew
                 </Button>
               )}
@@ -1311,10 +1315,11 @@ export default function UnitDetailPage() {
                             <span className="inline-flex cursor-not-allowed">
                               <Button
                                 disabled
-                                className="bg-primary text-primary-foreground font-semibold opacity-50 pointer-events-none flex items-center h-9 text-xs sm:text-sm"
+                                size="action"
+                                className="bg-primary text-primary-foreground opacity-50 pointer-events-none"
                               >
-                                <Plus className="w-4 h-4 mr-1.5" />
-                                Add Payment
+                                <Plus className="w-4 h-4" />
+                                Add payment
                               </Button>
                             </span>
                           </TooltipTrigger>
@@ -1334,10 +1339,11 @@ export default function UnitDetailPage() {
                             );
                             setPaymentError(null);
                           }}
-                          className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold flex items-center h-9 text-xs sm:text-sm"
+                          size="action"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
                         >
-                          <Plus className="w-4 h-4 mr-1.5" />
-                          Add Payment
+                          <Plus className="w-4 h-4" />
+                          Add payment
                         </Button>
                       );
                     })()}
@@ -1681,9 +1687,11 @@ export default function UnitDetailPage() {
             </p>
             <Button
               onClick={() => setIsAddLeaseOpen(true)}
+              size="action"
               className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2"
             >
-              Invite Tenants
+              <Plus className="w-4 h-4" />
+              Invite tenant
             </Button>
           </div>
         )}
@@ -1691,522 +1699,436 @@ export default function UnitDetailPage() {
       </main>
 
       {/* Edit Unit Modal */}
-      {isEditUnitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Edit Unit</h2>
-              <button
-                onClick={() => {
-                  setIsEditUnitOpen(false);
-                  setEditUnitError(null);
+      <Modal
+        open={isEditUnitOpen}
+        onOpenChange={(open) => {
+          setIsEditUnitOpen(open);
+          if (!open) setEditUnitError(null);
+        }}
+        isSaving={updateUnit.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Edit Unit"
+          onClose={() => {
+            setIsEditUnitOpen(false);
+            setEditUnitError(null);
+          }}
+          isSaving={updateUnit.isPending}
+        />
+        <form onSubmit={handleUpdateUnitSubmit} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            {editUnitError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                {editUnitError}
+              </div>
+            )}
+
+            <ModalField label="Unit Number / Name" htmlFor="editUnitNumber" required>
+              <input
+                id="editUnitNumber"
+                type="text"
+                required
+                value={editUnitNumber}
+                onChange={(e) => setEditUnitNumber(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                placeholder="e.g. Flat 101, Shop 5"
+              />
+            </ModalField>
+
+            <ModalField label="Unit Type" htmlFor="editUnitType">
+              <Select
+                id="editUnitType"
+                value={editUnitType}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEditUnitType(val);
+                  if (!isResidentialUnitType(val)) {
+                    setEditRoomsCount("");
+                  }
                 }}
-                className="text-muted-foreground hover:text-foreground"
+                className="h-12 text-sm"
               >
-                &times;
-              </button>
-            </div>
+                {allowedUnitTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </Select>
+            </ModalField>
 
-            <form onSubmit={handleUpdateUnitSubmit} className="space-y-4">
-              {editUnitError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {editUnitError}
-                </div>
-              )}
+            {isResidentialUnitType(editUnitType) && (
+              <ModalField label="Number of Rooms" htmlFor="editRoomsCount">
+                <input
+                  id="editRoomsCount"
+                  type="number"
+                  min="0"
+                  value={editRoomsCount}
+                  onChange={(e) => setEditRoomsCount(e.target.value)}
+                  placeholder="e.g. 3"
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                />
+              </ModalField>
+            )}
+          </ModalBody>
 
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="editUnitNumber" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Unit Number / Name
-                  </label>
-                  <input
-                    id="editUnitNumber"
-                    type="text"
-                    required
-                    value={editUnitNumber}
-                    onChange={(e) => setEditUnitNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
-                    placeholder="e.g. Flat 101, Shop 5"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="editUnitType" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Unit Type
-                  </label>
-                  <Select
-                    id="editUnitType"
-                    value={editUnitType}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setEditUnitType(val);
-                      if (!isResidentialUnitType(val)) {
-                        setEditRoomsCount("");
-                      }
-                    }}
-                    className="mt-1 h-[38px] text-sm"
-                  >
-                    {allowedUnitTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {isResidentialUnitType(editUnitType) && (
-                  <div>
-                    <label htmlFor="editRoomsCount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Number of Rooms
-                    </label>
-                    <input
-                      id="editRoomsCount"
-                      type="number"
-                      min="0"
-                      value={editRoomsCount}
-                      onChange={(e) => setEditRoomsCount(e.target.value)}
-                      placeholder="e.g. 3"
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsEditUnitOpen(false);
-                    setEditUnitError(null);
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateUnit.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {updateUnit.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter
+            onCancel={() => {
+              setIsEditUnitOpen(false);
+              setEditUnitError(null);
+            }}
+            primaryText="Save Changes"
+            isSaving={updateUnit.isPending}
+          />
+        </form>
+      </Modal>
 
       {/* Renew Lease Modal */}
-      {isRenewLeaseOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 my-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">Renew Lease</h2>
-                <p className="text-muted-foreground text-sm mt-1">
-                  Creates a new lease for the same tenant. The current lease is preserved as history.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setIsRenewLeaseOpen(false);
-                  resetRenewForm();
-                }}
-                className="text-muted-foreground hover:text-foreground ml-4 flex-shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Read-only tenant/unit info */}
-            <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 text-sm">
-              <div>
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Tenant</span>
-                <span className="text-foreground font-semibold mt-1 block">{activeLease.tenant.fullName}</span>
-              </div>
-              <div>
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Unit</span>
-                <span className="text-foreground font-semibold mt-1 block">Unit {unit?.unitNumber}</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleRenewLeaseSubmit} className="space-y-4">
-              {renewError && (
-                <div className="rounded bg-destructive-tint border border-destructive/30 p-2.5 text-xs text-destructive">
-                  {renewError}
+      <Modal
+        open={Boolean(isRenewLeaseOpen && activeLease)}
+        onOpenChange={(open) => {
+          setIsRenewLeaseOpen(open);
+          if (!open) resetRenewForm();
+        }}
+        isSaving={renewLease.isPending}
+        size="lg"
+      >
+        {activeLease && (
+          <>
+            <ModalHeader
+              title="Renew Lease"
+              description="Creates a new lease for the same tenant. The current lease is preserved as history."
+              onClose={() => {
+                setIsRenewLeaseOpen(false);
+                resetRenewForm();
+              }}
+              isSaving={renewLease.isPending}
+            />
+            <form onSubmit={handleRenewLeaseSubmit} className="flex flex-col flex-1 min-h-0">
+              <ModalBody className="space-y-6">
+                {/* Read-only tenant/unit info */}
+                <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+                  <div>
+                    <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tenant</span>
+                    <span className="text-foreground font-semibold mt-1 block">{activeLease.tenant.fullName}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unit</span>
+                    <span className="text-foreground font-semibold mt-1 block">Unit {unit?.unitNumber}</span>
+                  </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="renewStartDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    New Start Date
-                  </label>
-                  <input
-                    id="renewStartDate"
-                    type="date"
+                {renewError && (
+                  <div className="rounded bg-destructive-tint border border-destructive/30 p-2.5 text-xs text-destructive">
+                    {renewError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalField label="New Start Date" htmlFor="renewStartDate" required>
+                    <input
+                      id="renewStartDate"
+                      type="date"
+                      required
+                      value={renewStartDate}
+                      onChange={(e) => handleRenewStartDateChange(e.target.value)}
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    />
+                  </ModalField>
+                  <ModalField
+                    label={`New End Date ${unit && !isResidentialUnitType(unit.unitType) ? "(required)" : ""}`}
+                    htmlFor="renewEndDate"
                     required
-                    value={renewStartDate}
-                    onChange={(e) => handleRenewStartDateChange(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="renewEndDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    New End Date {unit && !isResidentialUnitType(unit.unitType) && <span className="text-subtle-foreground normal-case font-normal">(required)</span>}
-                  </label>
-                  <input
-                    id="renewEndDate"
-                    type="date"
-                    required
-                    value={renewEndDate}
-                    onChange={(e) => setRenewEndDate(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                  />
-                  {unit && isResidentialUnitType(unit.unitType) && (
-                    <p className="text-xs text-subtle-foreground mt-1">Auto-set to 1 year from start date</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="renewRentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Rent Amount (₦)
-                  </label>
-                  <input
-                    id="renewRentAmount"
-                    type="text"
-                    inputMode="decimal"
-                    value={renewRentAmount}
-                    onChange={(e) => setRenewRentAmount(formatInputNumber(e.target.value))}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                    placeholder="e.g. 150,000"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="renewRentFrequency" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Frequency
-                  </label>
-                  <Select
-                    id="renewRentFrequency"
-                    value={renewRentFrequency}
-                    onChange={(e) => setRenewRentFrequency(e.target.value as RentFrequency)}
-                    className="mt-1 h-10 text-sm"
                   >
-                    {RENT_FREQUENCY_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="renewDepositAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Security Deposit (₦) <span className="text-subtle-foreground normal-case font-normal">— optional</span>
-                </label>
-                <input
-                  id="renewDepositAmount"
-                  type="text"
-                  inputMode="decimal"
-                  value={renewDepositAmount}
-                  onChange={(e) => setRenewDepositAmount(formatInputNumber(e.target.value))}
-                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                  placeholder="e.g. 300,000"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsRenewLeaseOpen(false);
-                    resetRenewForm();
-                  }}
-                  variant="outline"
-                  className="w-full border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={renewLease.isPending}
-                  className="w-full bg-success hover:bg-success/90 text-success-foreground font-semibold h-10 text-sm"
-                >
-                  {renewLease.isPending ? "Creating..." : "Create Renewal Lease"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Lease Modal */}
-      {isAddLeaseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Invite Tenant</h2>
-              <button
-                onClick={() => {
-                  setIsAddLeaseOpen(false);
-                  resetLeaseForm();
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                &times;
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateLease} className="space-y-4">
-              {leaseError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {leaseError}
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="tenantName" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Tenant Full Name <span className="text-destructive">*</span>
-                    </label>
                     <input
-                      id="tenantName"
-                      type="text"
-                      required
-                      value={tenantName}
-                      onChange={(e) => {
-                        setTenantName(e.target.value);
-                        if (tenantNameError) setTenantNameError(null);
-                      }}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
-                        tenantNameError
-                          ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
-                          : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
-                      )}
-                      placeholder="e.g. Sandra Okon"
-                    />
-                    {tenantNameError && (
-                      <p className="mt-1 text-xs text-destructive">{tenantNameError}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label htmlFor="tenantEmail" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Tenant Email <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="tenantEmail"
-                      type="email"
-                      required
-                      value={tenantEmail}
-                      onChange={(e) => {
-                        setTenantEmail(e.target.value);
-                        if (tenantEmailError) setTenantEmailError(null);
-                      }}
-                      className={cn(
-                        "mt-1 block w-full rounded-lg border bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
-                        tenantEmailError || tenantEmailCheck?.isLandlord
-                          ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
-                          : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
-                      )}
-                      placeholder="sandra@example.com"
-                    />
-                    {tenantEmailError && (
-                      <p className="mt-1 text-xs text-destructive">{tenantEmailError}</p>
-                    )}
-                    {!tenantEmailError && tenantEmailCheck?.isLandlord && (
-                      <p className="mt-1 text-xs text-destructive">
-                        This email belongs to a landlord account. Use the tenant&apos;s personal email.
-                      </p>
-                    )}
-                    {!tenantEmailError && !tenantEmailCheck?.isLandlord && tenantEmailCheck?.isTenant && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        This person already uses PropLink. They&apos;ll get an invitation in the app.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="startDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Start Date <span className="text-subtle-foreground font-normal lowercase">(optional)</span>
-                    </label>
-                    <input
-                      id="startDate"
+                      id="renewEndDate"
                       type="date"
-                      value={startDate}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
+                      required
+                      value={renewEndDate}
+                      onChange={(e) => setRenewEndDate(e.target.value)}
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="endDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      End Date <span className="text-subtle-foreground font-normal lowercase">(optional)</span>
-                    </label>
-                    <input
-                      id="endDate"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
-                    />
-                  </div>
+                    {unit && isResidentialUnitType(unit.unitType) && (
+                      <p className="text-xs text-muted-foreground mt-1">Auto-set to 1 year from start date</p>
+                    )}
+                  </ModalField>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="rentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Rent amount (₦) <span className="text-destructive">*</span>
-                    </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalField label="Rent Amount (₦)" htmlFor="renewRentAmount">
                     <input
-                      id="rentAmount"
+                      id="renewRentAmount"
                       type="text"
                       inputMode="decimal"
-                      value={rentAmount}
-                      onChange={(e) => {
-                        setRentAmount(formatInputNumber(e.target.value));
-                        if (rentAmountError) setRentAmountError(null);
-                      }}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
+                      value={renewRentAmount}
+                      onChange={(e) => setRenewRentAmount(formatInputNumber(e.target.value))}
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       placeholder="e.g. 150,000"
                     />
-                    {rentAmountError && (
-                      <p className="mt-1 text-xs text-destructive">{rentAmountError}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label htmlFor="rentFrequency" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Rent frequency <span className="text-destructive">*</span>
-                    </label>
+                  </ModalField>
+                  <ModalField label="Frequency" htmlFor="renewRentFrequency">
                     <Select
-                      id="rentFrequency"
-                      value={rentFrequency}
-                      onChange={(e) => {
-                        setRentFrequency(e.target.value as RentFrequency);
-                        if (rentFrequencyError) setRentFrequencyError(null);
-                      }}
-                      className="mt-1 h-[38px] text-sm text-foreground"
+                      id="renewRentFrequency"
+                      value={renewRentFrequency}
+                      onChange={(e) => setRenewRentFrequency(e.target.value as RentFrequency)}
+                      className="h-12 text-sm"
                     >
-                      <option value="" disabled>Select frequency</option>
                       {RENT_FREQUENCY_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
                       ))}
                     </Select>
-                    {rentFrequencyError && (
-                      <p className="mt-1 text-xs text-destructive">{rentFrequencyError}</p>
-                    )}
-                  </div>
+                  </ModalField>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsAddLeaseOpen(false);
-                    resetLeaseForm();
-                  }}
-                  variant="outline"
-                  className="w-full border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createLease.isPending}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {createLease.isPending ? "Sending..." : "Send Invite"}
-                </Button>
-              </div>
+                <ModalField label="Security Deposit (₦) — optional" htmlFor="renewDepositAmount">
+                  <input
+                    id="renewDepositAmount"
+                    type="text"
+                    inputMode="decimal"
+                    value={renewDepositAmount}
+                    onChange={(e) => setRenewDepositAmount(formatInputNumber(e.target.value))}
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    placeholder="e.g. 300,000"
+                  />
+                </ModalField>
+              </ModalBody>
+
+              <ModalFooter
+                onCancel={() => {
+                  setIsRenewLeaseOpen(false);
+                  resetRenewForm();
+                }}
+                primaryText="Create Renewal Lease"
+                isSaving={renewLease.isPending}
+              />
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
-      {/* Edit Lease Modal */}
-      {isEditLeaseOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold tracking-tight">Edit Lease Details</h2>
-              <button
-                onClick={() => setIsEditLeaseOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                &times;
-              </button>
+      {/* Add Lease Modal / Invite Tenant */}
+      <Modal
+        open={isAddLeaseOpen}
+        onOpenChange={(open) => {
+          setIsAddLeaseOpen(open);
+          if (!open) resetLeaseForm();
+        }}
+        isSaving={createLease.isPending}
+        size="lg"
+      >
+        <ModalHeader
+          title="Invite Tenant"
+          onClose={() => {
+            setIsAddLeaseOpen(false);
+            resetLeaseForm();
+          }}
+          isSaving={createLease.isPending}
+        />
+        <form onSubmit={handleCreateLease} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            {leaseError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                {leaseError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ModalField label="Tenant Full Name" htmlFor="tenantName" required>
+                <input
+                  id="tenantName"
+                  type="text"
+                  required
+                  value={tenantName}
+                  onChange={(e) => {
+                    setTenantName(e.target.value);
+                    if (tenantNameError) setTenantNameError(null);
+                  }}
+                  className={cn(
+                    "block w-full h-12 rounded-lg border bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
+                    tenantNameError
+                      ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
+                      : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
+                  )}
+                  placeholder="e.g. Sandra Okon"
+                />
+                {tenantNameError && (
+                  <p className="mt-1 text-xs text-destructive">{tenantNameError}</p>
+                )}
+              </ModalField>
+
+              <ModalField label="Tenant Email" htmlFor="tenantEmail" required>
+                <input
+                  id="tenantEmail"
+                  type="email"
+                  required
+                  value={tenantEmail}
+                  onChange={(e) => {
+                    setTenantEmail(e.target.value);
+                    if (tenantEmailError) setTenantEmailError(null);
+                  }}
+                  className={cn(
+                    "block w-full h-12 rounded-lg border bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
+                    tenantEmailError || tenantEmailCheck?.isLandlord
+                      ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
+                      : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
+                  )}
+                  placeholder="sandra@example.com"
+                />
+                {tenantEmailError && (
+                  <p className="mt-1 text-xs text-destructive">{tenantEmailError}</p>
+                )}
+                {!tenantEmailError && tenantEmailCheck?.isLandlord && (
+                  <p className="mt-1 text-xs text-destructive">
+                    This email belongs to a landlord account. Use the tenant&apos;s personal email.
+                  </p>
+                )}
+                {!tenantEmailError && !tenantEmailCheck?.isLandlord && tenantEmailCheck?.isTenant && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This person already uses PropLink. They&apos;ll get an invitation in the app.
+                  </p>
+                )}
+              </ModalField>
             </div>
 
-            <form onSubmit={handleUpdateLeaseSubmit} className="space-y-4">
-              {editLeaseError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {editLeaseError}
-                </div>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ModalField label="Start Date (optional)" htmlFor="startDate">
+                <input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                />
+              </ModalField>
+              <ModalField label="End Date (optional)" htmlFor="endDate">
+                <input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                />
+              </ModalField>
+            </div>
 
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="editStartDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Start Date
-                    </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ModalField label="Rent amount (₦)" htmlFor="rentAmount" required>
+                <input
+                  id="rentAmount"
+                  type="text"
+                  inputMode="decimal"
+                  value={rentAmount}
+                  onChange={(e) => {
+                    setRentAmount(formatInputNumber(e.target.value));
+                    if (rentAmountError) setRentAmountError(null);
+                  }}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  placeholder="e.g. 150,000"
+                />
+                {rentAmountError && (
+                  <p className="mt-1 text-xs text-destructive">{rentAmountError}</p>
+                )}
+              </ModalField>
+              <ModalField label="Rent frequency" htmlFor="rentFrequency" required>
+                <Select
+                  id="rentFrequency"
+                  value={rentFrequency}
+                  onChange={(e) => {
+                    setRentFrequency(e.target.value as RentFrequency);
+                    if (rentFrequencyError) setRentFrequencyError(null);
+                  }}
+                  className="h-12 text-sm text-foreground"
+                >
+                  <option value="" disabled>Select frequency</option>
+                  {RENT_FREQUENCY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Select>
+                {rentFrequencyError && (
+                  <p className="mt-1 text-xs text-destructive">{rentFrequencyError}</p>
+                )}
+              </ModalField>
+            </div>
+          </ModalBody>
+
+          <ModalFooter
+            onCancel={() => {
+              setIsAddLeaseOpen(false);
+              resetLeaseForm();
+            }}
+            primaryText="Send Invite"
+            isSaving={createLease.isPending}
+          />
+        </form>
+      </Modal>
+
+      {/* Edit Lease Modal */}
+      <Modal
+        open={Boolean(isEditLeaseOpen && activeLease)}
+        onOpenChange={setIsEditLeaseOpen}
+        isSaving={updateLease.isPending}
+        size="lg"
+      >
+        {activeLease && (
+          <>
+            <ModalHeader
+              title="Edit Lease Details"
+              onClose={() => setIsEditLeaseOpen(false)}
+              isSaving={updateLease.isPending}
+            />
+            <form onSubmit={handleUpdateLeaseSubmit} className="flex flex-col flex-1 min-h-0">
+              <ModalBody className="space-y-6">
+                {editLeaseError && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                    {editLeaseError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalField label="Start Date" htmlFor="editStartDate" required>
                     <input
                       id="editStartDate"
                       type="date"
                       required
                       value={editStartDate}
                       onChange={(e) => handleEditStartDateChange(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="editEndDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      End Date
-                    </label>
+                  </ModalField>
+                  <ModalField label="End Date" htmlFor="editEndDate" required>
                     <input
                       id="editEndDate"
                       type="date"
                       required
                       value={editEndDate}
                       onChange={(e) => setEditEndDate(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-[38px]"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     />
-                  </div>
+                  </ModalField>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="editRentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Rent Amount (₦)
-                    </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ModalField label="Rent Amount (₦)" htmlFor="editRentAmount">
                     <input
                       id="editRentAmount"
                       type="text"
                       inputMode="decimal"
                       value={editRentAmount}
                       onChange={(e) => setEditRentAmount(formatInputNumber(e.target.value))}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                       placeholder="e.g. 150,000"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="editRentFrequency" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Frequency
-                    </label>
+                  </ModalField>
+                  <ModalField label="Frequency" htmlFor="editRentFrequency">
                     <Select
                       id="editRentFrequency"
                       value={editRentFrequency}
                       onChange={(e) => setEditRentFrequency(e.target.value as RentFrequency)}
-                      className="mt-1 h-[38px] text-sm"
+                      className="h-12 text-sm"
                     >
                       {RENT_FREQUENCY_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -2214,276 +2136,234 @@ export default function UnitDetailPage() {
                         </option>
                       ))}
                     </Select>
-                  </div>
+                  </ModalField>
                 </div>
 
-                <div>
-                  <label htmlFor="editDepositAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Deposit Amount (₦) - Optional
-                  </label>
+                <ModalField label="Deposit Amount (₦) - Optional" htmlFor="editDepositAmount">
                   <input
                     id="editDepositAmount"
                     type="text"
                     inputMode="decimal"
                     value={editDepositAmount}
                     onChange={(e) => setEditDepositAmount(formatInputNumber(e.target.value))}
-                    className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. 50,000"
                   />
-                </div>
-              </div>
+                </ModalField>
+              </ModalBody>
 
-              <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => setIsEditLeaseOpen(false)}
-                  variant="outline"
-                  className="w-full border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateLease.isPending}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {updateLease.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
+              <ModalFooter
+                onCancel={() => setIsEditLeaseOpen(false)}
+                primaryText="Save Changes"
+                isSaving={updateLease.isPending}
+              />
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Log Payment Modal */}
-      {isLogPaymentOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl my-8">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-border">
-              <h2 className="text-xl font-bold text-foreground font-sans">Add Payment</h2>
-              <button
-                onClick={() => {
+      <Modal
+        open={Boolean(isLogPaymentOpen && activeLease)}
+        onOpenChange={(open) => {
+          setIsLogPaymentOpen(open);
+          if (!open) resetPaymentForm();
+        }}
+        isSaving={createPayment.isPending}
+        size="md"
+      >
+        {activeLease && (
+          <>
+            <ModalHeader
+              title="Add Payment"
+              onClose={() => {
+                setIsLogPaymentOpen(false);
+                resetPaymentForm();
+              }}
+              isSaving={createPayment.isPending}
+            />
+            <form onSubmit={handleLogPaymentSubmit} className="flex flex-col flex-1 min-h-0">
+              <ModalBody className="space-y-6">
+                {paymentError && (
+                  <div className="rounded bg-destructive-tint border border-destructive/30 p-2.5 text-xs text-destructive">
+                    {paymentError}
+                  </div>
+                )}
+
+                {leases && leases.length > 1 && (
+                  <ModalField label="Lease" htmlFor="paymentLease">
+                    <Select
+                      id="paymentLease"
+                      value={selectedPaymentLeaseId || activeLease?.id || currentLease?.id || ""}
+                      onChange={(e) => setSelectedPaymentLeaseId(e.target.value)}
+                      className="h-12 text-sm"
+                    >
+                      {leases.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {formatDateGB(l.startDate)} – {formatDateGB(l.endDate)}{l.tenant?.fullName ? ` · ${l.tenant.fullName}` : ""}{l.id === currentLease?.id ? " (Current)" : l.terminatedAt ? " (Moved out)" : " (Ended)"}
+                        </option>
+                      ))}
+                    </Select>
+                  </ModalField>
+                )}
+
+                <ModalField label="Amount (₦)" htmlFor="paymentAmount" required>
+                  <input
+                    id="paymentAmount"
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(formatInputNumber(e.target.value))}
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    placeholder="e.g. 150,000"
+                  />
+                  {billingSummary && billingSummary.isRentSet && (
+                    <span className="text-xs text-muted-foreground block mt-1">
+                      {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
+                    </span>
+                  )}
+                </ModalField>
+
+                <ModalField label="Payment Date" htmlFor="paymentDate" required>
+                  <input
+                    id="paymentDate"
+                    type="date"
+                    required
+                    max={new Date().toISOString().split("T")[0]}
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  />
+                </ModalField>
+
+                <ModalField label="Payment Method" htmlFor="paymentMethod">
+                  <Select
+                    id="paymentMethod"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    className="h-12 text-sm"
+                  >
+                    <option value={PaymentMethod.cash}>Cash</option>
+                    <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
+                    <option value={PaymentMethod.cheque}>Cheque</option>
+                    <option value={PaymentMethod.other}>Other</option>
+                  </Select>
+                </ModalField>
+
+                <ModalField label="Notes" htmlFor="paymentNotes">
+                  <textarea
+                    id="paymentNotes"
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    placeholder="Reference, receipt numbers or bank metadata..."
+                  />
+                </ModalField>
+              </ModalBody>
+
+              <ModalFooter
+                onCancel={() => {
                   setIsLogPaymentOpen(false);
                   resetPaymentForm();
                 }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleLogPaymentSubmit} className="space-y-4">
-              {paymentError && (
-                <div className="rounded bg-destructive-tint border border-destructive/30 p-2.5 text-xs text-destructive">
-                  {paymentError}
-                </div>
-              )}
-
-              {leases && leases.length > 1 && (
-                <div>
-                  <label htmlFor="paymentLease" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Lease
-                  </label>
-                  <Select
-                    id="paymentLease"
-                    value={selectedPaymentLeaseId || activeLease?.id || currentLease?.id || ""}
-                    onChange={(e) => setSelectedPaymentLeaseId(e.target.value)}
-                    className="mt-1 h-10 text-sm"
-                  >
-                    {leases.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {formatDateGB(l.startDate)} – {formatDateGB(l.endDate)}{l.tenant?.fullName ? ` · ${l.tenant.fullName}` : ""}{l.id === currentLease?.id ? " (Current)" : l.terminatedAt ? " (Moved out)" : " (Ended)"}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="paymentAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Amount (₦)
-                </label>
-                <input
-                  id="paymentAmount"
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(formatInputNumber(e.target.value))}
-                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                  placeholder="e.g. 150,000"
-                />
-                {billingSummary && billingSummary.isRentSet && (
-                  <span className="text-xs text-muted-foreground block mt-1">
-                    {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="paymentDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Payment Date
-                </label>
-                <input
-                  id="paymentDate"
-                  type="date"
-                  required
-                  max={new Date().toISOString().split("T")[0]}
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="paymentMethod" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Payment Method
-                </label>
-                <Select
-                  id="paymentMethod"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="mt-1 h-10 text-sm"
-                >
-                  <option value={PaymentMethod.cash}>Cash</option>
-                  <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
-                  <option value={PaymentMethod.cheque}>Cheque</option>
-                  <option value={PaymentMethod.other}>Other</option>
-                </Select>
-              </div>
-
-              <div>
-                <label htmlFor="paymentNotes" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Notes
-                </label>
-                <textarea
-                  id="paymentNotes"
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-20"
-                  placeholder="Reference, receipt numbers or bank metadata..."
-                />
-              </div>
-
-              <div className="flex space-x-3 mt-6 pt-4 border-t border-border">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsLogPaymentOpen(false);
-                    resetPaymentForm();
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createPayment.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {createPayment.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
+                primaryText="Save"
+                isSaving={createPayment.isPending}
+              />
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Reject Payment Modal */}
-      {isRejectOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground font-sans">Dispute Tenant Payment</h2>
-              <button
-                onClick={() => {
-                  setIsRejectOpen(false);
-                  setRejectReason("");
-                  setRejectPaymentId("");
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Modal
+        open={isRejectOpen}
+        onOpenChange={(open) => {
+          setIsRejectOpen(open);
+          if (!open) {
+            setRejectReason("");
+            setRejectPaymentId("");
+          }
+        }}
+        isSaving={rejectPayment.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Dispute Tenant Payment"
+          onClose={() => {
+            setIsRejectOpen(false);
+            setRejectReason("");
+            setRejectPaymentId("");
+          }}
+          isSaving={rejectPayment.isPending}
+        />
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!rejectReason.trim()) {
+              toast("Reason is required", "error");
+              return;
+            }
+            await rejectPayment.mutateAsync({
+              paymentId: rejectPaymentId,
+              reason: rejectReason,
+            });
+          }}
+          className="flex flex-col flex-1 min-h-0"
+        >
+          <ModalBody className="space-y-6">
+            <ModalField label="Reason for Dispute" htmlFor="rejectReason" required>
+              <textarea
+                id="rejectReason"
+                required
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                placeholder="Specify why this payment is incorrect (e.g. money never received, wrong amount)..."
+              />
+            </ModalField>
+          </ModalBody>
 
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!rejectReason.trim()) {
-                  toast("Reason is required", "error");
-                  return;
-                }
-                await rejectPayment.mutateAsync({
-                  paymentId: rejectPaymentId,
-                  reason: rejectReason,
-                });
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label htmlFor="rejectReason" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Reason for dispute
-                </label>
-                <textarea
-                  id="rejectReason"
-                  required
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-24"
-                  placeholder="Specify why this payment is incorrect (e.g. money never received, wrong amount)..."
-                />
-              </div>
-
-              <div className="flex space-x-3 pt-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsRejectOpen(false);
-                    setRejectReason("");
-                    setRejectPaymentId("");
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-[38px]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!rejectReason.trim() || rejectPayment.isPending}
-                  className="w-1/2 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold h-[38px] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {rejectPayment.isPending ? "Submitting..." : "Submit"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter
+            onCancel={() => {
+              setIsRejectOpen(false);
+              setRejectReason("");
+              setRejectPaymentId("");
+            }}
+            primaryText="Submit"
+            variant="destructive"
+            isSaving={rejectPayment.isPending}
+            disabled={!rejectReason.trim()}
+          />
+        </form>
+      </Modal>
 
       {/* Landlord Payment Detail Modal */}
-      {isLandlordPaymentDetailOpen && selectedLandlordPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-6 flex flex-col my-auto">
-            <div className="flex justify-between items-center pb-4 border-b border-border">
-              <h2 className="text-xl font-bold text-foreground font-sans">Payment Details</h2>
-              <button
-                onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-sm">
+      <Modal
+        open={Boolean(isLandlordPaymentDetailOpen && selectedLandlordPayment)}
+        onOpenChange={(open) => {
+          setIsLandlordPaymentDetailOpen(open);
+          if (!open) setSelectedLandlordPayment(null);
+        }}
+        size="md"
+      >
+        {selectedLandlordPayment && (
+          <>
+            <ModalHeader
+              title="Payment Details"
+              onClose={() => {
+                setIsLandlordPaymentDetailOpen(false);
+                setSelectedLandlordPayment(null);
+              }}
+            />
+            <ModalBody className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Amount</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</span>
                   <span className="text-base font-bold text-foreground mt-1 block">{formatCurrency(selectedLandlordPayment.amount)}</span>
                 </div>
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Status</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</span>
                   <span className="mt-1 block">
                     <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${selectedLandlordPayment.status === "confirmed"
                       ? "bg-success-tint text-success border-success/30"
@@ -2499,17 +2379,17 @@ export default function UnitDetailPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Payment Date</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Payment Date</span>
                   <span className="text-foreground/80 mt-1 block">{new Date(selectedLandlordPayment.paymentDate).toLocaleDateString()}</span>
                 </div>
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Method</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Method</span>
                   <span className="text-foreground/80 mt-1 block capitalize">{selectedLandlordPayment.method.replace('_', ' ')}</span>
                 </div>
               </div>
 
               <div>
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Period Covered</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Period Covered</span>
                 <span className="text-foreground/80 mt-1 block">
                   {new Date(selectedLandlordPayment.periodStart).toLocaleDateString()} – {new Date(selectedLandlordPayment.periodEnd).toLocaleDateString()}
                 </span>
@@ -2517,14 +2397,14 @@ export default function UnitDetailPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Logged By</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logged By</span>
                   <span className="text-foreground/80 mt-1 block capitalize">
                     {selectedLandlordPayment.recorder?.fullName || "System"} ({selectedLandlordPayment.recordedByRole})
                   </span>
                 </div>
                 {selectedLandlordPayment.confirmedAt && (
                   <div>
-                    <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Confirmed At</span>
+                    <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confirmed At</span>
                     <span className="text-foreground/80 mt-1 block">{new Date(selectedLandlordPayment.confirmedAt).toLocaleDateString()}</span>
                   </div>
                 )}
@@ -2532,7 +2412,7 @@ export default function UnitDetailPage() {
 
               {selectedLandlordPayment.notes && (
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Notes</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notes</span>
                   <p className="text-foreground/80 mt-1 bg-muted p-2.5 rounded-lg border border-border text-xs">{selectedLandlordPayment.notes}</p>
                 </div>
               )}
@@ -2553,7 +2433,7 @@ export default function UnitDetailPage() {
 
               {selectedLandlordPayment.proofUrl ? (
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Proof Document</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Proof Document</span>
                   <div className="mt-2 flex flex-col items-start gap-1.5">
                     <button
                       type="button"
@@ -2571,7 +2451,7 @@ export default function UnitDetailPage() {
                         Remove proof
                       </button>
                     ) : (
-                      <p className="text-xs text-subtle-foreground italic mt-0.5">
+                      <p className="text-xs text-muted-foreground italic mt-0.5">
                         Proof is locked because this payment is confirmed.
                       </p>
                     )}
@@ -2579,7 +2459,7 @@ export default function UnitDetailPage() {
                 </div>
               ) : selectedLandlordPayment.status === "pending" ? (
                 <div>
-                  <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Proof Document</span>
+                  <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Proof Document</span>
                   <div className="mt-2">
                     <label className="block">
                       <span className="sr-only">Upload proof document</span>
@@ -2595,19 +2475,12 @@ export default function UnitDetailPage() {
                   </div>
                 </div>
               ) : null}
-            </div>
+            </ModalBody>
 
             <div className="pt-4 border-t border-border space-y-3">
               {/* Inline Confirm/Reject — shown only for pending payments */}
               {selectedLandlordPayment.status === 'pending' && (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={() => confirmPayment.mutate({ paymentId: selectedLandlordPayment.id })}
-                    disabled={confirmPayment.isPending || rejectPayment.isPending}
-                    className="w-full sm:flex-1 bg-success hover:bg-success/90 text-success-foreground font-semibold h-[38px] text-sm"
-                  >
-                    {confirmPayment.isPending ? 'Confirming…' : 'Confirm Payment'}
-                  </Button>
+                <div className="grid grid-cols-2 gap-4">
                   <Button
                     onClick={() => {
                       setRejectPaymentId(selectedLandlordPayment.id);
@@ -2617,132 +2490,116 @@ export default function UnitDetailPage() {
                     }}
                     disabled={confirmPayment.isPending || rejectPayment.isPending}
                     variant="outline"
-                    className="w-full sm:flex-1 border-border text-destructive hover:bg-destructive-tint hover:border-destructive/30 font-semibold h-[38px] text-sm"
+                    className="w-full border-border text-destructive hover:bg-destructive-tint hover:border-destructive/30 font-semibold h-12 text-sm rounded-lg"
                   >
                     Reject
+                  </Button>
+                  <Button
+                    onClick={() => confirmPayment.mutate({ paymentId: selectedLandlordPayment.id })}
+                    disabled={confirmPayment.isPending || rejectPayment.isPending}
+                    className="w-full bg-success hover:bg-success/90 text-success-foreground font-semibold h-12 text-sm rounded-lg"
+                  >
+                    {confirmPayment.isPending ? 'Confirming…' : 'Confirm Payment'}
                   </Button>
                 </div>
               )}
               <Button
                 onClick={() => { setIsLandlordPaymentDetailOpen(false); setSelectedLandlordPayment(null); }}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-[38px]"
+                className="w-full bg-card border border-border hover:bg-accent text-foreground font-semibold h-12 rounded-lg"
               >
                 Close
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Edit/Resolve Dispute Modal */}
-      {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground font-sans">Resolve Payment Dispute</h2>
-              <button
-                onClick={() => {
-                  setIsEditOpen(false);
-                  resetEditForm();
-                }}
-                className="text-muted-foreground hover:text-foreground"
+      <Modal
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) resetEditForm();
+        }}
+        isSaving={resolvePayment.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Resolve Payment Dispute"
+          onClose={() => {
+            setIsEditOpen(false);
+            resetEditForm();
+          }}
+          isSaving={resolvePayment.isPending}
+        />
+        <form onSubmit={handleEditPaymentSubmit} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            <ModalField label="Resolution Action" htmlFor="editAction">
+              <Select
+                id="editAction"
+                value={editAction}
+                onChange={(e) => setEditAction(e.target.value as "edit" | "void")}
+                className="h-12 text-sm"
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+                <option value="edit">Correct Details & Keep Confirmed</option>
+                <option value="void">Void Payment Entirely</option>
+              </Select>
+            </ModalField>
 
-            <form onSubmit={handleEditPaymentSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="editAction" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Resolution Action
-                </label>
-                <Select
-                  id="editAction"
-                  value={editAction}
-                  onChange={(e) => setEditAction(e.target.value as "edit" | "void")}
-                  className="mt-1 h-10 text-sm"
-                >
-                  <option value="edit">Correct Details & Keep Confirmed</option>
-                  <option value="void">Void Payment Entirely</option>
-                </Select>
-              </div>
+            {editAction === "edit" ? (
+              <>
+                <ModalField label="Corrected Amount (₦)" htmlFor="editAmount" required>
+                  <input
+                    id="editAmount"
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(formatInputNumber(e.target.value))}
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  />
+                </ModalField>
+                <ModalField label="Corrected Date" htmlFor="editPaymentDate" required>
+                  <input
+                    id="editPaymentDate"
+                    type="date"
+                    required
+                    value={editPaymentDate}
+                    onChange={(e) => setEditPaymentDate(e.target.value)}
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  />
+                </ModalField>
+                <ModalField label="Corrected Method" htmlFor="editMethod">
+                  <Select
+                    id="editMethod"
+                    value={editMethod}
+                    onChange={(e) => setEditMethod(e.target.value as PaymentMethod)}
+                    className="h-12 text-sm"
+                  >
+                    <option value={PaymentMethod.cash}>Cash</option>
+                    <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
+                    <option value={PaymentMethod.cheque}>Cheque</option>
+                    <option value={PaymentMethod.other}>Other</option>
+                  </Select>
+                </ModalField>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground bg-destructive-tint border border-destructive/30 p-2.5 rounded">
+                ⚠️ Voiding this payment marks it as disputed and removes it from outstanding balance calculations.
+              </p>
+            )}
+          </ModalBody>
 
-              {editAction === "edit" ? (
-                <>
-                  <div>
-                    <label htmlFor="editAmount" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Corrected Amount (₦)
-                    </label>
-                    <input
-                      id="editAmount"
-                      type="text"
-                      inputMode="decimal"
-                      required
-                      value={editAmount}
-                      onChange={(e) => setEditAmount(formatInputNumber(e.target.value))}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="editPaymentDate" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Corrected Date
-                    </label>
-                    <input
-                      id="editPaymentDate"
-                      type="date"
-                      required
-                      value={editPaymentDate}
-                      onChange={(e) => setEditPaymentDate(e.target.value)}
-                      className="mt-1 block w-full rounded-lg border border-input bg-card px-4 py-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm h-10"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="editMethod" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Corrected Method
-                    </label>
-                    <Select
-                      id="editMethod"
-                      value={editMethod}
-                      onChange={(e) => setEditMethod(e.target.value as PaymentMethod)}
-                      className="mt-1 h-10 text-sm"
-                    >
-                      <option value={PaymentMethod.cash}>Cash</option>
-                      <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
-                      <option value={PaymentMethod.cheque}>Cheque</option>
-                      <option value={PaymentMethod.other}>Other</option>
-                    </Select>
-                  </div>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground bg-destructive-tint border border-destructive/30 p-2.5 rounded">
-                  ⚠️ Voiding this payment marks it as disputed and removes it from outstanding balance calculations.
-                </p>
-              )}
-
-              <div className="flex space-x-3 pt-2">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsEditOpen(false);
-                    resetEditForm();
-                  }}
-                  variant="outline"
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-[38px]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={resolvePayment.isPending}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-[38px]"
-                >
-                  {resolvePayment.isPending ? "Saving..." : "Apply Resolution"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter
+            onCancel={() => {
+              setIsEditOpen(false);
+              resetEditForm();
+            }}
+            primaryText="Apply Resolution"
+            isSaving={resolvePayment.isPending}
+          />
+        </form>
+      </Modal>
 
       {/* Remove Payment Proof Dialog */}
       <ConfirmDialog
@@ -2866,23 +2723,25 @@ export default function UnitDetailPage() {
       />
 
       {/* Edit Placeholder Tenant Modal */}
-      {isEditTenantOpen && activeLease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-foreground">Edit Tenant Details</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditTenantOpen(false);
-                  setEditTenantError(null);
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                &times;
-              </button>
-            </div>
-
+      <Modal
+        open={Boolean(isEditTenantOpen && activeLease)}
+        onOpenChange={(open) => {
+          setIsEditTenantOpen(open);
+          if (!open) setEditTenantError(null);
+        }}
+        isSaving={updatePlaceholderTenantMutation.isPending}
+        size="md"
+      >
+        {activeLease && (
+          <>
+            <ModalHeader
+              title="Edit Tenant Details"
+              onClose={() => {
+                setIsEditTenantOpen(false);
+                setEditTenantError(null);
+              }}
+              isSaving={updatePlaceholderTenantMutation.isPending}
+            />
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -2903,19 +2762,16 @@ export default function UnitDetailPage() {
                   email: email,
                 });
               }}
-              className="space-y-4"
+              className="flex flex-col flex-1 min-h-0"
             >
-              {editTenantError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
-                  {editTenantError}
-                </div>
-              )}
+              <ModalBody className="space-y-6">
+                {editTenantError && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-3 text-sm text-destructive">
+                    {editTenantError}
+                  </div>
+                )}
 
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="editTenantFullName" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Full Name <span className="text-destructive">*</span>
-                  </label>
+                <ModalField label="Full Name" htmlFor="editTenantFullName" required>
                   <input
                     id="editTenantFullName"
                     type="text"
@@ -2925,15 +2781,12 @@ export default function UnitDetailPage() {
                       setEditTenantFullName(e.target.value);
                       if (editTenantError) setEditTenantError(null);
                     }}
-                    className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. John Doe"
                   />
-                </div>
+                </ModalField>
 
-                <div>
-                  <label htmlFor="editTenantEmail" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                    Email <span className="text-destructive">*</span>
-                  </label>
+                <ModalField label="Email" htmlFor="editTenantEmail" required>
                   <input
                     id="editTenantEmail"
                     type="email"
@@ -2943,36 +2796,24 @@ export default function UnitDetailPage() {
                       setEditTenantEmail(e.target.value);
                       if (editTenantError) setEditTenantError(null);
                     }}
-                    className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     placeholder="e.g. john@example.com"
                   />
-                </div>
-              </div>
+                </ModalField>
+              </ModalBody>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditTenantOpen(false);
-                    setEditTenantError(null);
-                  }}
-                  className="border-border text-foreground/80 hover:text-foreground hover:bg-accent"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updatePlaceholderTenantMutation.isPending}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-                >
-                  {updatePlaceholderTenantMutation.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
+              <ModalFooter
+                onCancel={() => {
+                  setIsEditTenantOpen(false);
+                  setEditTenantError(null);
+                }}
+                primaryText="Save"
+                isSaving={updatePlaceholderTenantMutation.isPending}
+              />
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Confirm Mark as Moved Out Dialog */}
       <ConfirmDialog

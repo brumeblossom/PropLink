@@ -11,6 +11,7 @@ import { DetailActionRow } from "@/components/layout/DetailActionRow";
 import { Select } from "@/components/ui/select";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import {
@@ -27,7 +28,6 @@ import {
   Eye,
   Pencil,
   AlertTriangle,
-  X,
   Upload,
   Loader2,
 } from "lucide-react";
@@ -616,7 +616,8 @@ export default function TenantRentalDetailsPage({
                         <span className="inline-flex cursor-not-allowed">
                           <Button
                             disabled
-                            className="bg-muted text-muted-foreground font-semibold text-xs h-9 px-3 flex items-center gap-1.5 opacity-50 pointer-events-none"
+                            size="action"
+                            className="bg-muted text-muted-foreground opacity-50 pointer-events-none"
                           >
                             <Plus className="w-4 h-4" />
                             Add payment
@@ -630,7 +631,8 @@ export default function TenantRentalDetailsPage({
                   ) : (
                     <Button
                       onClick={handleOpenAddPayment}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-xs h-9 px-3 flex items-center gap-1.5"
+                      size="action"
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
                     >
                       <Plus className="w-4 h-4" />
                       Add payment
@@ -900,206 +902,167 @@ export default function TenantRentalDetailsPage({
         </div>
       </PageContainer>
 
-      {/* Add / Edit Payment Modal (bottom sheet on phones, dialog on desktop) */}
-      {isAddPaymentOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto">
-          <div className="w-full sm:max-w-lg rounded-t-xl sm:rounded-xl border border-border bg-card p-6 shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-5 pb-3 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground font-sans">
-                {editingPaymentId ? "Edit Payment" : "Add Payment"}
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddPaymentOpen(false);
-                  resetPaymentForm();
+      {/* Add / Edit Payment Modal */}
+      <Modal
+        open={isAddPaymentOpen}
+        onOpenChange={(open) => {
+          setIsAddPaymentOpen(open);
+          if (!open) resetPaymentForm();
+        }}
+        isSaving={createPaymentMutation.isPending || updatePendingMutation.isPending || isUploadingProof}
+        size="md"
+      >
+        <ModalHeader
+          title={editingPaymentId ? "Edit Payment" : "Add Payment"}
+          onClose={() => {
+            setIsAddPaymentOpen(false);
+            resetPaymentForm();
+          }}
+          isSaving={createPaymentMutation.isPending || updatePendingMutation.isPending || isUploadingProof}
+        />
+        <form onSubmit={handlePaymentSubmit} className="flex flex-col flex-1 min-h-0">
+          <ModalBody className="space-y-6">
+            {paymentError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-xs text-destructive">
+                {paymentError}
+              </div>
+            )}
+
+            {/* Rental shown read-only */}
+            <ModalField label="Rental">
+              <div className="w-full bg-muted border border-border rounded-lg px-4 h-12 flex items-center text-sm text-foreground select-none">
+                Unit {unit.unitNumber} · {property.name}
+              </div>
+            </ModalField>
+
+            {/* Amount */}
+            <ModalField label="Amount (₦)" required>
+              <input
+                type="text"
+                required
+                placeholder="0"
+                value={amountInput}
+                onChange={(e) => {
+                  setAmountInput(formatInputNumber(e.target.value));
+                  setPaymentError(null);
                 }}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handlePaymentSubmit} className="space-y-4">
-              {paymentError && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-xs text-destructive">
-                  {paymentError}
-                </div>
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+              {billingSummary && billingSummary.isRentSet && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
+                </p>
               )}
+            </ModalField>
 
-              {/* Rental shown read-only */}
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Rental
-                </label>
-                <div className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground select-none">
-                  Unit {unit.unitNumber} · {property.name}
-                </div>
-              </div>
+            {/* Date Paid */}
+            <ModalField label="Date Paid" required>
+              <input
+                type="date"
+                required
+                max={todayStr}
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+            </ModalField>
 
-              {/* Amount */}
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Amount (₦)
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="0"
-                  value={amountInput}
-                  onChange={(e) => {
-                    setAmountInput(formatInputNumber(e.target.value));
-                    setPaymentError(null);
-                  }}
-                  className="w-full bg-card border border-input rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
-                />
-                {billingSummary && billingSummary.isRentSet && (
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {formatCurrency(billingSummary.remainingLeaseRent)} left on this lease
-                  </p>
-                )}
-              </div>
+            {/* Method */}
+            <ModalField label="Payment Method">
+              <Select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                className="h-12 text-sm"
+              >
+                <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
+                <option value={PaymentMethod.cash}>Cash</option>
+                <option value={PaymentMethod.cheque}>Cheque</option>
+                <option value={PaymentMethod.other}>Other</option>
+              </Select>
+            </ModalField>
 
-              {/* Date Paid */}
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Date paid
-                </label>
-                <input
-                  type="date"
-                  required
-                  max={todayStr}
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="w-full bg-card border border-input rounded-lg px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
-                />
-              </div>
-
-              {/* Method */}
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Payment method
-                </label>
-                <Select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full h-9 text-sm"
-                >
-                  <option value={PaymentMethod.bank_transfer}>Bank Transfer</option>
-                  <option value={PaymentMethod.cash}>Cash</option>
-                  <option value={PaymentMethod.cheque}>Cheque</option>
-                  <option value={PaymentMethod.other}>Other</option>
-                </Select>
-              </div>
-
-              {/* Receipt Upload */}
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Receipt / Proof (optional)
-                </label>
-                <div className="flex items-center gap-2">
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium text-foreground transition-colors">
-                    {isUploadingProof ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="w-3.5 h-3.5" />
-                    )}
-                    <span>{isUploadingProof ? "Uploading..." : "Upload file"}</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                      onChange={handleProofUpload}
-                      disabled={isUploadingProof}
-                      className="hidden"
-                    />
-                  </label>
-                  {proofFileName && (
-                    <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={proofFileName}>
-                      {proofFileName}
-                    </span>
+            {/* Receipt Upload */}
+            <ModalField label="Receipt / Proof (Optional)">
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-accent text-xs font-medium text-foreground transition-colors">
+                  {isUploadingProof ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
                   )}
-                </div>
-                {uploadError && (
-                  <p className="text-[11px] text-destructive mt-1">{uploadError}</p>
-                )}
-                <p className="text-[11px] text-muted-foreground mt-1">PDF, JPG or PNG up to 10MB.</p>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Notes (optional)
+                  <span>{isUploadingProof ? "Uploading..." : "Upload file"}</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    onChange={handleProofUpload}
+                    disabled={isUploadingProof}
+                    className="hidden"
+                  />
                 </label>
-                <textarea
-                  rows={2}
-                  placeholder="Optional reference or description"
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
-                  className="w-full bg-card border border-input rounded-lg p-2.5 text-xs text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring resize-none"
-                />
+                {proofFileName && (
+                  <span className="text-xs text-muted-foreground truncate max-w-[200px]" title={proofFileName}>
+                    {proofFileName}
+                  </span>
+                )}
               </div>
+              {uploadError && (
+                <p className="text-[11px] text-destructive mt-1">{uploadError}</p>
+              )}
+              <p className="text-[11px] text-muted-foreground mt-1">PDF, JPG or PNG up to 10MB.</p>
+            </ModalField>
 
-              {/* Buttons: Cancel / Save */}
-              <div className="flex gap-3 pt-3 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsAddPaymentOpen(false);
-                    resetPaymentForm();
-                  }}
-                  className="w-1/2 border-border text-foreground hover:bg-accent h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createPaymentMutation.isPending || updatePendingMutation.isPending || isUploadingProof}
-                  className="w-1/2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 text-sm font-semibold"
-                >
-                  {createPaymentMutation.isPending || updatePendingMutation.isPending
-                    ? "Saving..."
-                    : "Save"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            {/* Notes */}
+            <ModalField label="Notes (Optional)">
+              <textarea
+                placeholder="Optional reference or description"
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+            </ModalField>
+          </ModalBody>
+
+          <ModalFooter
+            onCancel={() => {
+              setIsAddPaymentOpen(false);
+              resetPaymentForm();
+            }}
+            primaryText="Save"
+            isSaving={createPaymentMutation.isPending || updatePendingMutation.isPending || isUploadingProof}
+          />
+        </form>
+      </Modal>
 
       {/* Payment Details Modal */}
-      {selectedPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground font-sans">Payment details</h2>
-              <button
-                type="button"
-                onClick={() => setSelectedPayment(null)}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between">
+      <Modal
+        open={Boolean(selectedPayment)}
+        onOpenChange={(open) => !open && setSelectedPayment(null)}
+        size="md"
+      >
+        {selectedPayment && (
+          <>
+            <ModalHeader
+              title="Payment details"
+              onClose={() => setSelectedPayment(null)}
+            />
+            <ModalBody className="space-y-4 text-xs">
+              <div className="flex justify-between py-2 border-b border-border/60">
                 <span className="text-muted-foreground">Amount</span>
                 <span className="font-semibold text-foreground text-sm">
                   {formatCurrency(selectedPayment.amount)}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between py-2 border-b border-border/60">
                 <span className="text-muted-foreground">Date paid</span>
                 <span className="text-foreground">{formatDateGB(selectedPayment.paymentDate)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between py-2 border-b border-border/60">
                 <span className="text-muted-foreground">Method</span>
                 <span className="text-foreground capitalize">
                   {selectedPayment.method.replace(/_/g, " ")}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center py-2 border-b border-border/60">
                 <span className="text-muted-foreground">Status</span>
                 <span>
                   {selectedPayment.status === "pending" ? (
@@ -1119,115 +1082,97 @@ export default function TenantRentalDetailsPage({
               </div>
 
               {selectedPayment.notes && (
-                <div className="pt-2 border-t border-border/80">
-                  <span className="text-muted-foreground block mb-1">Notes</span>
-                  <p className="text-foreground bg-muted/40 p-2.5 rounded-lg border border-border/60 text-xs">
+                <div className="pt-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">Notes</span>
+                  <p className="text-foreground bg-muted/40 p-3 rounded-lg border border-border/60 text-xs">
                     {selectedPayment.notes}
                   </p>
                 </div>
               )}
 
               {selectedPayment.proofUrl && (
-                <div className="pt-2 border-t border-border/80 flex justify-between items-center">
+                <div className="pt-2 flex justify-between items-center">
                   <span className="text-muted-foreground">Receipt</span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => handleViewReceipt(selectedPayment.proofUrl!)}
-                    className="h-7 px-2.5 text-xs border-border text-primary hover:underline"
+                    className="h-8 px-3 text-xs border-border text-primary hover:underline"
                   >
                     <Paperclip className="w-3.5 h-3.5 mr-1" />
                     View receipt
                   </Button>
                 </div>
               )}
-            </div>
-
-            <div className="pt-3 border-t border-border">
-              <Button
-                type="button"
-                onClick={() => setSelectedPayment(null)}
-                className="w-full bg-card hover:bg-accent border border-border text-foreground h-9 text-xs"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </ModalBody>
+            <ModalFooter
+              primaryText="Close"
+              onPrimary={() => setSelectedPayment(null)}
+            />
+          </>
+        )}
+      </Modal>
 
       {/* Dispute Payment Dialog */}
-      {isDisputeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-border">
-              <h2 className="text-lg font-bold text-foreground font-sans">Dispute payment</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDisputeOpen(false);
-                  setDisputeReason("");
-                  setDisputePaymentId(null);
-                }}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                If you believe this payment entry is inaccurate or was logged in error, explain the issue below. Your landlord will be notified to review and resolve the dispute.
-              </p>
-
-              <div>
-                <label className="block text-xs font-medium text-foreground/80 mb-1">
-                  Reason for dispute
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Explain why this payment record is incorrect..."
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
-                  className="w-full bg-card border border-input rounded-lg p-2.5 text-xs text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-3 border-t border-border">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setIsDisputeOpen(false);
-                  setDisputeReason("");
-                  setDisputePaymentId(null);
-                }}
-                className="w-1/2 border-border text-foreground hover:bg-accent h-9 text-xs"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={!disputeReason.trim() || flagPaymentMutation.isPending}
-                onClick={async () => {
-                  if (disputePaymentId && disputeReason.trim()) {
-                    await flagPaymentMutation.mutateAsync({
-                      paymentId: disputePaymentId,
-                      reason: disputeReason.trim(),
-                    });
-                  }
-                }}
-                className="w-1/2 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold h-9 text-xs"
-              >
-                {flagPaymentMutation.isPending ? "Submitting..." : "Submit dispute"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isDisputeOpen}
+        onOpenChange={(open) => {
+          setIsDisputeOpen(open);
+          if (!open) {
+            setDisputeReason("");
+            setDisputePaymentId(null);
+          }
+        }}
+        isSaving={flagPaymentMutation.isPending}
+        size="md"
+      >
+        <ModalHeader
+          title="Dispute payment"
+          description="If you believe this payment entry is inaccurate or was logged in error, explain the issue below. Your landlord will be notified to review and resolve the dispute."
+          onClose={() => {
+            setIsDisputeOpen(false);
+            setDisputeReason("");
+            setDisputePaymentId(null);
+          }}
+          isSaving={flagPaymentMutation.isPending}
+        />
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (disputePaymentId && disputeReason.trim()) {
+              await flagPaymentMutation.mutateAsync({
+                paymentId: disputePaymentId,
+                reason: disputeReason.trim(),
+              });
+            }
+          }}
+          className="flex flex-col flex-1 min-h-0"
+        >
+          <ModalBody className="space-y-6">
+            <ModalField label="Reason for Dispute" required>
+              <textarea
+                required
+                placeholder="Explain why this payment record is incorrect..."
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+              />
+            </ModalField>
+          </ModalBody>
+          <ModalFooter
+            onCancel={() => {
+              setIsDisputeOpen(false);
+              setDisputeReason("");
+              setDisputePaymentId(null);
+            }}
+            primaryText="Submit dispute"
+            variant="destructive"
+            isSaving={flagPaymentMutation.isPending}
+            disabled={!disputeReason.trim()}
+          />
+        </form>
+      </Modal>
     </div>
   );
 }

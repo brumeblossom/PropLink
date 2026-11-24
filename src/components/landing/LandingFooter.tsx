@@ -87,6 +87,15 @@ export function LandingFooter() {
               </li>
               <li>
                 <Link
+                  href="/#how-it-works"
+                  onClick={(e) => handleScrollTo(e, "how-it-works")}
+                  className="text-[rgb(238_240_245_/_0.6)] hover:text-[#EEF0F5] transition-colors"
+                >
+                  How it works
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/#faq"
                   onClick={(e) => handleScrollTo(e, "faq")}
                   className="text-[rgb(238_240_245_/_0.6)] hover:text-[#EEF0F5] transition-colors"

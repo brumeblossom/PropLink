@@ -221,12 +221,12 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="action"
               onClick={() => fileInputRef.current?.click()}
-              className="text-xs h-8 px-2.5 border-border hover:bg-muted text-foreground shrink-0 flex items-center gap-1.5"
+              className="border-border hover:bg-muted text-foreground shrink-0"
             >
               <Upload className="w-3.5 h-3.5" />
-              Upload
+              Upload document
             </Button>
           )}
         </div>
@@ -269,12 +269,12 @@ export function LeaseDocumentsCard({ leaseId, mode, className }: LeaseDocumentsC
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="action"
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-xs h-8 px-3 border-border hover:bg-muted text-foreground"
+                    className="border-border hover:bg-muted text-foreground"
                   >
-                    <Upload className="w-3.5 h-3.5 mr-1.5" />
-                    Upload
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload document
                   </Button>
                 </div>
               ) : (

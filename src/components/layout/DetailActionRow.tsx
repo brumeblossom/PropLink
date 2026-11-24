@@ -59,10 +59,11 @@ export function DetailActionRow({
             <Button
               type="button"
               variant={action.variant === "primary" ? "default" : "outline"}
+              size="action"
               onClick={action.onClick}
               disabled={action.disabled}
               className={cn(
-                "h-9 px-3.5 text-xs font-medium flex items-center transition-colors disabled:opacity-50",
+                "transition-colors disabled:opacity-50",
                 action.disabled && "pointer-events-none",
                 action.variant === "danger"
                   ? "border-destructive/30 text-destructive hover:bg-destructive-tint"
@@ -104,9 +105,10 @@ export function DetailActionRow({
                 <span className="inline-flex cursor-not-allowed">
                   <Button
                     type="button"
+                    size="action"
                     onClick={phonePrimaryAction.onClick}
                     disabled={phonePrimaryAction.disabled}
-                    className="h-9 px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 disabled:opacity-50 pointer-events-none"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 pointer-events-none"
                   >
                     {phonePrimaryAction.icon}
                     <span>{phonePrimaryAction.label}</span>
@@ -121,9 +123,10 @@ export function DetailActionRow({
             <div>
               <Button
                 type="button"
+                size="action"
                 onClick={phonePrimaryAction.onClick}
                 disabled={phonePrimaryAction.disabled}
-                className="h-9 px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
               >
                 {phonePrimaryAction.icon}
                 <span>{phonePrimaryAction.label}</span>

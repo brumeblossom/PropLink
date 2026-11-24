@@ -10,7 +10,7 @@ import { PageTitleRow } from "@/components/layout/PageTitleRow";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { NoticeType } from "@prisma/client";
-import * as Dialog from "@radix-ui/react-dialog";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField, ModalSegmentedControl } from "@/components/ui/modal";
 import { 
   Plus, 
   Search, 
@@ -243,7 +243,8 @@ function NoticesContent() {
               {/* Desktop primary button */}
               <Button
                 onClick={() => setIsCreateOpen(true)}
-                className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-4 text-sm items-center gap-1.5 shrink-0"
+                size="action"
+                className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 Create message
@@ -588,333 +589,222 @@ function NoticesContent() {
         )}
 
         {/* 1. Create Message Modal */}
-        <Dialog.Root open={isCreateOpen} onOpenChange={(open) => !open && setIsCreateOpen(false)}>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-2xl focus:outline-none">
-              <div className="flex items-center justify-between pb-4 border-b border-border">
-                <Dialog.Title className="text-lg font-bold text-foreground">Create message</Dialog.Title>
-                <Dialog.Close asChild>
-                  <button
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    aria-label="Close"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </Dialog.Close>
-              </div>
-              <Dialog.Description className="sr-only">
-                Form to create and broadcast an announcement to tenants.
-              </Dialog.Description>
-
-              <form onSubmit={handleCreateSubmit} className="mt-5 space-y-4">
-                {formError && (
-                  <div className="p-3 bg-destructive-tint/20 border border-destructive/30 rounded-lg text-destructive text-sm">
-                    {formError}
-                  </div>
-                )}
-
-                {/* Audience */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground/80">Audience</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTargetType("all")}
-                      className={cn(
-                        "py-2 px-3 text-xs rounded-lg border font-medium transition-all text-center",
-                        targetType === "all"
-                          ? "bg-primary text-primary-foreground border-primary shadow"
-                          : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
-                      )}
-                    >
-                      All Properties
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTargetType("property")}
-                      className={cn(
-                        "py-2 px-3 text-xs rounded-lg border font-medium transition-all text-center",
-                        targetType === "property"
-                          ? "bg-primary text-primary-foreground border-primary shadow"
-                          : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
-                      )}
-                    >
-                      Single Property
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTargetType("unit")}
-                      className={cn(
-                        "py-2 px-3 text-xs rounded-lg border font-medium transition-all text-center",
-                        targetType === "unit"
-                          ? "bg-primary text-primary-foreground border-primary shadow"
-                          : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
-                      )}
-                    >
-                      Single Unit
-                    </button>
-                  </div>
+        <Modal
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+          isSaving={isSubmitting}
+          size="lg"
+        >
+          <ModalHeader
+            title="Create message"
+            onClose={() => setIsCreateOpen(false)}
+            isSaving={isSubmitting}
+          />
+          <form onSubmit={handleCreateSubmit} className="flex flex-col flex-1 min-h-0">
+            <ModalBody className="space-y-6">
+              {formError && (
+                <div className="p-3 bg-destructive-tint/20 border border-destructive/30 rounded-lg text-destructive text-sm">
+                  {formError}
                 </div>
+              )}
 
-                {/* Property Dropdown (if property or unit selected) */}
-                {targetType !== "all" && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground/80">Select Property</label>
-                    <Select
-                      value={formPropertyId}
-                      onChange={(e) => {
-                        setFormPropertyId(e.target.value);
-                        setFormUnitId("");
-                      }}
-                      required
-                    >
-                      <option value="">Choose a property...</option>
-                      {properties?.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                )}
+              {/* Audience */}
+              <ModalField label="Audience">
+                <ModalSegmentedControl
+                  value={targetType}
+                  onChange={(val) => setTargetType(val as "all" | "property" | "unit")}
+                  options={[
+                    { value: "all", label: "All Properties" },
+                    { value: "property", label: "Single Property" },
+                    { value: "unit", label: "Single Unit" },
+                  ]}
+                />
+              </ModalField>
 
-                {/* Unit Dropdown (if unit selected) */}
-                {targetType === "unit" && formPropertyId && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground/80">Select Unit</label>
-                    <Select
-                      value={formUnitId}
-                      onChange={(e) => setFormUnitId(e.target.value)}
-                      required
-                    >
-                      <option value="">Choose a unit...</option>
-                      {formUnits.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          Unit {u.unitNumber}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                )}
-
-                {/* Category */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground/80">Category</label>
+              {/* Property Dropdown (if property or unit selected) */}
+              {targetType !== "all" && (
+                <ModalField label="Select Property" required>
                   <Select
-                    value={type}
-                    onChange={(e) => setType(e.target.value as NoticeType)}
+                    value={formPropertyId}
+                    onChange={(e) => {
+                      setFormPropertyId(e.target.value);
+                      setFormUnitId("");
+                    }}
+                    required
+                    className="h-12"
                   >
-                    {Object.entries(noticeTypeLabels).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
+                    <option value="">Choose a property...</option>
+                    {properties?.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
                       </option>
                     ))}
                   </Select>
-                </div>
+                </ModalField>
+              )}
 
-                {/* Subject / Title */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground/80">Subject / Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Water Tank Maintenance This Saturday"
-                    className="w-full px-3 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+              {/* Unit Dropdown (if unit selected) */}
+              {targetType === "unit" && formPropertyId && (
+                <ModalField label="Select Unit" required>
+                  <Select
+                    value={formUnitId}
+                    onChange={(e) => setFormUnitId(e.target.value)}
                     required
-                  />
-                </div>
-
-                {/* Message */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground/80">Message</label>
-                  <textarea
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    rows={4}
-                    placeholder="Provide details about the announcement..."
-                    className="w-full px-3 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
-                    required
-                  />
-                </div>
-
-                {/* Buttons: Cancel & Send */}
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreateOpen(false)}
-                    disabled={isSubmitting}
-                    className="border-border hover:bg-accent text-foreground text-sm h-9 px-4 rounded-lg"
+                    className="h-12"
                   >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm h-9 px-5 rounded-lg font-semibold"
-                  >
-                    {isSubmitting ? "Sending..." : "Send"}
-                  </Button>
-                </div>
-              </form>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+                    <option value="">Choose a unit...</option>
+                    {formUnits.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        Unit {u.unitNumber}
+                      </option>
+                    ))}
+                  </Select>
+                </ModalField>
+              )}
+
+              {/* Category */}
+              <ModalField label="Category">
+                <Select
+                  value={type}
+                  onChange={(e) => setType(e.target.value as NoticeType)}
+                  className="h-12"
+                >
+                  {Object.entries(noticeTypeLabels).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </ModalField>
+
+              {/* Subject / Title */}
+              <ModalField label="Subject / Title" required>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Water Tank Maintenance This Saturday"
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  required
+                />
+              </ModalField>
+
+              {/* Message */}
+              <ModalField label="Message" required>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Provide details about the announcement..."
+                  className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm leading-relaxed"
+                  required
+                />
+              </ModalField>
+            </ModalBody>
+
+            <ModalFooter
+              onCancel={() => setIsCreateOpen(false)}
+              primaryText={isSubmitting ? "Sending..." : "Send"}
+              isSaving={isSubmitting}
+            />
+          </form>
+        </Modal>
 
         {/* 2. Full Message Modal (when title clicked) */}
-        <Dialog.Root
+        <Modal
           open={Boolean(viewingMessageNotice)}
           onOpenChange={(open) => !open && setViewingMessageNotice(null)}
+          size="md"
         >
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-2xl focus:outline-none space-y-4">
-              {viewingMessageNotice && (
-                <>
-                  <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
-                    <div className="space-y-1">
-                      <Dialog.Title className="text-lg font-bold text-foreground">
-                        {viewingMessageNotice.title}
-                      </Dialog.Title>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-                            noticeTypeStyles[viewingMessageNotice.type as NoticeType] || "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {noticeTypeLabels[viewingMessageNotice.type as NoticeType] || viewingMessageNotice.type}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDateGB(viewingMessageNotice.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <Dialog.Close asChild>
-                      <button
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                        aria-label="Close"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </Dialog.Close>
+          {viewingMessageNotice && (
+            <>
+              <ModalHeader
+                title={viewingMessageNotice.title}
+                description={`${formatDateGB(viewingMessageNotice.createdAt)} · ${noticeTypeLabels[viewingMessageNotice.type as NoticeType] || viewingMessageNotice.type}`}
+                onClose={() => setViewingMessageNotice(null)}
+              />
+              <ModalBody className="space-y-6">
+                {/* Audience details */}
+                <div className="rounded-lg bg-muted/60 border border-border/80 p-3 text-xs space-y-1">
+                  <div className="text-muted-foreground font-medium">Audience</div>
+                  <div className="text-foreground font-semibold">
+                    {getAudienceDisplay(viewingMessageNotice).combined}
                   </div>
-                  <Dialog.Description className="sr-only">
-                    Full message content and details.
-                  </Dialog.Description>
+                </div>
 
-                  {/* Audience details */}
-                  <div className="rounded-lg bg-muted/60 border border-border/80 p-3 text-xs space-y-1">
-                    <div className="text-muted-foreground font-medium">Audience</div>
-                    <div className="text-foreground font-semibold">
-                      {getAudienceDisplay(viewingMessageNotice).combined}
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="text-xs font-medium text-muted-foreground">Message:</div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-muted/40 p-4 rounded-lg border border-border/60">
-                      {viewingMessageNotice.body}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      onClick={() => setViewingMessageNotice(null)}
-                      className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-4 rounded-lg"
-                    >
-                      Close
-                    </Button>
-                  </div>
-                </>
-              )}
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+                {/* Body */}
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Message</div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed bg-muted/40 p-4 rounded-lg border border-border/60">
+                    {viewingMessageNotice.body}
+                  </p>
+                </div>
+              </ModalBody>
+              <ModalFooter
+                primaryText="Close"
+                onPrimary={() => setViewingMessageNotice(null)}
+              />
+            </>
+          )}
+        </Modal>
 
         {/* 3. Recipients Modal (when "View recipients" clicked) */}
-        <Dialog.Root
+        <Modal
           open={Boolean(viewingRecipientsNotice)}
           onOpenChange={(open) => !open && setViewingRecipientsNotice(null)}
+          size="md"
         >
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[85vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl focus:outline-none">
-              {viewingRecipientsNotice && (
-                <>
-                  <div className="flex items-center justify-between p-6 pb-4 border-b border-border shrink-0">
-                    <div>
-                      <Dialog.Title className="text-lg font-bold text-foreground">Recipients</Dialog.Title>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {viewingRecipientsNotice.title} · {viewingRecipientsNotice.recipients.length} total
-                      </p>
-                    </div>
-                    <Dialog.Close asChild>
-                      <button
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                        aria-label="Close"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </Dialog.Close>
-                  </div>
-                  <Dialog.Description className="sr-only">
-                    List of tenants who received this message and read status.
-                  </Dialog.Description>
-
-                  <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-2">
-                    {viewingRecipientsNotice.recipients.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-6 text-center">No recipients found.</p>
-                    ) : (
-                      <table className="w-full text-left text-xs">
-                        <thead className="border-b border-border text-muted-foreground uppercase tracking-wider">
-                          <tr>
-                            <th scope="col" className="py-2.5 pr-4">Name</th>
-                            <th scope="col" className="py-2.5 px-4">Email</th>
-                            <th scope="col" className="py-2.5 pl-4 text-right">Status</th>
+          {viewingRecipientsNotice && (
+            <>
+              <ModalHeader
+                title="Recipients"
+                description={`${viewingRecipientsNotice.title} · ${viewingRecipientsNotice.recipients.length} total`}
+                onClose={() => setViewingRecipientsNotice(null)}
+              />
+              <ModalBody className="space-y-4">
+                {viewingRecipientsNotice.recipients.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">No recipients found.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="border-b border-border text-muted-foreground uppercase tracking-wider">
+                        <tr>
+                          <th scope="col" className="py-2.5 pr-4">Name</th>
+                          <th scope="col" className="py-2.5 px-4">Email</th>
+                          <th scope="col" className="py-2.5 pl-4 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {viewingRecipientsNotice.recipients.map((r: NoticeRecipientItem) => (
+                          <tr key={r.id}>
+                            <td className="py-2.5 pr-4 font-medium text-foreground truncate max-w-[120px]">
+                              {r.tenant?.fullName || "Tenant"}
+                            </td>
+                            <td className="py-2.5 px-4 text-muted-foreground truncate max-w-[160px]">
+                              {r.tenant?.email || "—"}
+                            </td>
+                            <td className="py-2.5 pl-4 text-right whitespace-nowrap">
+                              {r.readAt ? (
+                                <span className="text-success font-medium">
+                                  Read {formatDateGB(r.readAt)}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">Not read yet</span>
+                              )}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/60">
-                          {viewingRecipientsNotice.recipients.map((r: NoticeRecipientItem) => (
-                            <tr key={r.id}>
-                              <td className="py-2.5 pr-4 font-medium text-foreground truncate max-w-[120px]">
-                                {r.tenant?.fullName || "Tenant"}
-                              </td>
-                              <td className="py-2.5 px-4 text-muted-foreground truncate max-w-[160px]">
-                                {r.tenant?.email || "—"}
-                              </td>
-                              <td className="py-2.5 pl-4 text-right whitespace-nowrap">
-                                {r.readAt ? (
-                                  <span className="text-success font-medium">
-                                    Read {formatDateGB(r.readAt)}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground">Not read yet</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-
-                  <div className="flex justify-end p-4 border-t border-border shrink-0">
-                    <Button
-                      onClick={() => setViewingRecipientsNotice(null)}
-                      className="bg-card border border-border hover:bg-accent text-foreground text-sm h-8 px-4 rounded-lg"
-                    >
-                      Done
-                    </Button>
-                  </div>
-                </>
-              )}
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
+                )}
+              </ModalBody>
+              <ModalFooter
+                primaryText="Done"
+                onPrimary={() => setViewingRecipientsNotice(null)}
+              />
+            </>
+          )}
+        </Modal>
       </main>
     </div>
   );

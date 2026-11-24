@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { trpc } from "@/utils/trpc";
 import { Button } from "@/components/ui/button";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, Pencil, Key, Eye, EyeOff, X } from "lucide-react";
+import { Shield, Pencil, Key, Eye, EyeOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PasswordChecklist, isPasswordValid } from "@/components/auth/PasswordChecklist";
 
@@ -214,229 +215,214 @@ export function AccountSection({ user }: AccountSectionProps) {
       </div>
 
       {/* Edit Name Modal */}
-      {isEditNameOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-foreground font-sans">Edit name</h2>
-              <button
+      <Modal
+        open={isEditNameOpen}
+        onOpenChange={setIsEditNameOpen}
+        size="md"
+        isSaving={updateProfile.isPending}
+      >
+        <ModalHeader
+          title="Edit name"
+          onClose={() => setIsEditNameOpen(false)}
+          isSaving={updateProfile.isPending}
+        />
+        <form onSubmit={handleSaveName} className="flex-1 flex flex-col min-h-0">
+          <ModalBody>
+            {nameError && (
+              <div className="rounded-lg bg-destructive-tint border border-destructive/30 p-3 text-xs text-destructive">
+                {nameError}
+              </div>
+            )}
+
+            <ModalField label="Full Name" htmlFor="edit-full-name" required>
+              <input
+                id="edit-full-name"
+                type="text"
+                required
+                maxLength={40}
+                value={nameValue}
+                onChange={(e) => {
+                  setNameValue(e.target.value);
+                  if (nameError) setNameError(null);
+                }}
+                placeholder="Enter full name"
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+              />
+              <div className="mt-1.5 flex justify-end">
+                <span
+                  className={cn(
+                    "text-xs transition-colors",
+                    nameValue.length >= 40
+                      ? "text-destructive font-medium"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {nameValue.length}/40
+                </span>
+              </div>
+            </ModalField>
+          </ModalBody>
+
+          <ModalFooter>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setIsEditNameOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Close"
+                disabled={updateProfile.isPending}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold border-border hover:bg-muted"
               >
-                <X className="w-5 h-5" />
-              </button>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!nameValue.trim() || updateProfile.isPending}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
+              >
+                {updateProfile.isPending && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                Save
+              </Button>
             </div>
-
-            <form onSubmit={handleSaveName} className="space-y-4">
-              {nameError && (
-                <div className="rounded-lg bg-destructive-tint border border-destructive/30 p-3 text-xs text-destructive">
-                  {nameError}
-                </div>
-              )}
-
-              <div>
-                <label
-                  htmlFor="edit-full-name"
-                  className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider"
-                >
-                  Full Name
-                </label>
-                <input
-                  id="edit-full-name"
-                  type="text"
-                  required
-                  maxLength={40}
-                  value={nameValue}
-                  onChange={(e) => {
-                    setNameValue(e.target.value);
-                    if (nameError) setNameError(null);
-                  }}
-                  placeholder="Enter full name"
-                  className="mt-1.5 block w-full rounded-lg border border-input bg-card px-3.5 py-2 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
-                />
-                <div className="mt-1.5 flex justify-end">
-                  <span
-                    className={cn(
-                      "text-xs transition-colors",
-                      nameValue.length >= 40
-                        ? "text-destructive font-medium"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {nameValue.length}/40
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditNameOpen(false)}
-                  className="border-border text-foreground/80 hover:text-foreground hover:bg-muted h-9 px-4 text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!nameValue.trim() || updateProfile.isPending}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-5 text-xs"
-                >
-                  {updateProfile.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Change Password Modal */}
-      {isChangePasswordOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-foreground font-sans">Change password</h2>
-              <button
-                type="button"
-                onClick={() => setIsChangePasswordOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              {passwordModalGeneralError && (
-                <div className="rounded-lg bg-destructive-tint border border-destructive/30 p-3 text-xs text-destructive">
-                  {passwordModalGeneralError}
-                </div>
-              )}
-
-              {/* Current Password */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Current Password
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    type={showCurrentPassword ? "text" : "password"}
-                    required
-                    value={currentPassword}
-                    onChange={(e) => {
-                      setCurrentPassword(e.target.value);
-                      if (currentPasswordError) setCurrentPasswordError(null);
-                    }}
-                    className="block w-full rounded-lg border border-input bg-card px-3.5 py-2 pr-10 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
-                    placeholder="Enter current password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-                {currentPasswordError && (
-                  <p className="mt-1.5 text-xs text-destructive">
-                    {currentPasswordError}
-                  </p>
-                )}
+      <Modal
+        open={isChangePasswordOpen}
+        onOpenChange={setIsChangePasswordOpen}
+        size="md"
+        isSaving={isUpdatingPassword}
+      >
+        <ModalHeader
+          title="Change password"
+          onClose={() => setIsChangePasswordOpen(false)}
+          isSaving={isUpdatingPassword}
+        />
+        <form onSubmit={handleChangePassword} className="flex-1 flex flex-col min-h-0">
+          <ModalBody>
+            {passwordModalGeneralError && (
+              <div className="rounded-lg bg-destructive-tint border border-destructive/30 p-3 text-xs text-destructive">
+                {passwordModalGeneralError}
               </div>
+            )}
 
-              {/* New Password */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  New Password
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-input bg-card px-3.5 py-2 pr-10 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
-                    placeholder="Enter new password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-                <PasswordChecklist password={newPassword} className="mt-2.5" />
-              </div>
-
-              {/* Confirm New Password */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Confirm New Password
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-input bg-card px-3.5 py-2 pr-10 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
-                    placeholder="Repeat new password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-                {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-                  <p className="mt-1.5 text-xs text-destructive">
-                    Passwords don&apos;t match
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-border">
-                <Button
+            {/* Current Password */}
+            <ModalField label="Current Password" required>
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  required
+                  value={currentPassword}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (currentPasswordError) setCurrentPasswordError(null);
+                  }}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                  placeholder="Enter current password"
+                />
+                <button
                   type="button"
-                  variant="outline"
-                  onClick={() => setIsChangePasswordOpen(false)}
-                  className="border-border text-foreground/80 hover:text-foreground hover:bg-muted h-9 px-4 text-xs"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isUpdatingPassword || !isPasswordReady}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-9 px-5 text-xs"
-                >
-                  {isUpdatingPassword ? "Updating..." : "Change password"}
-                </Button>
+                  {showCurrentPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+              {currentPasswordError && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {currentPasswordError}
+                </p>
+              )}
+            </ModalField>
+
+            {/* New Password */}
+            <ModalField label="New Password" required>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                  placeholder="Enter new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              <PasswordChecklist password={newPassword} className="mt-2.5" />
+            </ModalField>
+
+            {/* Confirm New Password */}
+            <ModalField label="Confirm New Password" required>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                  placeholder="Repeat new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  Passwords don&apos;t match
+                </p>
+              )}
+            </ModalField>
+          </ModalBody>
+
+          <ModalFooter>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsChangePasswordOpen(false)}
+                disabled={isUpdatingPassword}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold border-border hover:bg-muted"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isUpdatingPassword || !isPasswordReady}
+                className="w-full h-12 rounded-lg text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
+              >
+                {isUpdatingPassword && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+                Change password
+              </Button>
+            </div>
+          </ModalFooter>
+        </form>
+      </Modal>
     </>
   );
 }

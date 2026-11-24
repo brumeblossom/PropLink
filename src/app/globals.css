@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 42 55.6% 96.5%;      /* #FBF8F1 warm off-white page */
+    --background: 50 18.7% 93.7%;      /* #F2F1EC soft warm grey (was cream #FBF8F1) */
     --foreground: 224 62.7% 11.6%;     /* #0B1530 */
     --card: 0 0% 100%;                 /* #FFFFFF */
     --card-foreground: 224 62.7% 11.6%;
@@ -16,17 +16,17 @@
     --gold: 44 57% 50.8%;              /* #C9A23A, marketing CTA */
     --gold-foreground: 43 67.7% 6.1%;  /* #1A1405 */
     --emphasis: 43 77.5% 31.4%;        /* #8E6B12, serif accent words on light */
-    --secondary: 42 43.6% 92.4%;       /* #F4EFE3 */
+    --secondary: 47 19.1% 90.8%;       /* #ECEAE3 */
     --secondary-foreground: 224 62.7% 11.6%;
-    --muted: 42 43.6% 92.4%;           /* table header, sunken areas */
+    --muted: 47 19.1% 90.8%;           /* #ECEAE3 table headers, sunken areas */
     --muted-foreground: 228 14.3% 41.2%; /* #5A6078 */
     --subtle-foreground: 228 12% 59%;  /* #8A8FA3, hints, placeholders */
-    --accent: 42 43.6% 92.4%;
+    --accent: 47 19.1% 90.8%;
     --accent-foreground: 224 62.7% 11.6%;
-    --border: 42 32.4% 86.1%;          /* #E7E0D0 */
-    --input: 42 32.4% 86.1%;
+    --border: 48 15.2% 87.1%;          /* #E3E1D9 */
+    --input: 48 15.2% 87.1%;
     --ring: 223 66.3% 16.3%;
-    --sidebar: 0 0% 100%;              /* white sidebar */
+    --sidebar: 60 23.1% 97.5%;         /* #FAFAF7 off-white (was pure white) */
     --destructive: 10 71.4% 41.2%;     /* #B4361E */
     --destructive-foreground: 0 0% 100%;
     --destructive-tint: 13 74.2% 93.9%;
@@ -36,12 +36,16 @@
     --warning-tint: 42 81% 91.8%;
     --kpi-navy: 222 59.5% 30%;
     --kpi-navy-tint: 221 50% 93.7%;
+    --kpi-navy-fill: 221 40% 92.2%;    /* #E3E8F3 */
     --kpi-gold: 43 68.7% 38.8%;
     --kpi-gold-tint: 44 65.2% 91%;
+    --kpi-gold-fill: 43 62.1% 88.6%;   /* #F4EAD0 */
     --kpi-sage: 154 46.2% 33.5%;
     --kpi-sage-tint: 150 33.3% 91.8%;
+    --kpi-sage-fill: 145 32.1% 89.6%;  /* #DCEDE3 */
     --kpi-clay: 18 62.2% 43.5%;
     --kpi-clay-tint: 20 65.9% 92%;
+    --kpi-clay-fill: 21 58.5% 89.6%;   /* #F4E0D5 */
     --radius: 0.5rem;
   }
 
@@ -78,12 +82,17 @@
     --warning-tint: 43 74.3% 66.5% / 0.14;
     --kpi-navy: 224 32.8% 76.1%;
     --kpi-navy-tint: 224 32.8% 76.1% / 0.12;
+    --kpi-navy-fill: 226 28% 14.7%;    /* #1B2030 */
     --kpi-gold: 44 65.3% 57.1%;
     --kpi-gold-tint: 44 65.3% 57.1% / 0.14;
+    --kpi-gold-fill: 39 21.2% 12.9%;   /* #28231A */
     --kpi-sage: 150 43.2% 64.1%;
     --kpi-sage-tint: 150 43.2% 64.1% / 0.14;
+    --kpi-sage-fill: 159 23.3% 11.8%;  /* #172520 */
     --kpi-clay: 18 77.9% 69.8%;
     --kpi-clay-tint: 18 77.9% 69.8% / 0.14;
+    --kpi-clay-fill: 18 25.4% 13.1%;   /* #2A1E19 */
+    --radius: 0.5rem;
   }
 }
 

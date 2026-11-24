@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import { formatDateGB, formatTwoLineRentDue, type RentDueLines } from "@/lib/billing";
@@ -837,113 +838,95 @@ function LandlordTenantsContent() {
         />
 
         {/* Edit Placeholder Tenant Modal */}
-        {leaseToEditTenant && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold tracking-tight text-foreground">Edit Tenant Details</h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLeaseToEditTenant(null);
-                    setEditTenantError(null);
+        <Modal
+          open={Boolean(leaseToEditTenant)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setLeaseToEditTenant(null);
+              setEditTenantError(null);
+            }
+          }}
+          isSaving={updatePlaceholderTenantMutation.isPending}
+          size="md"
+        >
+          <ModalHeader
+            title="Edit Tenant Details"
+            onClose={() => {
+              setLeaseToEditTenant(null);
+              setEditTenantError(null);
+            }}
+            isSaving={updatePlaceholderTenantMutation.isPending}
+          />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = editTenantFullName.trim();
+              const email = editTenantEmail.trim();
+              if (!name) {
+                setEditTenantError("Enter the tenant's full name");
+                return;
+              }
+              if (!email) {
+                setEditTenantError("Enter the tenant's email address");
+                return;
+              }
+              setEditTenantError(null);
+              updatePlaceholderTenantMutation.mutate({
+                leaseId: leaseToEditTenant!.id,
+                fullName: name,
+                email: email,
+              });
+            }}
+            className="flex flex-col flex-1 min-h-0"
+          >
+            <ModalBody className="space-y-6">
+              {editTenantError && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
+                  {editTenantError}
+                </div>
+              )}
+
+              <ModalField label="Full Name" htmlFor="editTenantListFullName" required>
+                <input
+                  id="editTenantListFullName"
+                  type="text"
+                  required
+                  value={editTenantFullName}
+                  onChange={(e) => {
+                    setEditTenantFullName(e.target.value);
+                    if (editTenantError) setEditTenantError(null);
                   }}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  &times;
-                </button>
-              </div>
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  placeholder="e.g. John Doe"
+                />
+              </ModalField>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const name = editTenantFullName.trim();
-                  const email = editTenantEmail.trim();
-                  if (!name) {
-                    setEditTenantError("Enter the tenant's full name");
-                    return;
-                  }
-                  if (!email) {
-                    setEditTenantError("Enter the tenant's email address");
-                    return;
-                  }
-                  setEditTenantError(null);
-                  updatePlaceholderTenantMutation.mutate({
-                    leaseId: leaseToEditTenant.id,
-                    fullName: name,
-                    email: email,
-                  });
-                }}
-                className="space-y-4"
-              >
-                {editTenantError && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive-tint/20 p-3 text-sm text-destructive">
-                    {editTenantError}
-                  </div>
-                )}
+              <ModalField label="Email" htmlFor="editTenantListEmail" required>
+                <input
+                  id="editTenantListEmail"
+                  type="email"
+                  required
+                  value={editTenantEmail}
+                  onChange={(e) => {
+                    setEditTenantEmail(e.target.value);
+                    if (editTenantError) setEditTenantError(null);
+                  }}
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  placeholder="e.g. john@example.com"
+                />
+              </ModalField>
+            </ModalBody>
 
-                <div className="space-y-3">
-                  <div>
-                    <label htmlFor="editTenantListFullName" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Full Name <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="editTenantListFullName"
-                      type="text"
-                      required
-                      value={editTenantFullName}
-                      onChange={(e) => {
-                        setEditTenantFullName(e.target.value);
-                        if (editTenantError) setEditTenantError(null);
-                      }}
-                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
-                      placeholder="e.g. John Doe"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="editTenantListEmail" className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                      Email <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      id="editTenantListEmail"
-                      type="email"
-                      required
-                      value={editTenantEmail}
-                      onChange={(e) => {
-                        setEditTenantEmail(e.target.value);
-                        if (editTenantError) setEditTenantError(null);
-                      }}
-                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
-                      placeholder="e.g. john@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setLeaseToEditTenant(null);
-                      setEditTenantError(null);
-                    }}
-                    className="border-border text-foreground hover:bg-accent"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={updatePlaceholderTenantMutation.isPending}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-                  >
-                    {updatePlaceholderTenantMutation.isPending ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+            <ModalFooter
+              onCancel={() => {
+                setLeaseToEditTenant(null);
+                setEditTenantError(null);
+              }}
+              primaryText="Save"
+              isSaving={updatePlaceholderTenantMutation.isPending}
+            />
+          </form>
+        </Modal>
       </main>
     </div>
   );

@@ -12,11 +12,11 @@ import {
   FileText, 
   UserCheck, 
   Check, 
-  Inbox, 
-  X
+  Inbox
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatWidget } from "@/components/ChatWidgetContext";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "./ui/modal";
 
 interface MergedNotificationItem {
   id: string; // db row id
@@ -314,42 +314,44 @@ export function NotificationBell() {
       {isOpen && mounted && createPortal(dropdownContent, document.body)}
 
       {/* Notice Detail Dialog Modal */}
-      {selectedNotice && mounted && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-[9999] p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setSelectedNotice(null)}
-              className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-muted rounded-xl border border-border">
-                <Megaphone className="w-5 h-5 text-warning" />
-              </div>
-              <div>
-                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Notice from Landlord</span>
-                <h3 className="text-lg font-bold text-foreground leading-tight">{selectedNotice.title}</h3>
-              </div>
-            </div>
-
+      {selectedNotice && (
+        <Modal
+          open={!!selectedNotice}
+          onOpenChange={(open) => {
+            if (!open) setSelectedNotice(null);
+          }}
+          size="md"
+        >
+          <ModalHeader
+            title={selectedNotice.title}
+            description="Notice from Landlord"
+            onClose={() => setSelectedNotice(null)}
+          />
+          <ModalBody>
             <div className="bg-muted/30 rounded-xl border border-border p-4 min-h-[120px] text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
               {selectedNotice.body}
             </div>
 
-            <div className="flex items-center space-x-3 mt-5 pt-4 border-t border-border">
+            <div className="flex items-center space-x-3 pt-2 text-xs text-muted-foreground">
               <div>
-                <p className="text-xs font-semibold text-foreground">{selectedNotice.senderName}</p>
-                <p className="text-[10px] text-muted-foreground">Property Landlord</p>
+                <p className="font-semibold text-foreground">{selectedNotice.senderName}</p>
+                <p className="text-[11px] text-muted-foreground">Property Landlord</p>
               </div>
-              <span className="text-[10px] text-subtle-foreground ml-auto">
+              <span className="text-[11px] text-subtle-foreground ml-auto">
                 {new Date(selectedNotice.createdAt).toLocaleDateString()} at {new Date(selectedNotice.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
-          </div>
-        </div>,
-        document.body
+          </ModalBody>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setSelectedNotice(null)}
+              className="w-full h-12 rounded-lg text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center transition-colors"
+            >
+              Close
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
     </>
   );

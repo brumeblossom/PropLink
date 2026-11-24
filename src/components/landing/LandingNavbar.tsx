@@ -35,7 +35,7 @@ export function LandingNavbar() {
     <header
       className={cn(
         "sticky top-0 z-50 w-full transition-[border-color,background-color] duration-200 backdrop-blur-md",
-        "bg-background/88",
+        "bg-background/90",
         scrolled ? "border-b border-border shadow-sm" : "border-b border-transparent"
       )}
     >
@@ -66,6 +66,13 @@ export function LandingNavbar() {
               className="text-[15px] text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               For tenants
+            </Link>
+            <Link
+              href="/#how-it-works"
+              onClick={(e) => handleScrollTo(e, "how-it-works")}
+              className="text-[15px] text-muted-foreground hover:text-foreground transition-colors font-medium"
+            >
+              How it works
             </Link>
             <Link
               href="/#faq"
@@ -150,6 +157,13 @@ export function LandingNavbar() {
                   className="text-[17px] font-medium text-muted-foreground hover:text-foreground py-1.5 transition-colors"
                 >
                   For tenants
+                </Link>
+                <Link
+                  href="/#how-it-works"
+                  onClick={(e) => handleScrollTo(e, "how-it-works")}
+                  className="text-[17px] font-medium text-muted-foreground hover:text-foreground py-1.5 transition-colors"
+                >
+                  How it works
                 </Link>
                 <Link
                   href="/#faq"

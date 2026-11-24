@@ -9,6 +9,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, cn } from "@/lib/utils";
 import {
@@ -445,9 +446,9 @@ export default function TenantHomePage() {
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           {/* Card 1: Active leases (kpi-navy, Home) */}
-          <div className="rounded-xl p-[18px] border border-kpi-navy/25 bg-gradient-to-br from-kpi-navy-tint to-card to-70% flex flex-col justify-between h-full">
+          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-navy-fill flex flex-col justify-between h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-navy/25">
+              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
                 <Home className="w-5 h-5 text-kpi-navy" />
               </div>
               <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Active leases</span>
@@ -461,9 +462,9 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 2: Landlords (kpi-gold, Users) */}
-          <div className="rounded-xl p-[18px] border border-kpi-gold/25 bg-gradient-to-br from-kpi-gold-tint to-card to-70% flex flex-col justify-between h-full">
+          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-gold-fill flex flex-col justify-between h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-gold/25">
+              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
                 <Users className="w-5 h-5 text-kpi-gold" />
               </div>
               <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Landlords</span>
@@ -477,9 +478,9 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 3: Outstanding (kpi-clay, CreditCard) */}
-          <div className="rounded-xl p-[18px] border border-kpi-clay/25 bg-gradient-to-br from-kpi-clay-tint to-card to-70% flex flex-col justify-between h-full">
+          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-clay-fill flex flex-col justify-between h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-clay/25">
+              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
                 <CreditCard className="w-5 h-5 text-kpi-clay" />
               </div>
               <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Outstanding</span>
@@ -496,9 +497,9 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 4: Next payment (kpi-sage, Calendar) */}
-          <div className="rounded-xl p-[18px] border border-kpi-sage/25 bg-gradient-to-br from-kpi-sage-tint to-card to-70% flex flex-col justify-between h-full">
+          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-sage-fill flex flex-col justify-between h-full">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-sage/25">
+              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-kpi-sage" />
               </div>
               <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Next payment</span>
@@ -777,23 +778,22 @@ export default function TenantHomePage() {
       </PageContainer>
 
       {/* View Terms Dialog */}
-      {viewingInvitation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-2xl flex flex-col space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold tracking-tight text-foreground font-sans">Rental Invitation</h2>
-              <button
-                onClick={() => setViewingInvitation(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-sm divide-y divide-border">
+      <Modal
+        open={Boolean(viewingInvitation)}
+        onOpenChange={(open) => !open && setViewingInvitation(null)}
+        isSaving={acceptInvitation.isPending}
+        size="md"
+      >
+        {viewingInvitation && (
+          <>
+            <ModalHeader
+              title="Rental Invitation"
+              onClose={() => setViewingInvitation(null)}
+              isSaving={acceptInvitation.isPending}
+            />
+            <ModalBody className="space-y-4 text-sm divide-y divide-border">
               <div className="pt-1">
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Property</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Property</span>
                 <span className="font-semibold text-foreground mt-1 block">{viewingInvitation.unit.property.name}</span>
                 <p className="text-muted-foreground text-xs mt-0.5">
                   {viewingInvitation.unit.property.address}, {viewingInvitation.unit.property.city}, {viewingInvitation.unit.property.state}
@@ -801,12 +801,12 @@ export default function TenantHomePage() {
               </div>
 
               <div className="pt-3">
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Unit</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unit</span>
                 <span className="font-semibold text-foreground mt-1 block">{viewingInvitation.unit.unitNumber}</span>
               </div>
 
               <div className="pt-3">
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Landlord</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Landlord</span>
                 <span className="font-semibold text-foreground mt-1 block">
                   {viewingInvitation.unit.property.landlord.fullName || "Landlord"}
                 </span>
@@ -814,14 +814,14 @@ export default function TenantHomePage() {
               </div>
 
               <div className="pt-3">
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Rental Period</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rental Period</span>
                 <span className="font-semibold text-foreground mt-1 block">
                   {formatDateGB(viewingInvitation.startDate)} – {formatDateGB(viewingInvitation.endDate)}
                 </span>
               </div>
 
               <div className="pt-3">
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Rent</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rent</span>
                 <span className="font-semibold text-foreground mt-1 block">
                   {Number(viewingInvitation.rentAmount) > 0
                     ? `${formatCurrency(viewingInvitation.rentAmount)} / ${formatRentFrequency(viewingInvitation.rentFrequency)}`
@@ -830,32 +830,23 @@ export default function TenantHomePage() {
               </div>
 
               <div className="pt-3">
-                <span className="block text-xs font-semibold text-subtle-foreground uppercase tracking-wider">Deposit</span>
+                <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deposit</span>
                 <span className="font-semibold text-foreground mt-1 block">
                   {viewingInvitation.depositAmount ? formatCurrency(viewingInvitation.depositAmount) : "None"}
                 </span>
               </div>
-            </div>
+            </ModalBody>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-border">
-              <Button
-                variant="outline"
-                onClick={() => setDeclineConfirmInvitation(viewingInvitation)}
-                className="border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-              >
-                Decline
-              </Button>
-              <Button
-                onClick={() => acceptInvitation.mutate({ leaseId: viewingInvitation.id })}
-                disabled={acceptInvitation.isPending}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-              >
-                Accept
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            <ModalFooter
+              cancelText="Decline"
+              onCancel={() => setDeclineConfirmInvitation(viewingInvitation)}
+              primaryText="Accept"
+              onPrimary={() => acceptInvitation.mutate({ leaseId: viewingInvitation.id })}
+              isSaving={acceptInvitation.isPending}
+            />
+          </>
+        )}
+      </Modal>
 
       {/* Decline Confirm Dialog */}
       <ConfirmDialog

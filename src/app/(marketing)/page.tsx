@@ -11,6 +11,7 @@ import {
   Bell,
 } from "lucide-react";
 import { LandingImage } from "@/components/landing/LandingImage";
+import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FaqAccordion } from "@/components/landing/FaqAccordion";
 
 export const metadata: Metadata = {
@@ -68,8 +69,25 @@ export default function LandingPage() {
                 Track leases, rent and tenants without spreadsheets or WhatsApp threads. Know who has paid, what is due and when every lease ends.
               </p>
 
-              {/* Actions */}
-              <div className="flex flex-wrap items-center gap-5 mt-8">
+              {/* Actions - Phones (<640px): stacked full-width */}
+              <div className="flex flex-col gap-3 sm:hidden mt-8 w-full">
+                <Link
+                  href="/signup"
+                  className="h-12 w-full rounded-full bg-gold hover:bg-[#B89230] text-gold-foreground font-semibold text-[15px] flex items-center justify-center gap-2 transition-colors shadow-sm"
+                >
+                  <span>Sign up your first property</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="h-12 w-full rounded-full bg-secondary text-secondary-foreground font-medium text-[15px] flex items-center justify-center hover:opacity-90 transition-opacity"
+                >
+                  Sign in
+                </Link>
+              </div>
+
+              {/* Actions - Desktop / Tablet (>=640px) */}
+              <div className="hidden sm:flex flex-wrap items-center gap-5 mt-8">
                 <Link
                   href="/signup"
                   className="h-[46px] px-7 rounded-full bg-gold hover:bg-[#B89230] text-gold-foreground font-semibold text-[15px] inline-flex items-center gap-2 transition-colors shadow-sm"
@@ -78,13 +96,13 @@ export default function LandingPage() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 
-                <a
-                  href="#tenants"
+                <Link
+                  href="/signup?role=tenant"
                   className="inline-flex items-center gap-1.5 text-[15px] font-medium text-foreground underline decoration-gold decoration-1 underline-offset-4 hover:opacity-80 transition-opacity"
                 >
                   <span>I&apos;m a tenant</span>
                   <ArrowRight className="w-4 h-4 text-gold" />
-                </a>
+                </Link>
               </div>
 
               {/* 1px Divider & 2 plain lines */}
@@ -187,8 +205,8 @@ export default function LandingPage() {
       <section id="tenants" className="scroll-mt-[72px] py-[72px] lg:py-[112px]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left Column: Tenants Image on lg */}
-            <div className="order-2 lg:order-1 w-full">
+            {/* Left Column: Tenants Image (order-1 on phones and desktop) */}
+            <div className="order-1 lg:order-1 w-full">
               <LandingImage
                 src="/landing/tenants.jpg"
                 alt="PropLink for tenants"
@@ -198,14 +216,14 @@ export default function LandingPage() {
               />
             </div>
 
-            {/* Right Column: Text */}
-            <div className="order-1 lg:order-2">
+            {/* Right Column: Text (order-2 on phones and desktop) */}
+            <div className="order-2 lg:order-2">
               <span className="text-[12px] font-bold tracking-[0.14em] text-muted-foreground uppercase">
                 FOR TENANTS
               </span>
               <h2 className="text-[clamp(32px,4.4vw,52px)] leading-[1.08] tracking-[-0.025em] mt-4">
-                <span className="block font-sans font-bold text-foreground">Your rent, receipts and lease,</span>
-                <span className="block font-serif italic font-normal text-emphasis">in one place.</span>
+                <span className="block font-sans font-bold text-foreground">Your rent, receipts and</span>
+                <span className="whitespace-nowrap font-serif italic font-normal text-emphasis">lease, in one place.</span>
               </h2>
 
               <div className="space-y-6 mt-8 lg:mt-10">
@@ -264,6 +282,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* NEW: HOW IT WORKS SECTION */}
+      <HowItWorks />
+
       {/* 5. FAQ SECTION */}
       <section id="faq" className="scroll-mt-[72px] py-[72px] lg:py-[112px]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
@@ -273,7 +294,7 @@ export default function LandingPage() {
             </span>
             <h2 className="text-[clamp(32px,4.4vw,52px)] leading-[1.08] tracking-[-0.025em] mt-4 font-bold">
               <span className="font-sans text-foreground">Questions landlords </span>
-              <span className="font-serif italic font-normal text-emphasis">ask us.</span>
+              <span className="whitespace-nowrap font-serif italic font-normal text-emphasis">ask us.</span>
             </h2>
           </div>
 
