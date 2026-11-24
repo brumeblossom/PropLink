@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-serif",
 });
 
 export const metadata: Metadata = {
@@ -29,11 +29,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans dark", inter.variable)}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Providers>{children}</Providers>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn(plusJakartaSans.variable, instrumentSerif.variable, "font-sans")}
+    >
+      <body className="antialiased font-sans">
+        <Providers>
+          {children}
+          <ThemeSwitcher />
+        </Providers>
       </body>
     </html>
   );
