@@ -220,6 +220,41 @@ export function getRentPeriodForDate(
 }
 
 /**
+ * Returns the date one day after the given date in Africa/Lagos time.
+ */
+export function getDayAfter(dateInput: Date | string): Date {
+  const { year, month, day } = getLagosYMD(dateInput);
+  const next = new Date(Date.UTC(year, month - 1, day + 1, 0, 0, 0));
+  const nextYMD = getLagosYMD(next);
+  return createLagosDate(nextYMD.year, nextYMD.month, nextYMD.day);
+}
+
+/**
+ * Returns the due dates for all periods of a lease.
+ * A period's due date = its end date: the next period's start, or the lease end date for the last period.
+ */
+export function getPeriodDueDates(
+  lease: Pick<LeaseLike, "startDate" | "endDate" | "rentFrequency">
+): Date[] {
+  const starts = getPeriodStarts(lease);
+  if (starts.length === 0) return [];
+
+  const dueDates: Date[] = [];
+  const endYMD = getLagosYMD(lease.endDate);
+  const leaseEndDate = createLagosDate(endYMD.year, endYMD.month, endYMD.day);
+
+  for (let i = 0; i < starts.length; i++) {
+    if (i < starts.length - 1) {
+      dueDates.push(starts[i + 1]);
+    } else {
+      dueDates.push(leaseEndDate);
+    }
+  }
+
+  return dueDates;
+}
+
+/**
  * Evaluates the status and display text for the due date line under summary tiles.
  */
 export function getDueDateStatus(
@@ -244,10 +279,13 @@ export function getDueDateStatus(
   const dueFormatted = formatDateGB(nextDueDate);
 
   if (dueStr < todayStr) {
-    const periodsText = unpaidPeriods === 1 ? "1 unpaid period" : `${unpaidPeriods} unpaid periods`;
+    const periodsCount = Math.max(1, unpaidPeriods);
+    const periodsText = periodsCount === 1 ? "1 unpaid period" : `${periodsCount} unpaid periods`;
+    const dayAfter = getDayAfter(nextDueDate);
+    const overdueSinceFormatted = formatDateGB(dayAfter);
     return {
       status: "overdue",
-      text: `Overdue since ${dueFormatted} · ${periodsText}`,
+      text: `Overdue since ${overdueSinceFormatted} · ${periodsText}`,
     };
   } else if (dueStr === todayStr) {
     return {
@@ -304,9 +342,10 @@ export function formatTwoLineRentDue({
   if (dueStr < todayStr) {
     const periodsCount = Math.max(1, unpaidPeriods);
     const periodWord = periodsCount === 1 ? "1 period" : `${periodsCount} periods`;
+    const dayAfter = getDayAfter(nextDueDate);
     return {
       line1: `Overdue · ${periodWord}`,
-      line2: `since ${formatDateGB(nextDueDate)}`,
+      line2: `since ${formatDateGB(dayAfter)}`,
       status: "overdue",
     };
   }
@@ -372,6 +411,7 @@ export function getLeaseBalance(
   const pendingAmount = pending.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
   const periodStarts = getPeriodStarts(lease);
+  const periodDueDates = getPeriodDueDates(lease);
   const totalPeriods = periodStarts.length;
   const totalLeaseRent = isRentSet ? rentAmount * totalPeriods : 0;
   const remainingLeaseRent = isRentSet ? Math.max(0, totalLeaseRent - paidToDate - pendingAmount) : 0;
@@ -402,33 +442,33 @@ export function getLeaseBalance(
 
   const todayStr = formatLagosYMD(todayInput);
 
-  // Periods due: period starts on or before today
-  const periodsDue = periodStarts.filter((p) => formatLagosYMD(p) <= todayStr).length;
+  // Periods due: periods whose due date is on or before today
+  const periodsDue = periodDueDates.filter((d) => formatLagosYMD(d) <= todayStr).length;
   const rentDueToDate = rentAmount * periodsDue;
 
   const rawDiff = rentDueToDate - paidToDate;
   const outstanding = Math.max(0, rawDiff);
   const credit = rawDiff < 0 ? Math.abs(rawDiff) : 0;
 
-  // nextDueDate: start of the first period not fully covered by paidToDate
+  // nextDueDate: due date (end) of the first period not fully covered by confirmed payments
   let remainingPaid = paidToDate;
   let nextDueDate: Date | null = null;
+  let uncoveredPeriodIndex = -1;
 
-  for (const p of periodStarts) {
+  for (let i = 0; i < periodDueDates.length; i++) {
     if (remainingPaid >= rentAmount) {
       remainingPaid -= rentAmount;
     } else {
-      nextDueDate = p;
+      nextDueDate = periodDueDates[i];
+      uncoveredPeriodIndex = i;
       break;
     }
   }
 
-  // Count unpaid periods among periods that have started so far
+  // Count unpaid periods among finished periods that aren't covered
   let unpaidPeriods = 0;
-  if (nextDueDate && formatLagosYMD(nextDueDate) < todayStr) {
-    unpaidPeriods = periodStarts.filter(
-      (p) => formatLagosYMD(p) >= formatLagosYMD(nextDueDate!) && formatLagosYMD(p) <= todayStr
-    ).length;
+  if (uncoveredPeriodIndex !== -1 && uncoveredPeriodIndex < periodsDue) {
+    unpaidPeriods = periodsDue - uncoveredPeriodIndex;
   }
 
   return {

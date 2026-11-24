@@ -566,13 +566,13 @@ export default function TenantRentalDetailsPage({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                  RENT DUE SO FAR
+                  RENT DUE TO DATE
                 </span>
                 <span className="text-[22px] font-semibold text-white block leading-tight">
                   {formatCurrency(billingSummary.rentDueToDate)}
                 </span>
                 <span className="block text-xs text-neutral-400">
-                  {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} since {formatDateGB(lease.startDate)}
+                  {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} finished
                 </span>
               </div>
 

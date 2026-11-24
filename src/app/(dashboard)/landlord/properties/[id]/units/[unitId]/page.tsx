@@ -941,24 +941,24 @@ export default function UnitDetailPage() {
           phonePrimaryAction={
             activeLease
               ? {
-                  label: "Add payment",
-                  icon: <Plus className="w-4 h-4" />,
-                  disabled: !billingSummary || (billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0),
-                  title:
-                    billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0
-                      ? "This lease is fully paid."
-                      : undefined,
-                  onClick: () => {
-                    setIsLogPaymentOpen(true);
-                    setSelectedPaymentLeaseId(currentLease?.id || activeLease.id);
-                    setPaymentAmount(
-                      billingSummary && billingSummary.outstanding > 0
-                        ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
-                        : ""
-                    );
-                    setPaymentError(null);
-                  },
-                }
+                label: "Add payment",
+                icon: <Plus className="w-4 h-4" />,
+                disabled: !billingSummary || (billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0),
+                title:
+                  billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0
+                    ? "This lease is fully paid."
+                    : undefined,
+                onClick: () => {
+                  setIsLogPaymentOpen(true);
+                  setSelectedPaymentLeaseId(currentLease?.id || activeLease.id);
+                  setPaymentAmount(
+                    billingSummary && billingSummary.outstanding > 0
+                      ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                      : ""
+                  );
+                  setPaymentError(null);
+                },
+              }
               : undefined
           }
           actions={[
@@ -988,13 +988,12 @@ export default function UnitDetailPage() {
             <div className="flex items-center space-x-3">
               <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
               <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-                  unitStatus?.status === "occupied"
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${unitStatus?.status === "occupied"
                     ? "bg-green-950/30 text-green-400 border border-green-900/30"
                     : unitStatus?.status === "reserved"
-                    ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
-                    : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
-                }`}
+                      ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
+                      : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                  }`}
               >
                 {unitStatus?.status === "reserved" ? "Reserved" : unitStatus?.status}
               </span>
@@ -1069,11 +1068,10 @@ export default function UnitDetailPage() {
                     </span>
                   ) : (
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                        timeline.status === "renewal_due"
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${timeline.status === "renewal_due"
                           ? "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30 animate-pulse"
                           : "bg-green-950/30 text-green-400 border border-green-900/30"
-                      }`}
+                        }`}
                     >
                       {timeline.status.replace("_", " ")}
                     </span>
@@ -1280,13 +1278,13 @@ export default function UnitDetailPage() {
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-5 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">RENT DUE SO FAR</span>
+                      <span className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">RENT DUE TO DATE</span>
                       <span className="text-[22px] font-semibold text-white block leading-tight">
                         {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
                       </span>
                       {billingSummary.isRentSet && (
                         <span className="block text-xs text-neutral-400">
-                          {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} since {new Date(activeLease.startDate).toLocaleDateString("en-GB")}
+                          {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} finished
                         </span>
                       )}
                     </div>
@@ -1320,10 +1318,10 @@ export default function UnitDetailPage() {
                       status.status === "overdue"
                         ? "text-red-400 font-medium"
                         : status.status === "today"
-                        ? "text-amber-400 font-medium"
-                        : status.status === "paid_in_full"
-                        ? "text-green-400 font-medium"
-                        : "text-neutral-300";
+                          ? "text-amber-400 font-medium"
+                          : status.status === "paid_in_full"
+                            ? "text-green-400 font-medium"
+                            : "text-neutral-300";
 
                     return (
                       <div className="pt-3 border-t border-neutral-800/60 text-sm text-neutral-300">
@@ -1450,13 +1448,12 @@ export default function UnitDetailPage() {
                                   <td className="px-6 py-4 text-sm">
                                     <div className="flex flex-col space-y-1">
                                       <div className="flex items-center space-x-2">
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                                          p.status === "confirmed"
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
                                             ? "bg-green-950/30 text-green-400 border-green-900/30"
                                             : p.status === "disputed"
-                                            ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                            : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                                        }`}>
+                                              ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                              : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                          }`}>
                                           {paymentStatusLabel[p.status] ?? p.status}
                                         </span>
                                         {hasTenantDispute && (
@@ -1537,13 +1534,12 @@ export default function UnitDetailPage() {
 
                               {/* Bottom: status pill + Flagged pill */}
                               <div className="flex items-center space-x-2 pt-1 border-t border-neutral-800/40">
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
-                                  p.status === "confirmed"
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
                                     ? "bg-green-950/30 text-green-400 border-green-900/30"
                                     : p.status === "disputed"
-                                    ? "bg-red-950/30 text-red-400 border-red-900/30"
-                                    : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                                }`}>
+                                      ? "bg-red-950/30 text-red-400 border-red-900/30"
+                                      : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                                  }`}>
                                   {paymentStatusLabel[p.status] ?? p.status}
                                 </span>
                                 {hasTenantDispute && (
@@ -2414,13 +2410,12 @@ export default function UnitDetailPage() {
                 <div>
                   <span className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</span>
                   <span className="mt-1 block">
-                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                      selectedLandlordPayment.status === "confirmed"
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${selectedLandlordPayment.status === "confirmed"
                         ? "bg-green-950/30 text-green-400 border-green-900/30"
                         : selectedLandlordPayment.status === "disputed"
-                        ? "bg-red-950/30 text-red-400 border-red-900/30"
-                        : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
-                    }`}>
+                          ? "bg-red-950/30 text-red-400 border-red-900/30"
+                          : "bg-yellow-950/30 text-yellow-400 border-yellow-900/30"
+                      }`}>
                       {paymentStatusLabel[selectedLandlordPayment.status] ?? selectedLandlordPayment.status}
                     </span>
                   </span>

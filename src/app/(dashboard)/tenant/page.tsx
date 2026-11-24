@@ -16,7 +16,6 @@ import {
   formatLagosYMD,
   formatTwoLineRentDue,
   getLeaseBalance,
-  getPeriodStarts,
   type RentDueLines,
 } from "@/lib/billing";
 import { formatRentFrequency } from "@/lib/rent";
@@ -237,58 +236,19 @@ export default function TenantHomePage() {
     let earliestDueDate: Date | null = null;
     const todayStr = formatLagosYMD(today);
 
-    for (const l of activeRunning) {
-      const rentAmount = Number(l.rentAmount) || 0;
-      if (rentAmount <= 0) continue;
+    for (const item of processed) {
+      if (!activeRunning.some((l) => l.id === item.id)) continue;
+      const rentAmount = Number(item.rentAmount) || 0;
+      if (rentAmount <= 0 || !item.balance.nextDueDate) continue;
 
-      const periodStarts = getPeriodStarts({
-        startDate: l.startDate,
-        endDate: l.endDate,
-        rentFrequency: l.rentFrequency,
-      });
-
-      // Confirmed payments on this lease
-      const confirmedPayments = (l.payments || []).filter(
-        (p) => !p.status || p.status === "confirmed"
-      );
-      const paidToDate = confirmedPayments.reduce(
-        (sum: number, p) => sum + Number(p.amount || 0),
-        0
-      );
-
-      // Periods strictly before today
-      const periodsBeforeToday = periodStarts.filter(
-        (p) => formatLagosYMD(p) < todayStr
-      );
-      const pastPeriodsRent = periodsBeforeToday.length * rentAmount;
-
-      // Excess paid covering future periods from today onwards
-      const futureCredit = Math.max(0, paidToDate - pastPeriodsRent);
-
-      // Future periods on or after today
-      const futurePeriods = periodStarts.filter(
-        (p) => formatLagosYMD(p) >= todayStr
-      );
-
-      let nextDueForThisLease: Date | null = null;
-      let remainingCredit = futureCredit;
-      for (const p of futurePeriods) {
-        if (remainingCredit >= rentAmount) {
-          remainingCredit -= rentAmount;
-        } else {
-          nextDueForThisLease = p;
-          break;
-        }
-      }
-
-      if (nextDueForThisLease) {
-        const due = new Date(nextDueForThisLease);
+      if (formatLagosYMD(item.balance.nextDueDate) >= todayStr) {
+        const due = new Date(item.balance.nextDueDate);
         if (!earliestDueDate || due < earliestDueDate) {
           earliestDueDate = due;
           earliestPayment = {
             amount: rentAmount,
-            dateStr: formatDateGB(nextDueForThisLease),
-            unitName: l.unit.unitNumber,
+            dateStr: formatDateGB(item.balance.nextDueDate),
+            unitName: item.unit.unitNumber,
           };
         }
       }

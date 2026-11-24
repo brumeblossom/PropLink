@@ -82,7 +82,7 @@ export const internalRouter = router({
           const rentAmount = balance.rentAmount;
           const formattedRent = formatCurrency(rentAmount);
           const title = `Rent Due Reminder (${threshold} Day${threshold > 1 ? "s" : ""})`;
-          const body = `Hello ${lease.tenant.fullName},\n\nThis is a friendly reminder that your rent of ${formattedRent} for the period starting ${dueDateStr} is due in ${threshold} day${threshold > 1 ? "s" : ""}.\n\nThank you,\n${lease.unit.property.name} Management`;
+          const body = `Hello ${lease.tenant.fullName},\n\nThis is a friendly reminder that your rent of ${formattedRent} is due in ${threshold} day${threshold > 1 ? "s" : ""} on ${dueDateStr}.\n\nThank you,\n${lease.unit.property.name} Management`;
 
           // Dispatch email via Resend
           await dispatchNotification({
