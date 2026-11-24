@@ -19,6 +19,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://proplink.ng"),
   title: "PropLink",
   description: "Multi-tenant property management platform",
 };

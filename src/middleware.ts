@@ -87,8 +87,8 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // 2. Redirect authenticated users away from login/signup to their dashboard
-  if (pathname === "/login" || pathname === "/signup") {
+  // 2. Redirect authenticated users away from landing page, login, or signup to their dashboard
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
     if (user) {
       const userRole = user.user_metadata?.role;
       const url = request.nextUrl.clone();
