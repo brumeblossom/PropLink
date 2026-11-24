@@ -65,10 +65,10 @@ export function DetailActionRow({
                 "h-9 px-3.5 text-xs font-medium flex items-center transition-colors disabled:opacity-50",
                 action.disabled && "pointer-events-none",
                 action.variant === "danger"
-                  ? "border-rose-900/50 text-rose-400 hover:bg-rose-950/30 hover:text-rose-300 hover:border-rose-800"
+                  ? "border-destructive/30 text-destructive hover:bg-destructive-tint"
                   : action.variant === "primary"
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
-                  : "border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-850"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                  : "border-border text-foreground/80 hover:text-foreground hover:bg-muted"
               )}
             >
               {action.icon && <span className="mr-1.5 flex-shrink-0">{action.icon}</span>}
@@ -106,7 +106,7 @@ export function DetailActionRow({
                     type="button"
                     onClick={phonePrimaryAction.onClick}
                     disabled={phonePrimaryAction.disabled}
-                    className="h-9 px-3 text-xs font-semibold bg-white text-neutral-950 hover:bg-neutral-200 flex items-center gap-1.5 disabled:opacity-50 pointer-events-none"
+                    className="h-9 px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 disabled:opacity-50 pointer-events-none"
                   >
                     {phonePrimaryAction.icon}
                     <span>{phonePrimaryAction.label}</span>
@@ -123,7 +123,7 @@ export function DetailActionRow({
                 type="button"
                 onClick={phonePrimaryAction.onClick}
                 disabled={phonePrimaryAction.disabled}
-                className="h-9 px-3 text-xs font-semibold bg-white text-neutral-950 hover:bg-neutral-200 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                className="h-9 px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
                 {phonePrimaryAction.icon}
                 <span>{phonePrimaryAction.label}</span>
@@ -142,7 +142,7 @@ export function DetailActionRow({
               disabled: action.disabled,
             }))}
             label="More actions"
-            triggerClassName="h-9 w-9 bg-neutral-900 border border-neutral-800"
+            triggerClassName="h-9 w-9 bg-card border border-border"
           />
         )}
       </div>

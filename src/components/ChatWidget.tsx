@@ -79,20 +79,20 @@ export function ChatWidget() {
       {isOpen && (
         <div
           ref={panelRef}
-          className="w-[370px] rounded-2xl border border-neutral-800 bg-neutral-950 shadow-[0_8px_40px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
+          className="w-[370px] rounded-2xl border border-border bg-card shadow-[0_8px_40px_rgba(0,0,0,0.2)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200"
           style={{ pointerEvents: "auto" }}
         >
           {/* Panel Header */}
-          <div className="px-4 py-3 border-b border-neutral-800 bg-neutral-900/60 flex items-center justify-between flex-shrink-0">
+          <div className="px-4 py-3 border-b border-border bg-muted/60 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-2.5">
-              <div className="p-1.5 rounded-lg bg-neutral-800">
-                <MessageSquare className="w-3.5 h-3.5 text-neutral-300" />
+              <div className="p-1.5 rounded-lg bg-muted">
+                <MessageSquare className="w-3.5 h-3.5 text-foreground/80" />
               </div>
-              <span className="text-sm font-semibold text-white">{panelTitle}</span>
+              <span className="text-sm font-semibold text-foreground">{panelTitle}</span>
             </div>
             <button
               onClick={close}
-              className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors focus:outline-none"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus:outline-none"
               aria-label="Close chat"
             >
               <X className="w-4 h-4" />
@@ -104,17 +104,17 @@ export function ChatWidget() {
             {resolvedUnitId ? (
               <UnitChatPanel
                 unitId={resolvedUnitId}
-                className="h-full bg-neutral-950/20"
+                className="h-full bg-card/20"
               />
             ) : (
               /* Landlord: no unit selected yet */
               <div className="h-full flex flex-col items-center justify-center text-center px-6 space-y-3 py-8">
-                <div className="w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center">
-                  <MessageSquare className="w-7 h-7 text-neutral-600" />
+                <div className="w-14 h-14 rounded-full bg-muted border border-border flex items-center justify-center">
+                  <MessageSquare className="w-7 h-7 text-subtle-foreground" />
                 </div>
-                <p className="text-sm font-semibold text-neutral-300">No conversation selected</p>
-                <p className="text-xs text-neutral-500 leading-relaxed">
-                  Click <strong className="text-neutral-400">&quot;Chat with Tenant&quot;</strong> on a unit
+                <p className="text-sm font-semibold text-foreground/80">No conversation selected</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Click <strong className="text-foreground">&quot;Chat with Tenant&quot;</strong> on a unit
                   page, or tap a chat notification to open a conversation here.
                 </p>
               </div>
@@ -131,8 +131,8 @@ export function ChatWidget() {
           relative w-14 h-14 rounded-full shadow-2xl flex items-center justify-center
           transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none
           ${isOpen
-            ? "bg-neutral-800 text-white hover:bg-neutral-700"
-            : "bg-white text-neutral-950 hover:bg-neutral-100"
+            ? "bg-muted text-foreground hover:bg-muted/80"
+            : "bg-primary text-primary-foreground hover:bg-primary/90"
           }
         `}
         style={{ pointerEvents: "auto" }}
@@ -148,7 +148,7 @@ export function ChatWidget() {
         {/* Unread badge */}
         {!isOpen && unreadChatCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-neutral-950 px-1 animate-in zoom-in-50 duration-150"
+            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground ring-2 ring-background px-1 animate-in zoom-in-50 duration-150"
             aria-label={`${unreadChatCount} unread message${unreadChatCount !== 1 ? "s" : ""}`}
           >
             {unreadChatCount}

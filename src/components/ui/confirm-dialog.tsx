@@ -3,6 +3,7 @@
 import React from "react";
 import { Button } from "./button";
 import { X, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface ConfirmDialogProps {
   isOpen: boolean;
@@ -30,23 +31,23 @@ export function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in-0 duration-150">
-      <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
-          <h2 className="text-lg font-bold text-white font-sans flex items-center gap-2">
-            {variant === "danger" && <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in-0 duration-150">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
+          <h2 className="text-lg font-bold text-foreground font-sans flex items-center gap-2">
+            {variant === "danger" && <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />}
             <span>{title}</span>
           </h2>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="text-neutral-400 hover:text-white transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <p className="text-sm text-neutral-300 mb-6 leading-relaxed">
+        <p className="text-sm text-foreground/80 mb-6 leading-relaxed">
           {description}
         </p>
 
@@ -56,7 +57,7 @@ export function ConfirmDialog({
             onClick={onClose}
             disabled={isLoading}
             variant="outline"
-            className="w-1/2 border-neutral-800 text-white hover:bg-neutral-900 h-10 text-sm font-medium"
+            className="w-1/2 border-border text-foreground hover:bg-muted h-10 text-sm font-medium"
           >
             {cancelText}
           </Button>
@@ -64,11 +65,12 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`w-1/2 font-semibold h-10 text-sm ${
+            className={cn(
+              "w-1/2 font-semibold h-10 text-sm",
               variant === "danger"
-                ? "bg-red-600 hover:bg-red-500 text-white"
-                : "bg-white text-neutral-950 hover:bg-neutral-200"
-            }`}
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            )}
           >
             {isLoading ? "Deleting..." : confirmText}
           </Button>

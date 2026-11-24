@@ -32,17 +32,17 @@ export function useToast() {
 // ─── Individual Toast Item ────────────────────────────────────────────────────
 
 const ICON_MAP: Record<ToastVariant, React.ReactNode> = {
-  success: <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />,
-  error:   <XCircle     className="w-4 h-4 text-red-400 shrink-0" />,
-  warning: <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0" />,
-  info:    <Info        className="w-4 h-4 text-sky-400 shrink-0" />,
+  success: <CheckCircle2 className="w-4 h-4 text-success shrink-0" />,
+  error:   <XCircle     className="w-4 h-4 text-destructive shrink-0" />,
+  warning: <AlertCircle className="w-4 h-4 text-warning shrink-0" />,
+  info:    <Info        className="w-4 h-4 text-primary shrink-0" />,
 };
 
 const BORDER_MAP: Record<ToastVariant, string> = {
-  success: 'border-green-900/40',
-  error:   'border-red-900/40',
-  warning: 'border-yellow-900/40',
-  info:    'border-sky-900/40',
+  success: 'border-success/30',
+  error:   'border-destructive/30',
+  warning: 'border-warning/30',
+  info:    'border-primary/30',
 };
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
@@ -62,7 +62,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   return (
     <div
       className={cn(
-        'flex items-start gap-3 w-full max-w-xs rounded-xl border bg-neutral-950/95 backdrop-blur px-4 py-3 shadow-xl',
+        'flex items-start gap-3 w-full max-w-xs rounded-xl border bg-card/95 backdrop-blur px-4 py-3 shadow-xl',
         'transition-all duration-300',
         BORDER_MAP[toast.variant],
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
@@ -70,10 +70,10 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       role="alert"
     >
       {ICON_MAP[toast.variant]}
-      <p className="text-sm text-white flex-1 leading-snug font-medium">{toast.message}</p>
+      <p className="text-sm text-foreground flex-1 leading-snug font-medium">{toast.message}</p>
       <button
         onClick={() => { setVisible(false); setTimeout(() => onDismiss(toast.id), 300); }}
-        className="text-neutral-500 hover:text-white transition-colors mt-0.5"
+        className="text-muted-foreground hover:text-foreground transition-colors mt-0.5"
         aria-label="Dismiss notification"
       >
         <X className="w-3.5 h-3.5" />

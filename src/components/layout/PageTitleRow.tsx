@@ -19,7 +19,7 @@ export function PageTitleRow({
       {/* Row 1: Heading on left, actions on right */}
       <div className="flex items-center justify-between gap-4">
         {typeof title === "string" ? (
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             {title}
           </h1>
         ) : (
@@ -34,7 +34,7 @@ export function PageTitleRow({
 
       {/* Row 2: Full width description under heading */}
       {description && (
-        <p className="text-neutral-400 text-sm">
+        <p className="text-muted-foreground text-sm">
           {description}
         </p>
       )}

@@ -172,9 +172,6 @@ export function NotificationBell() {
           }
         }
       } else if (item.relatedType === "conversation") {
-        // Open the floating chat widget instead of navigating to a full page.
-        // Tenant: widget self-resolves unitId from their active lease — just open it.
-        // Landlord: resolve unitId from the conversationId, then hand it to the widget.
         if (userRole === "tenant") {
           chatWidget.open();
         } else {
@@ -211,21 +208,21 @@ export function NotificationBell() {
   const getIcon = (type: string) => {
     switch (type) {
       case "notice":
-        return <Megaphone className="w-4 h-4 text-amber-400" />;
+        return <Megaphone className="w-4 h-4 text-warning" />;
       case "message_received":
-        return <MessageSquare className="w-4 h-4 text-sky-400" />;
+        return <MessageSquare className="w-4 h-4 text-primary" />;
       case "payment_logged":
       case "payment_confirmed":
       case "payment_rejected":
       case "payment_flagged":
       case "payment_resolved":
-        return <CreditCard className="w-4 h-4 text-emerald-400" />;
+        return <CreditCard className="w-4 h-4 text-success" />;
       case "lease_created":
-        return <FileText className="w-4 h-4 text-purple-400" />;
+        return <FileText className="w-4 h-4 text-kpi-navy" />;
       case "invite_redeemed":
-        return <UserCheck className="w-4 h-4 text-indigo-400" />;
+        return <UserCheck className="w-4 h-4 text-kpi-gold" />;
       default:
-        return <Bell className="w-4 h-4 text-neutral-400" />;
+        return <Bell className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -233,15 +230,15 @@ export function NotificationBell() {
     <div
       ref={dropdownRef}
       style={{ top: dropdownPos.top, right: dropdownPos.right }}
-      className="fixed w-80 sm:w-96 rounded-2xl border border-neutral-800 bg-neutral-950 p-4 shadow-2xl z-[9999] animate-in fade-in slide-in-from-top-3 duration-200"
+      className="fixed w-80 sm:w-96 rounded-2xl border border-border bg-card p-4 shadow-2xl z-[9999] animate-in fade-in slide-in-from-top-3 duration-200"
     >
-      <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-3">
-        <h2 className="text-sm font-semibold text-white">Notifications</h2>
+      <div className="flex items-center justify-between border-b border-border pb-3 mb-3">
+        <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
         {unreadCount > 0 && (
           <button
             onClick={() => markAllReadMutation.mutate()}
             disabled={markAllReadMutation.isPending}
-            className="text-xs text-neutral-400 hover:text-white flex items-center space-x-1 font-medium transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center space-x-1 font-medium transition-colors"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Mark all read</span>
@@ -250,9 +247,9 @@ export function NotificationBell() {
       </div>
 
       {/* Notification List */}
-      <div className="max-h-[350px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+      <div className="max-h-[350px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {mergedNotifications.length === 0 ? (
-          <div className="py-8 text-center text-neutral-500">
+          <div className="py-8 text-center text-muted-foreground">
             <Inbox className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-xs">Your notification feed is empty.</p>
           </div>
@@ -264,27 +261,27 @@ export function NotificationBell() {
               className={cn(
                 "flex items-start space-x-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent",
                 item.readAt === null 
-                  ? "bg-neutral-900/40 border-neutral-800/40 hover:bg-neutral-900/60" 
-                  : "hover:bg-neutral-900/20 opacity-75"
+                  ? "bg-muted/40 border-border/40 hover:bg-muted/60" 
+                  : "hover:bg-muted/20 opacity-75"
               )}
             >
-              <div className="flex-shrink-0 mt-0.5 p-1.5 bg-neutral-900 rounded-lg border border-neutral-800">
+              <div className="flex-shrink-0 mt-0.5 p-1.5 bg-muted rounded-lg border border-border">
                 {getIcon(item.type)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className={cn("text-xs text-white", item.readAt === null ? "font-semibold" : "font-normal")}>
+                <p className={cn("text-xs text-foreground", item.readAt === null ? "font-semibold" : "font-normal")}>
                   {item.title}
                 </p>
-                <p className="text-[11px] text-neutral-400 mt-0.5 line-clamp-2">
+                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
                   {item.body}
                 </p>
                 <div className="flex items-center space-x-2 mt-1.5">
                   {item.senderName && (
-                    <span className="text-[10px] text-neutral-500 truncate flex items-center space-x-1">
-                      <span className="font-medium text-neutral-400">{item.senderName}</span>
+                    <span className="text-[10px] text-muted-foreground truncate flex items-center space-x-1">
+                      <span className="font-medium text-foreground/80">{item.senderName}</span>
                     </span>
                   )}
-                  <span className="text-[9px] text-neutral-500 font-medium font-sans ml-auto">
+                  <span className="text-[9px] text-subtle-foreground font-medium font-sans ml-auto">
                     {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -302,12 +299,12 @@ export function NotificationBell() {
       <button
         ref={bellButtonRef}
         onClick={handleBellToggle}
-        className="relative p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition-all focus:outline-none"
+        className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all focus:outline-none"
         aria-label="Open notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-neutral-950">
+          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
             {unreadCount}
           </span>
         )}
@@ -318,35 +315,35 @@ export function NotificationBell() {
 
       {/* Notice Detail Dialog Modal */}
       {selectedNotice && mounted && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[9999] p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-[9999] p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedNotice(null)}
-              className="absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition-colors"
+              className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-neutral-900 rounded-xl border border-neutral-800">
-                <Megaphone className="w-5 h-5 text-amber-400" />
+              <div className="p-2 bg-muted rounded-xl border border-border">
+                <Megaphone className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <span className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">Notice from Landlord</span>
-                <h3 className="text-lg font-bold text-white leading-tight">{selectedNotice.title}</h3>
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Notice from Landlord</span>
+                <h3 className="text-lg font-bold text-foreground leading-tight">{selectedNotice.title}</h3>
               </div>
             </div>
 
-            <div className="bg-neutral-900/30 rounded-xl border border-neutral-800 p-4 min-h-[120px] text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">
+            <div className="bg-muted/30 rounded-xl border border-border p-4 min-h-[120px] text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
               {selectedNotice.body}
             </div>
 
-            <div className="flex items-center space-x-3 mt-5 pt-4 border-t border-neutral-900">
+            <div className="flex items-center space-x-3 mt-5 pt-4 border-t border-border">
               <div>
-                <p className="text-xs font-semibold text-white">{selectedNotice.senderName}</p>
-                <p className="text-[10px] text-neutral-500">Property Landlord</p>
+                <p className="text-xs font-semibold text-foreground">{selectedNotice.senderName}</p>
+                <p className="text-[10px] text-muted-foreground">Property Landlord</p>
               </div>
-              <span className="text-[10px] text-neutral-500 ml-auto">
+              <span className="text-[10px] text-subtle-foreground ml-auto">
                 {new Date(selectedNotice.createdAt).toLocaleDateString()} at {new Date(selectedNotice.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>

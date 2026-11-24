@@ -41,7 +41,7 @@ export function ActionMenu({
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
               className={cn(
-                "w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400",
+                "w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 triggerClassName
               )}
               aria-label={label}
@@ -60,68 +60,68 @@ export function ActionMenu({
         </TooltipContent>
       </Tooltip>
 
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            align="end"
-            sideOffset={4}
-            collisionPadding={8}
-            onClick={(e) => e.stopPropagation()}
-            className={cn(
-              "z-50 min-w-[176px] rounded-xl border border-neutral-800 bg-neutral-950 p-1 shadow-2xl animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 duration-100",
-              contentClassName
-            )}
-          >
-            {items.map((item, index) => (
-              <React.Fragment key={index}>
-                {item.separatorBefore && (
-                  <DropdownMenu.Separator className="my-1 border-t border-neutral-800" />
-                )}
-                {item.disabled ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="block w-full">
-                        <DropdownMenu.Item
-                          disabled
-                          onSelect={(e) => e.preventDefault()}
-                          className="w-full h-10 sm:h-9 px-3 text-left text-[13px] rounded-lg text-neutral-600 flex items-center select-none cursor-not-allowed opacity-60 focus:outline-none"
-                        >
-                          {item.icon && <span className="mr-2 shrink-0">{item.icon}</span>}
-                          <span>{item.label}</span>
-                        </DropdownMenu.Item>
-                      </span>
-                    </TooltipTrigger>
-                    {item.disabledTooltip && (
-                      <TooltipContent
-                        side="left"
-                        align="center"
-                        sideOffset={6}
-                        className="pointer-events-none"
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={4}
+          collisionPadding={8}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "z-50 min-w-[176px] rounded-xl border border-border bg-card p-1 shadow-2xl animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 duration-100",
+            contentClassName
+          )}
+        >
+          {items.map((item, index) => (
+            <React.Fragment key={index}>
+              {item.separatorBefore && (
+                <DropdownMenu.Separator className="my-1 border-t border-border" />
+              )}
+              {item.disabled ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="block w-full">
+                      <DropdownMenu.Item
+                        disabled
+                        onSelect={(e) => e.preventDefault()}
+                        className="w-full h-10 sm:h-9 px-3 text-left text-[13px] rounded-lg text-subtle-foreground flex items-center select-none cursor-not-allowed opacity-60 focus:outline-none"
                       >
-                        {item.disabledTooltip}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                ) : (
-                  <DropdownMenu.Item
-                    onSelect={(e) => {
-                      e.stopPropagation();
-                      item.onClick?.();
-                    }}
-                    className={cn(
-                      "w-full h-10 sm:h-9 px-3 text-left text-[13px] rounded-lg flex items-center select-none cursor-pointer focus:outline-none transition-colors",
-                      item.variant === "danger"
-                        ? "text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 focus:text-rose-300 focus:bg-rose-950/40 data-[highlighted]:bg-rose-950/40 data-[highlighted]:text-rose-300"
-                        : "text-neutral-300 hover:text-white hover:bg-neutral-900 focus:text-white focus:bg-neutral-900 data-[highlighted]:bg-neutral-900 data-[highlighted]:text-white"
-                    )}
-                  >
-                    {item.icon && <span className="mr-2 shrink-0">{item.icon}</span>}
-                    <span>{item.label}</span>
-                  </DropdownMenu.Item>
-                )}
-              </React.Fragment>
-            ))}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
-    );
-  }
+                        {item.icon && <span className="mr-2 shrink-0">{item.icon}</span>}
+                        <span>{item.label}</span>
+                      </DropdownMenu.Item>
+                    </span>
+                  </TooltipTrigger>
+                  {item.disabledTooltip && (
+                    <TooltipContent
+                      side="left"
+                      align="center"
+                      sideOffset={6}
+                      className="pointer-events-none"
+                    >
+                      {item.disabledTooltip}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              ) : (
+                <DropdownMenu.Item
+                  onSelect={(e) => {
+                    e.stopPropagation();
+                    item.onClick?.();
+                  }}
+                  className={cn(
+                    "w-full h-10 sm:h-9 px-3 text-left text-[13px] rounded-lg flex items-center select-none cursor-pointer focus:outline-none transition-colors",
+                    item.variant === "danger"
+                      ? "text-destructive hover:bg-destructive-tint focus:bg-destructive-tint data-[highlighted]:bg-destructive-tint data-[highlighted]:text-destructive"
+                      : "text-foreground/80 hover:text-foreground hover:bg-muted focus:text-foreground focus:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
+                  )}
+                >
+                  {item.icon && <span className="mr-2 shrink-0">{item.icon}</span>}
+                  <span>{item.label}</span>
+                </DropdownMenu.Item>
+              )}
+            </React.Fragment>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}

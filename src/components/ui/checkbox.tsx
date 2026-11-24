@@ -21,11 +21,11 @@ const Checkbox = React.forwardRef<
       ref={ref}
       checked={isIndeterminate ? "indeterminate" : checked}
       className={cn(
-        "peer h-4 w-4 shrink-0 rounded-[4px] border border-neutral-700 bg-neutral-900 transition-colors",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 focus-visible:ring-offset-1 focus-visible:ring-offset-neutral-950",
+        "peer h-4 w-4 shrink-0 rounded-[4px] border border-border bg-card transition-colors",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         "disabled:cursor-not-allowed disabled:opacity-40",
-        "data-[state=checked]:bg-white data-[state=checked]:text-neutral-950 data-[state=checked]:border-white",
-        "data-[state=indeterminate]:bg-white data-[state=indeterminate]:text-neutral-950 data-[state=indeterminate]:border-white",
+        "data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary",
+        "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground data-[state=indeterminate]:border-primary",
         className
       )}
       {...props}

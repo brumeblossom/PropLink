@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BackButtonProps {
   href?: string;
@@ -16,7 +17,10 @@ export function BackButton({ href, onClick, label = "Back", className }: BackBut
     </>
   );
 
-  const classes = `h-9 inline-flex items-center space-x-2 text-neutral-400 hover:text-white transition-colors group focus:outline-none ${className || ""}`;
+  const classes = cn(
+    "h-9 inline-flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors group focus:outline-none",
+    className
+  );
 
   if (onClick) {
     return (

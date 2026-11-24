@@ -124,7 +124,7 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center text-neutral-500">
+      <div className="rounded-xl border border-border bg-card/40 p-12 text-center text-muted-foreground">
         <Loader2 className="w-6 h-6 mx-auto animate-spin mb-2" />
         <p className="text-xs">Loading chat conversation...</p>
       </div>
@@ -133,10 +133,10 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
 
   if (!conversation) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/10 p-12 text-center text-neutral-500">
-        <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-40 text-neutral-400" />
-        <p className="text-base font-semibold text-neutral-300">No active chat</p>
-        <p className="text-xs text-neutral-500 mt-1">
+      <div className="rounded-xl border border-border bg-card/40 p-12 text-center text-muted-foreground">
+        <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-40 text-muted-foreground" />
+        <p className="text-base font-semibold text-foreground/80">No active chat</p>
+        <p className="text-xs text-muted-foreground mt-1">
           Chat is only available during active leases.
         </p>
       </div>
@@ -150,24 +150,24 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
       ref={containerRef}
       className={cn(
         "flex flex-col overflow-hidden",
-        className ?? "rounded-xl border border-neutral-800 bg-neutral-900/15 h-[500px] shadow-lg"
+        className ?? "rounded-xl border border-border bg-card/40 h-[500px] shadow-lg"
       )}
     >
       {/* Header bar */}
-      <div className="px-5 py-4 border-b border-neutral-850 bg-neutral-950/45 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-border bg-card/60 flex items-center justify-between">
         <div>
-          <h4 className="text-sm font-semibold text-white leading-tight">{counterparty.fullName}</h4>
-          <span className="text-[10px] text-neutral-500 capitalize">{currentUser?.role === "landlord" ? "Tenant" : "Landlord"}</span>
+          <h4 className="text-sm font-semibold text-foreground leading-tight">{counterparty.fullName}</h4>
+          <span className="text-[10px] text-muted-foreground capitalize">{currentUser?.role === "landlord" ? "Tenant" : "Landlord"}</span>
         </div>
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {conversation.messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center text-neutral-500 py-12">
-            <MessageSquare className="w-10 h-10 mb-2 opacity-30 text-neutral-400" />
-            <p className="text-xs font-medium text-neutral-400">No messages yet</p>
-            <p className="text-[11px] text-neutral-600 mt-0.5">Send a message to start the conversation.</p>
+          <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground py-12">
+            <MessageSquare className="w-10 h-10 mb-2 opacity-30 text-muted-foreground" />
+            <p className="text-xs font-medium text-muted-foreground">No messages yet</p>
+            <p className="text-[11px] text-subtle-foreground mt-0.5">Send a message to start the conversation.</p>
           </div>
         ) : (
           conversation.messages.map((msg) => {
@@ -184,13 +184,13 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
                     className={cn(
                       "px-4 py-2.5 text-xs rounded-2xl whitespace-pre-wrap leading-relaxed shadow",
                       isMe 
-                        ? "bg-white text-neutral-950 rounded-br-none" 
-                        : "bg-neutral-900/90 border border-neutral-850 text-neutral-100 rounded-bl-none"
+                        ? "bg-primary text-primary-foreground rounded-br-none" 
+                        : "bg-muted border border-border text-foreground rounded-bl-none"
                     )}
                   >
                     {msg.body}
                   </div>
-                  <span className={cn("text-[9px] text-neutral-500 font-medium font-sans px-1.5", isMe ? "text-right" : "text-left")}>
+                  <span className={cn("text-[9px] text-muted-foreground font-medium font-sans px-1.5", isMe ? "text-right" : "text-left")}>
                     {formattedTime}
                   </span>
                 </div>
@@ -202,21 +202,21 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
       </div>
 
       {/* Input panel */}
-      <form onSubmit={handleSend} className="p-3 border-t border-neutral-850 bg-neutral-950/25 flex items-center space-x-2">
+      <form onSubmit={handleSend} className="p-3 border-t border-border bg-card/50 flex items-center space-x-2">
         <input
           type="text"
           value={messageText}
           onChange={(e) => setMessageText(e.target.value)}
           placeholder={`Type a message to ${counterparty.fullName}...`}
           disabled={sending}
-          className="flex-1 rounded-xl border border-neutral-850 bg-neutral-900/50 px-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none text-sm"
+          className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none text-sm"
         />
         <Button
           type="submit"
           disabled={!messageText.trim() || sending}
-          className="h-10 w-10 p-0 rounded-xl bg-white text-neutral-950 hover:bg-neutral-200 transition-colors flex items-center justify-center flex-shrink-0"
+          className="h-10 w-10 p-0 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center flex-shrink-0"
         >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin text-neutral-950" /> : <Send className="w-4 h-4 text-neutral-950" />}
+          {sending ? <Loader2 className="w-4 h-4 animate-spin text-primary-foreground" /> : <Send className="w-4 h-4 text-primary-foreground" />}
         </Button>
       </form>
     </div>

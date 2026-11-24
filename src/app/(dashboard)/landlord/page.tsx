@@ -7,6 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils";
 import {
+  Building2,
+  LayoutGrid,
+  UserCheck,
+  DoorOpen,
+} from "lucide-react";
+import {
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -19,11 +25,11 @@ import {
   CartesianGrid,
 } from "recharts";
 
-// Calm, single-tone palette for donut chart
+// Brand KPI series colors for charts
 const DONUT_COLORS: Record<string, string> = {
-  residential: "rgba(96, 165, 250, 0.85)", // blue-400
-  commercial: "rgba(129, 140, 248, 0.85)", // indigo-400
-  mixed: "rgba(148, 163, 184, 0.85)", // slate-400
+  residential: "hsl(var(--kpi-navy))",
+  commercial: "hsl(var(--kpi-gold))",
+  mixed: "hsl(var(--kpi-sage))",
 };
 
 export default function LandlordDashboard() {
@@ -38,7 +44,7 @@ export default function LandlordDashboard() {
 
   if (isLoadingSummary) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <PageHeader title="Dashboard" />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           <div>
@@ -46,12 +52,15 @@ export default function LandlordDashboard() {
             <Skeleton className="h-4 w-64 mt-1.5" />
           </div>
 
-          {/* Stats Skeletons (84px tall, 4 across desktop, 2 across mobile) */}
+          {/* Stats Skeletons (4 across desktop, 2 across mobile) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 h-[84px] flex flex-col justify-center">
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="h-6 w-12 mt-1.5" />
+              <div key={i} className="rounded-xl border border-border bg-card p-[18px] min-h-[140px] flex flex-col justify-between">
+                <Skeleton className="w-10 h-10 rounded-xl" />
+                <div className="space-y-1.5 mt-3.5">
+                  <Skeleton className="h-3.5 w-20" />
+                  <Skeleton className="h-7 w-16" />
+                </div>
               </div>
             ))}
           </div>
@@ -59,7 +68,7 @@ export default function LandlordDashboard() {
           {/* Grid Skeletons */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 h-[264px]">
+              <div key={i} className="rounded-xl border border-border bg-card p-5 h-[264px]">
                 <Skeleton className="h-4 w-36 mb-4" />
                 <Skeleton className="h-[180px] w-full rounded-lg" />
               </div>
@@ -67,7 +76,7 @@ export default function LandlordDashboard() {
           </div>
 
           {/* Table Skeleton */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5">
+          <div className="rounded-xl border border-border bg-card p-5">
             <Skeleton className="h-4 w-32 mb-4" />
             <Skeleton className="h-44 w-full rounded-lg" />
           </div>
@@ -113,53 +122,87 @@ export default function LandlordDashboard() {
   const tenantsYWidth = getYAxisWidth(tenantsByLocation.data.map((t) => t.location));
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <PageHeader title="Dashboard" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Welcome Section */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">
             Welcome back, {user?.fullName || "Landlord"}
           </h1>
-          <p className="text-neutral-400 mt-1 text-sm">
+          <p className="text-muted-foreground mt-1 text-sm">
             Overview of your properties, units, and tenant activity.
           </p>
         </div>
 
-        {/* 1. Stat Cards: 16px 20px padding, 84px height, 4 across desktop, 2 across mobile */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
-            <span className="block text-xs text-neutral-400">Properties</span>
-            <span className="text-2xl font-semibold text-white mt-1 block">{stats.totalProperties}</span>
+        {/* 1. Stat Cards: 4 across desktop, 2 across mobile */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+          {/* Card 1: Total properties (kpi-navy, Building2) */}
+          <div className="rounded-xl p-[18px] border border-kpi-navy/25 bg-gradient-to-br from-kpi-navy-tint to-card to-70% flex flex-col justify-between h-full">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-navy/25">
+                <Building2 className="w-5 h-5 text-kpi-navy" />
+              </div>
+              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Total properties</span>
+              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+                {stats.totalProperties}
+              </span>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
-            <span className="block text-xs text-neutral-400">Total units</span>
-            <span className="text-2xl font-semibold text-white mt-1 block">{stats.totalUnits}</span>
+          {/* Card 2: Total units (kpi-gold, LayoutGrid) */}
+          <div className="rounded-xl p-[18px] border border-kpi-gold/25 bg-gradient-to-br from-kpi-gold-tint to-card to-70% flex flex-col justify-between h-full">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-gold/25">
+                <LayoutGrid className="w-5 h-5 text-kpi-gold" />
+              </div>
+              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Total units</span>
+              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+                {stats.totalUnits}
+              </span>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
-            <span className="block text-xs text-neutral-400">Occupied</span>
-            <span className="text-2xl font-semibold text-white mt-1 block">{stats.occupiedUnits}</span>
-            <span className="text-xs text-neutral-400 mt-1 block">{stats.occupancyRate}% occupancy</span>
+          {/* Card 3: Occupied (kpi-sage, UserCheck) */}
+          <div className="rounded-xl p-[18px] border border-kpi-sage/25 bg-gradient-to-br from-kpi-sage-tint to-card to-70% flex flex-col justify-between h-full">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-sage/25">
+                <UserCheck className="w-5 h-5 text-kpi-sage" />
+              </div>
+              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Occupied</span>
+              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+                {stats.occupiedUnits}
+              </span>
+              <span className="text-xs text-subtle-foreground mt-1 block">
+                {stats.occupancyRate}% occupancy
+              </span>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 px-5 py-4 min-h-[84px] flex flex-col justify-center">
-            <span className="block text-xs text-neutral-400">Vacant</span>
-            <span className="text-2xl font-semibold text-white mt-1 block">{stats.vacantUnits}</span>
+          {/* Card 4: Vacant (kpi-clay, DoorOpen) */}
+          <div className="rounded-xl p-[18px] border border-kpi-clay/25 bg-gradient-to-br from-kpi-clay-tint to-card to-70% flex flex-col justify-between h-full">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center ring-1 ring-inset ring-kpi-clay/25">
+                <DoorOpen className="w-5 h-5 text-kpi-clay" />
+              </div>
+              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Vacant</span>
+              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+                {stats.vacantUnits}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* 2 & 3. Responsive Grid: 2 columns on desktop, 1 on phones with 16px gap */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Chart 1: Properties by Type (Donut) */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
-            <h2 className="text-sm font-semibold text-white mb-4">Properties by Type</h2>
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Properties by Type</h2>
 
             <div className="h-[200px] w-full flex items-center justify-center">
               {totalTypedProperties === 0 ? (
-                <div className="text-center text-xs text-neutral-500">No properties added yet.</div>
+                <div className="text-center text-xs text-muted-foreground">No properties added yet.</div>
               ) : isMounted ? (
                 <div className="w-full h-full flex flex-col sm:flex-row items-center justify-center gap-6">
                   <div className="w-[180px] h-[180px] shrink-0">
@@ -178,36 +221,36 @@ export default function LandlordDashboard() {
                           {propertiesByType.map((entry) => (
                             <Cell
                               key={`cell-${entry.type}`}
-                              fill={DONUT_COLORS[entry.type] || "#525252"}
-                              stroke="#0a0a0a"
+                              fill={DONUT_COLORS[entry.type] || "hsl(var(--kpi-navy))"}
+                              stroke="hsl(var(--card))"
                               strokeWidth={1}
                             />
                           ))}
                         </Pie>
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#0a0a0a",
-                            borderColor: "#262626",
+                            backgroundColor: "hsl(var(--card))",
+                            borderColor: "hsl(var(--border))",
                             borderRadius: "8px",
                             fontSize: "12px",
-                            color: "#ffffff",
+                            color: "hsl(var(--foreground))",
                           }}
-                          itemStyle={{ color: "#e5e5e5" }}
+                          itemStyle={{ color: "hsl(var(--foreground))" }}
                         />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
 
-                  {/* Legend on the right on desktop, under on phones */}
+                  {/* Legend */}
                   <div className="flex flex-col gap-2">
                     {propertiesByType.map((item) => (
-                      <div key={item.type} className="flex items-center text-xs text-neutral-400">
+                      <div key={item.type} className="flex items-center text-xs text-muted-foreground">
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0 mr-2"
-                          style={{ backgroundColor: DONUT_COLORS[item.type] || "#525252" }}
+                          style={{ backgroundColor: DONUT_COLORS[item.type] || "hsl(var(--kpi-navy))" }}
                         />
                         <span>{item.label}</span>
-                        <span className="text-white font-medium ml-1.5">{item.count}</span>
+                        <span className="text-foreground font-medium ml-1.5">{item.count}</span>
                       </div>
                     ))}
                   </div>
@@ -217,15 +260,15 @@ export default function LandlordDashboard() {
           </div>
 
           {/* Chart 2: Units by Unit Type (Horizontal Bar) */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
-            <h2 className="text-sm font-semibold text-white mb-4">Units by Unit Type</h2>
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Units by Unit Type</h2>
 
             <div
               style={{ height: getChartHeight(unitsByType.length) }}
               className="w-full flex items-center justify-center transition-all"
             >
               {unitsByType.length === 0 ? (
-                <div className="text-center text-xs text-neutral-500">No units found.</div>
+                <div className="text-center text-xs text-muted-foreground">No units found.</div>
               ) : isMounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -234,13 +277,13 @@ export default function LandlordDashboard() {
                     barCategoryGap="35%"
                     margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
                   >
-                    <CartesianGrid horizontal={false} vertical={true} stroke="#262626" strokeDasharray="3 3" />
+                    <CartesianGrid horizontal={false} vertical={true} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                     <XAxis
                       type="number"
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     />
                     <YAxis
                       dataKey="type"
@@ -248,24 +291,24 @@ export default function LandlordDashboard() {
                       axisLine={false}
                       tickLine={false}
                       width={unitsYWidth}
-                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                       tickFormatter={(v) => (v && v.length > 14 ? `${v.slice(0, 13)}…` : v)}
                     />
                     <Tooltip
-                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
+                      cursor={{ fill: "hsl(var(--muted) / 0.5)" }}
                       contentStyle={{
-                        backgroundColor: "#0a0a0a",
-                        borderColor: "#262626",
+                        backgroundColor: "hsl(var(--card))",
+                        borderColor: "hsl(var(--border))",
                         borderRadius: "8px",
                         fontSize: "12px",
-                        color: "#ffffff",
+                        color: "hsl(var(--foreground))",
                       }}
-                      itemStyle={{ color: "#e5e5e5" }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
                     />
                     <Bar
                       dataKey="count"
                       name="Units"
-                      fill="rgba(96, 165, 250, 0.8)"
+                      fill="hsl(var(--kpi-navy))"
                       barSize={14}
                       maxBarSize={14}
                       radius={[0, 3, 3, 0]}
@@ -277,16 +320,16 @@ export default function LandlordDashboard() {
           </div>
 
           {/* Chart 3: Occupancy by Property (Stacked Horizontal Bar) */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-white">Occupancy by Property</h2>
-              <div className="flex items-center space-x-3 text-xs text-neutral-400">
+              <h2 className="text-sm font-semibold text-foreground">Occupancy by Property</h2>
+              <div className="flex items-center space-x-3 text-xs text-muted-foreground">
                 <div className="flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "rgba(34, 197, 94, 0.8)" }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "hsl(var(--kpi-sage))" }} />
                   <span>Occupied</span>
                 </div>
                 <div className="flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full bg-neutral-700" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "hsl(var(--border))" }} />
                   <span>Vacant</span>
                 </div>
               </div>
@@ -297,7 +340,7 @@ export default function LandlordDashboard() {
               className="w-full flex items-center justify-center transition-all"
             >
               {occupancyByProperty.length === 0 ? (
-                <div className="text-center text-xs text-neutral-500">No properties available.</div>
+                <div className="text-center text-xs text-muted-foreground">No properties available.</div>
               ) : isMounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -306,13 +349,13 @@ export default function LandlordDashboard() {
                     barCategoryGap="35%"
                     margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
                   >
-                    <CartesianGrid horizontal={false} vertical={true} stroke="#262626" strokeDasharray="3 3" />
+                    <CartesianGrid horizontal={false} vertical={true} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                     <XAxis
                       type="number"
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     />
                     <YAxis
                       dataKey="propertyName"
@@ -320,25 +363,25 @@ export default function LandlordDashboard() {
                       axisLine={false}
                       tickLine={false}
                       width={occupancyYWidth}
-                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                       tickFormatter={(v) => (v && v.length > 14 ? `${v.slice(0, 13)}…` : v)}
                     />
                     <Tooltip
-                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
+                      cursor={{ fill: "hsl(var(--muted) / 0.5)" }}
                       contentStyle={{
-                        backgroundColor: "#0a0a0a",
-                        borderColor: "#262626",
+                        backgroundColor: "hsl(var(--card))",
+                        borderColor: "hsl(var(--border))",
                         borderRadius: "8px",
                         fontSize: "12px",
-                        color: "#ffffff",
+                        color: "hsl(var(--foreground))",
                       }}
-                      itemStyle={{ color: "#e5e5e5" }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
                     />
                     <Bar
                       dataKey="occupied"
                       stackId="occupancy"
                       name="Occupied"
-                      fill="rgba(34, 197, 94, 0.8)"
+                      fill="hsl(var(--kpi-sage))"
                       barSize={14}
                       maxBarSize={14}
                       radius={[0, 0, 0, 0]}
@@ -347,7 +390,7 @@ export default function LandlordDashboard() {
                       dataKey="vacant"
                       stackId="occupancy"
                       name="Vacant"
-                      fill="#404040"
+                      fill="hsl(var(--border))"
                       barSize={14}
                       maxBarSize={14}
                       radius={[0, 3, 3, 0]}
@@ -359,8 +402,8 @@ export default function LandlordDashboard() {
           </div>
 
           {/* Chart 4: Tenants by Location (Horizontal Bar) */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
-            <h2 className="text-sm font-semibold text-white mb-4">
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between">
+            <h2 className="text-sm font-semibold text-foreground mb-4">
               Tenants by {tenantsByLocation.level === "city" ? "City" : "State"}
             </h2>
 
@@ -369,7 +412,7 @@ export default function LandlordDashboard() {
               className="w-full flex items-center justify-center transition-all"
             >
               {tenantsByLocation.data.length === 0 ? (
-                <div className="text-center text-xs text-neutral-500">No active tenants.</div>
+                <div className="text-center text-xs text-muted-foreground">No active tenants.</div>
               ) : isMounted ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -378,13 +421,13 @@ export default function LandlordDashboard() {
                     barCategoryGap="35%"
                     margin={{ top: 4, right: 12, left: 0, bottom: 4 }}
                   >
-                    <CartesianGrid horizontal={false} vertical={true} stroke="#262626" strokeDasharray="3 3" />
+                    <CartesianGrid horizontal={false} vertical={true} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                     <XAxis
                       type="number"
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     />
                     <YAxis
                       dataKey="location"
@@ -392,24 +435,24 @@ export default function LandlordDashboard() {
                       axisLine={false}
                       tickLine={false}
                       width={tenantsYWidth}
-                      tick={{ fill: "#737373", fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                       tickFormatter={(v) => (v && v.length > 14 ? `${v.slice(0, 13)}…` : v)}
                     />
                     <Tooltip
-                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
+                      cursor={{ fill: "hsl(var(--muted) / 0.5)" }}
                       contentStyle={{
-                        backgroundColor: "#0a0a0a",
-                        borderColor: "#262626",
+                        backgroundColor: "hsl(var(--card))",
+                        borderColor: "hsl(var(--border))",
                         borderRadius: "8px",
                         fontSize: "12px",
-                        color: "#ffffff",
+                        color: "hsl(var(--foreground))",
                       }}
-                      itemStyle={{ color: "#e5e5e5" }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
                     />
                     <Bar
                       dataKey="count"
                       name="Tenants"
-                      fill="rgba(96, 165, 250, 0.8)"
+                      fill="hsl(var(--kpi-gold))"
                       barSize={14}
                       maxBarSize={14}
                       radius={[0, 3, 3, 0]}
@@ -420,33 +463,33 @@ export default function LandlordDashboard() {
             </div>
           </div>
 
-          {/* List 1: Leases Ending Soon (44px rows, thin dividers, max 5 rows, View all link) */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+          {/* List 1: Leases Ending Soon */}
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-white">Leases Ending Soon</h2>
+              <h2 className="text-sm font-semibold text-foreground">Leases Ending Soon</h2>
 
               <div className="mt-3">
                 {leasesEndingSoon.length === 0 ? (
-                  <div className="h-[120px] flex items-center justify-center text-xs text-neutral-500">
+                  <div className="h-[120px] flex items-center justify-center text-xs text-muted-foreground">
                     No leases ending in the next 60 days.
                   </div>
                 ) : (
-                  <div className="divide-y divide-neutral-800/60">
+                  <div className="divide-y divide-border">
                     {leasesEndingSoon.slice(0, 5).map((lease) => (
                       <Link
                         key={lease.leaseId}
                         href={`/landlord/properties/${lease.propertyId}/units/${lease.unitId}`}
-                        className="h-[44px] flex items-center justify-between px-1 hover:bg-neutral-900/40 transition-colors group"
+                        className="h-[44px] flex items-center justify-between px-1 hover:bg-muted/50 transition-colors group"
                       >
                         <div className="flex items-center space-x-2 min-w-0 pr-3">
-                          <span className="text-sm font-medium text-white truncate group-hover:underline">
+                          <span className="text-sm font-medium text-foreground truncate group-hover:underline">
                             {lease.tenantName}
                           </span>
-                          <span className="text-xs text-neutral-400 truncate">
+                          <span className="text-xs text-muted-foreground truncate">
                             · Unit {lease.unitNumber}
                           </span>
                         </div>
-                        <span className="text-xs text-neutral-400 shrink-0">
+                        <span className="text-xs text-muted-foreground shrink-0">
                           {lease.daysLeft === 0
                             ? "Expires today"
                             : lease.daysLeft === 1
@@ -461,10 +504,10 @@ export default function LandlordDashboard() {
             </div>
 
             {leasesEndingSoon.length > 0 && (
-              <div className="flex justify-end pt-3 border-t border-neutral-800/40 mt-1">
+              <div className="flex justify-end pt-3 border-t border-border mt-1">
                 <Link
                   href="/landlord/tenants"
-                  className="text-xs text-neutral-400 hover:text-white transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   View all &rarr;
                 </Link>
@@ -472,13 +515,13 @@ export default function LandlordDashboard() {
             )}
           </div>
 
-          {/* List 2: Payments Waiting for You (44px rows, thin dividers, max 5 rows, View all link) */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 flex flex-col justify-between">
+          {/* List 2: Payments Waiting for You */}
+          <div className="rounded-xl border border-border bg-card p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">Payments Waiting for You</h2>
+                <h2 className="text-sm font-semibold text-foreground">Payments Waiting for You</h2>
                 {pendingPayments.count > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-warning-tint text-warning border border-warning/30">
                     {pendingPayments.count}
                   </span>
                 )}
@@ -486,28 +529,28 @@ export default function LandlordDashboard() {
 
               <div className="mt-3">
                 {pendingPayments.items.length === 0 ? (
-                  <div className="h-[120px] flex items-center justify-center text-xs text-neutral-500">
+                  <div className="h-[120px] flex items-center justify-center text-xs text-muted-foreground">
                     Nothing to confirm.
                   </div>
                 ) : (
-                  <div className="divide-y divide-neutral-800/60">
+                  <div className="divide-y divide-border">
                     {pendingPayments.items.slice(0, 5).map((p) => (
                       <Link
                         key={p.paymentId}
                         href={`/landlord/properties/${p.propertyId}/units/${p.unitId}?paymentId=${p.paymentId}`}
-                        className="h-[44px] flex items-center justify-between px-1 hover:bg-neutral-900/40 transition-colors group"
+                        className="h-[44px] flex items-center justify-between px-1 hover:bg-muted/50 transition-colors group"
                       >
                         <div className="flex items-center space-x-2 min-w-0 pr-3">
-                          <span className="text-sm font-medium text-white truncate group-hover:underline">
+                          <span className="text-sm font-medium text-foreground truncate group-hover:underline">
                             {p.tenantName}
                           </span>
-                          <span className="text-xs text-neutral-400 truncate">
+                          <span className="text-xs text-muted-foreground truncate">
                             · Unit {p.unitNumber}
                           </span>
                         </div>
                         <div className="flex items-center space-x-3 shrink-0">
-                          <span className="text-sm font-medium text-white">{formatCurrency(p.amount)}</span>
-                          <span className="text-xs text-neutral-500">{p.date}</span>
+                          <span className="text-sm font-medium text-foreground">{formatCurrency(p.amount)}</span>
+                          <span className="text-xs text-muted-foreground">{p.date}</span>
                         </div>
                       </Link>
                     ))}
@@ -517,10 +560,10 @@ export default function LandlordDashboard() {
             </div>
 
             {pendingPayments.items.length > 0 && (
-              <div className="flex justify-end pt-3 border-t border-neutral-800/40 mt-1">
+              <div className="flex justify-end pt-3 border-t border-border mt-1">
                 <Link
                   href="/landlord/properties"
-                  className="text-xs text-neutral-400 hover:text-white transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   View all &rarr;
                 </Link>
@@ -529,22 +572,22 @@ export default function LandlordDashboard() {
           </div>
         </div>
 
-        {/* 4. All Properties Table: 14px semibold title, 48px rows, 20px padding */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-5 space-y-4">
+        {/* 4. All Properties Table */}
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">All Properties</h2>
-            <span className="text-xs text-neutral-400">{propertiesTable.length} properties</span>
+            <h2 className="text-sm font-semibold text-foreground">All Properties</h2>
+            <span className="text-xs text-muted-foreground">{propertiesTable.length} properties</span>
           </div>
 
           {propertiesTable.length === 0 ? (
-            <div className="py-8 text-center text-xs text-neutral-500">No properties added yet.</div>
+            <div className="py-8 text-center text-xs text-muted-foreground">No properties added yet.</div>
           ) : (
             <>
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-neutral-800 text-xs font-medium text-neutral-400 uppercase tracking-wider">
+                    <tr className="border-b border-border bg-muted text-xs font-medium text-subtle-foreground uppercase tracking-wider">
                       <th className="py-2.5 px-4">Name</th>
                       <th className="py-2.5 px-4">Type</th>
                       <th className="py-2.5 px-4">Location</th>
@@ -554,43 +597,43 @@ export default function LandlordDashboard() {
                       <th className="py-2.5 px-4 text-right">Occupancy %</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-800/60">
+                  <tbody className="divide-y divide-border">
                     {propertiesTable.map((p) => (
                       <tr
                         key={p.id}
-                        className="h-[48px] hover:bg-neutral-900/60 transition-colors group cursor-pointer"
+                        className="h-[48px] hover:bg-accent/50 transition-colors group cursor-pointer"
                       >
-                        <td className="py-2 px-4 font-medium text-white">
+                        <td className="py-2 px-4 font-medium text-foreground">
                           <Link href={`/landlord/properties/${p.id}`} className="hover:underline block truncate">
                             {p.name}
                           </Link>
                         </td>
-                        <td className="py-2 px-4 capitalize text-neutral-400">
+                        <td className="py-2 px-4 capitalize text-muted-foreground">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.propertyType}
                           </Link>
                         </td>
-                        <td className="py-2 px-4 text-neutral-400">
+                        <td className="py-2 px-4 text-muted-foreground">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.city}, {p.state}
                           </Link>
                         </td>
-                        <td className="py-2 px-4 text-center text-neutral-300">
+                        <td className="py-2 px-4 text-center text-foreground/80">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.totalUnits}
                           </Link>
                         </td>
-                        <td className="py-2 px-4 text-center font-medium text-green-400">
+                        <td className="py-2 px-4 text-center font-medium text-success">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.occupiedUnits}
                           </Link>
                         </td>
-                        <td className="py-2 px-4 text-center text-neutral-400">
+                        <td className="py-2 px-4 text-center text-muted-foreground">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.vacantUnits}
                           </Link>
                         </td>
-                        <td className="py-2 px-4 text-right font-medium text-white">
+                        <td className="py-2 px-4 text-right font-medium text-foreground">
                           <Link href={`/landlord/properties/${p.id}`} className="block">
                             {p.occupancyRate}%
                           </Link>
@@ -607,34 +650,34 @@ export default function LandlordDashboard() {
                   <Link
                     key={p.id}
                     href={`/landlord/properties/${p.id}`}
-                    className="block p-4 rounded-xl border border-neutral-800 bg-neutral-900/40 hover:bg-neutral-900 transition-colors"
+                    className="block p-4 rounded-xl border border-border bg-card hover:bg-accent/40 transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white text-base">{p.name}</span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-neutral-900 border border-neutral-800 text-neutral-400 capitalize">
+                      <span className="font-semibold text-foreground text-base">{p.name}</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-muted border border-border text-muted-foreground capitalize">
                         {p.propertyType}
                       </span>
                     </div>
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {p.city}, {p.state}
                     </p>
 
-                    <div className="mt-3 pt-3 border-t border-neutral-800/60 grid grid-cols-4 gap-2 text-center text-xs">
+                    <div className="mt-3 pt-3 border-t border-border grid grid-cols-4 gap-2 text-center text-xs">
                       <div>
-                        <span className="block text-neutral-500 text-[10px] uppercase">Units</span>
-                        <span className="font-bold text-white mt-0.5 block">{p.totalUnits}</span>
+                        <span className="block text-subtle-foreground text-[10px] uppercase">Units</span>
+                        <span className="font-bold text-foreground mt-0.5 block">{p.totalUnits}</span>
                       </div>
                       <div>
-                        <span className="block text-neutral-500 text-[10px] uppercase">Occupied</span>
-                        <span className="font-bold text-green-400 mt-0.5 block">{p.occupiedUnits}</span>
+                        <span className="block text-subtle-foreground text-[10px] uppercase">Occupied</span>
+                        <span className="font-bold text-success mt-0.5 block">{p.occupiedUnits}</span>
                       </div>
                       <div>
-                        <span className="block text-neutral-500 text-[10px] uppercase">Vacant</span>
-                        <span className="font-bold text-neutral-300 mt-0.5 block">{p.vacantUnits}</span>
+                        <span className="block text-subtle-foreground text-[10px] uppercase">Vacant</span>
+                        <span className="font-bold text-muted-foreground mt-0.5 block">{p.vacantUnits}</span>
                       </div>
                       <div>
-                        <span className="block text-neutral-500 text-[10px] uppercase">Rate</span>
-                        <span className="font-bold text-white mt-0.5 block">{p.occupancyRate}%</span>
+                        <span className="block text-subtle-foreground text-[10px] uppercase">Rate</span>
+                        <span className="font-bold text-foreground mt-0.5 block">{p.occupancyRate}%</span>
                       </div>
                     </div>
                   </Link>

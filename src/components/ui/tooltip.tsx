@@ -18,13 +18,13 @@ const TooltipContent = React.forwardRef<
       sideOffset={sideOffset}
       collisionPadding={collisionPadding}
       className={cn(
-        "z-50 max-w-[240px] overflow-hidden rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-200 shadow-md break-words animate-in fade-in-0 zoom-in-95",
+        "z-50 max-w-[240px] overflow-hidden rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground shadow-md break-words animate-in fade-in-0 zoom-in-95",
         className
       )}
       {...props}
     >
       {children}
-      <TooltipPrimitive.Arrow className="fill-neutral-900 border-neutral-800" />
+      <TooltipPrimitive.Arrow className="fill-card border-border" />
     </TooltipPrimitive.Content>
   </TooltipPrimitive.Portal>
 ));
