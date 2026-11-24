@@ -20,6 +20,7 @@ import {
 } from "@/lib/billing";
 import { formatRentFrequency } from "@/lib/rent";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Plus,
   Paperclip,
@@ -608,22 +609,32 @@ export default function TenantRentalDetailsPage({
                   Payment history
                 </div>
                 {/* Add payment button */}
-                <div className="relative group">
-                  <Button
-                    onClick={handleOpenAddPayment}
-                    disabled={isPaidInFull}
-                    className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-9 px-3 flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add payment
-                  </Button>
-                  {isPaidInFull && (
-                    <div
-                      role="tooltip"
-                      className="pointer-events-none absolute bottom-full right-0 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
+                <div>
+                  {isPaidInFull ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-not-allowed">
+                          <Button
+                            disabled
+                            className="bg-white text-neutral-950 font-semibold text-xs h-9 px-3 flex items-center gap-1.5 opacity-50 pointer-events-none"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add payment
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" align="end">
+                        This lease is fully paid.
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      onClick={handleOpenAddPayment}
+                      className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold text-xs h-9 px-3 flex items-center gap-1.5"
                     >
-                      This lease is fully paid.
-                    </div>
+                      <Plus className="w-4 h-4" />
+                      Add payment
+                    </Button>
                   )}
                 </div>
               </div>

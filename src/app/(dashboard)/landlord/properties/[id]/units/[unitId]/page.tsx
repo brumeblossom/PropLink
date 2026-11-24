@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { InviteCard } from "@/components/leases/InviteCard";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -1017,23 +1018,23 @@ export default function UnitDetailPage() {
           actions={[
             ...(isLeaseEndedState
               ? [
-                  {
-                    label: "Mark as moved out",
-                    onClick: () => setIsMovedOutConfirmOpen(true),
-                    icon: <LogOut className="w-4 h-4" />,
-                    variant: "outline" as const,
-                  },
-                  {
-                    label: "Renew",
-                    onClick: handleOpenRenewLease,
-                    icon: <RefreshCw className="w-4 h-4" />,
-                    variant: "primary" as const,
-                    disabled: !renewEligibility.eligible,
-                    disabledTooltip: !renewEligibility.eligible && renewEligibility.reason === "unpaid"
-                      ? `${formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease`
-                      : undefined,
-                  },
-                ]
+                {
+                  label: "Mark as moved out",
+                  onClick: () => setIsMovedOutConfirmOpen(true),
+                  icon: <LogOut className="w-4 h-4" />,
+                  variant: "outline" as const,
+                },
+                {
+                  label: "Renew",
+                  onClick: handleOpenRenewLease,
+                  icon: <RefreshCw className="w-4 h-4" />,
+                  variant: "primary" as const,
+                  disabled: !renewEligibility.eligible,
+                  disabledTooltip: !renewEligibility.eligible && renewEligibility.reason === "unpaid"
+                    ? `${formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease`
+                    : undefined,
+                },
+              ]
               : []),
             {
               label: "Edit Unit",
@@ -1061,23 +1062,36 @@ export default function UnitDetailPage() {
               <LogOut className="w-4 h-4 mr-1.5" />
               Mark as moved out
             </Button>
-            <div className="relative w-full">
-              <Button
-                variant="default"
-                onClick={handleOpenRenewLease}
-                disabled={!renewEligibility.eligible}
-                className="w-full justify-center text-xs h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50"
-              >
-                <RefreshCw className="w-4 h-4 mr-1.5" />
-                Renew
-              </Button>
-              {!renewEligibility.eligible && renewEligibility.reason === "unpaid" && (
-                <div
-                  role="tooltip"
-                  className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1 text-[11px] font-medium text-neutral-200 shadow-xl"
+            <div className="w-full">
+              {!renewEligibility.eligible && renewEligibility.reason === "unpaid" ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="block w-full cursor-not-allowed">
+                      <Button
+                        variant="default"
+                        onClick={handleOpenRenewLease}
+                        disabled
+                        className="w-full justify-center text-xs h-9 bg-emerald-600 text-white font-semibold opacity-50 pointer-events-none"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1.5" />
+                        Renew
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    {formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant="default"
+                  onClick={handleOpenRenewLease}
+                  disabled={!renewEligibility.eligible}
+                  className="w-full justify-center text-xs h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-50"
                 >
-                  {formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease
-                </div>
+                  <RefreshCw className="w-4 h-4 mr-1.5" />
+                  Renew
+                </Button>
               )}
             </div>
           </div>
@@ -1291,34 +1305,40 @@ export default function UnitDetailPage() {
                     </div>
                     {(() => {
                       const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
-                      return (
-                        <div className={`relative ${isPaidInFull ? "cursor-not-allowed group" : ""}`}>
-                          <Button
-                            onClick={() => {
-                              setIsLogPaymentOpen(true);
-                              setSelectedPaymentLeaseId(activeLease?.id || currentLease?.id || "");
-                              setPaymentAmount(
-                                billingSummary?.outstanding
-                                  ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
-                                  : ""
-                              );
-                              setPaymentError(null);
-                            }}
-                            disabled={isPaidInFull}
-                            className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold disabled:opacity-50 disabled:pointer-events-none flex items-center h-9 text-xs sm:text-sm"
-                          >
-                            <Plus className="w-4 h-4 mr-1.5" />
-                            Add Payment
-                          </Button>
-                          {isPaidInFull && (
-                            <div
-                              role="tooltip"
-                              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
-                            >
-                              This lease is fully paid.
-                            </div>
-                          )}
-                        </div>
+                      return isPaidInFull ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex cursor-not-allowed">
+                              <Button
+                                disabled
+                                className="bg-white text-neutral-950 font-semibold opacity-50 pointer-events-none flex items-center h-9 text-xs sm:text-sm"
+                              >
+                                <Plus className="w-4 h-4 mr-1.5" />
+                                Add Payment
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="center">
+                            This lease is fully paid.
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            setIsLogPaymentOpen(true);
+                            setSelectedPaymentLeaseId(activeLease?.id || currentLease?.id || "");
+                            setPaymentAmount(
+                              billingSummary?.outstanding
+                                ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                                : ""
+                            );
+                            setPaymentError(null);
+                          }}
+                          className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold flex items-center h-9 text-xs sm:text-sm"
+                        >
+                          <Plus className="w-4 h-4 mr-1.5" />
+                          Add Payment
+                        </Button>
                       );
                     })()}
                   </div>

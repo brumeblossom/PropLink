@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { formatDateGB } from "@/lib/billing";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const noticeTypeLabels: Record<NoticeType, string> = {
   general: "General",
@@ -249,20 +250,20 @@ function NoticesContent() {
               </Button>
 
               {/* Mobile icon-only button (36px) */}
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="sm:hidden w-9 h-9 rounded-lg bg-white text-neutral-950 hover:bg-neutral-200 flex items-center justify-center shrink-0 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
-                aria-label="Create message"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-
-              <div
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full right-0 mb-2 hidden group-hover:block sm:group-hover:hidden z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
-              >
-                Create message
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setIsCreateOpen(true)}
+                    className="sm:hidden w-9 h-9 rounded-lg bg-white text-neutral-950 hover:bg-neutral-200 flex items-center justify-center shrink-0 font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+                    aria-label="Create message"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="end" className="sm:hidden">
+                  Create message
+                </TooltipContent>
+              </Tooltip>
             </div>
           }
         />

@@ -17,7 +17,7 @@ import { X, Trash2, ChevronDown, Plus, Pencil, Search } from "lucide-react";
 import { getUnitTypesByPropertyType, isResidentialUnitType } from "@/lib/unit-types";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function PropertyDetailPage() {
   const router = useRouter();
@@ -848,22 +848,20 @@ export default function PropertyDetailPage() {
                             >
                               <div className="flex items-center justify-center">
                                 {isOccupiedOrReserved ? (
-                                  <TooltipProvider delayDuration={200}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="inline-flex cursor-not-allowed">
-                                          <Checkbox
-                                            disabled
-                                            checked={false}
-                                            aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
-                                          />
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">
-                                        This unit has a tenant
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex cursor-not-allowed">
+                                        <Checkbox
+                                          disabled
+                                          checked={false}
+                                          aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
+                                        />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" align="center">
+                                      This unit has a tenant
+                                    </TooltipContent>
+                                  </Tooltip>
                                 ) : (
                                   <Checkbox
                                     checked={isSelected}
@@ -958,22 +956,20 @@ export default function PropertyDetailPage() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           {isOccupiedOrReserved ? (
-                            <TooltipProvider delayDuration={200}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex cursor-not-allowed">
-                                    <Checkbox
-                                      disabled
-                                      checked={false}
-                                      aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
-                                    />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  This unit has a tenant
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex cursor-not-allowed">
+                                  <Checkbox
+                                    disabled
+                                    checked={false}
+                                    aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
+                                  />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" align="center">
+                                This unit has a tenant
+                              </TooltipContent>
+                            </Tooltip>
                           ) : (
                             <Checkbox
                               checked={isSelected}

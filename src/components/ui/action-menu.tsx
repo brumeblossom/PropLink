@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import * as Tooltip from "@radix-ui/react-tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,36 +32,33 @@ export function ActionMenu({
   const [open, setOpen] = useState(false);
 
   return (
-    <Tooltip.Provider delayDuration={200}>
-      <DropdownMenu.Root open={open} onOpenChange={setOpen}>
-        <Tooltip.Root open={open ? false : undefined}>
-          <Tooltip.Trigger asChild>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                className={cn(
-                  "w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400",
-                  triggerClassName
-                )}
-                aria-label={label}
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
-            </DropdownMenu.Trigger>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content
-              side="top"
-              align="center"
-              sideOffset={4}
-              className="hidden sm:block z-50 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[11px] font-medium text-neutral-300 shadow-xl animate-in fade-in-0 zoom-in-95 pointer-events-none"
+    <DropdownMenu.Root open={open} onOpenChange={setOpen}>
+      <Tooltip open={open ? false : undefined}>
+        <TooltipTrigger asChild>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={cn(
+                "w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400",
+                triggerClassName
+              )}
+              aria-label={label}
             >
-              Actions
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </DropdownMenu.Trigger>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          align="center"
+          sideOffset={4}
+          className="hidden sm:block pointer-events-none text-[11px] px-2 py-0.5"
+        >
+          Actions
+        </TooltipContent>
+      </Tooltip>
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
@@ -80,8 +77,8 @@ export function ActionMenu({
                   <DropdownMenu.Separator className="my-1 border-t border-neutral-800" />
                 )}
                 {item.disabled ? (
-                  <Tooltip.Root>
-                    <Tooltip.Trigger asChild>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                       <span className="block w-full">
                         <DropdownMenu.Item
                           disabled
@@ -92,20 +89,18 @@ export function ActionMenu({
                           <span>{item.label}</span>
                         </DropdownMenu.Item>
                       </span>
-                    </Tooltip.Trigger>
+                    </TooltipTrigger>
                     {item.disabledTooltip && (
-                      <Tooltip.Portal>
-                        <Tooltip.Content
-                          side="left"
-                          align="center"
-                          sideOffset={6}
-                          className="z-50 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs font-medium text-neutral-300 shadow-xl animate-in fade-in-0 zoom-in-95 pointer-events-none"
-                        >
-                          {item.disabledTooltip}
-                        </Tooltip.Content>
-                      </Tooltip.Portal>
+                      <TooltipContent
+                        side="left"
+                        align="center"
+                        sideOffset={6}
+                        className="pointer-events-none"
+                      >
+                        {item.disabledTooltip}
+                      </TooltipContent>
                     )}
-                  </Tooltip.Root>
+                  </Tooltip>
                 ) : (
                   <DropdownMenu.Item
                     onSelect={(e) => {
@@ -128,6 +123,5 @@ export function ActionMenu({
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
-    </Tooltip.Provider>
-  );
-}
+    );
+  }

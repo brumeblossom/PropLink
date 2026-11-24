@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function PropertiesPage() {
   const router = useRouter();
@@ -222,22 +223,21 @@ export default function PropertiesPage() {
           title="Your Properties"
           description="Manage your buildings, leasable units, and view active leases."
           actions={
-            <div className="relative group">
-              <Button
-                onClick={() => setIsModalOpen(true)}
-                className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
-                aria-label="Add Property"
-              >
-                <Plus className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Add Property</span>
-              </Button>
-              <div
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full right-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 hidden group-hover:block sm:group-hover:hidden z-50 whitespace-nowrap rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs font-medium text-neutral-200 shadow-xl"
-              >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setIsModalOpen(true)}
+                  className="bg-white text-neutral-950 hover:bg-neutral-200 font-semibold h-9 px-3 sm:px-4 text-sm flex items-center shrink-0"
+                  aria-label="Add Property"
+                >
+                  <Plus className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Add Property</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center" className="sm:hidden">
                 Add Property
-              </div>
-            </div>
+              </TooltipContent>
+            </Tooltip>
           }
         />
 

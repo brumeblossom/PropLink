@@ -14,6 +14,7 @@ import {
 import { ChatWidgetProvider } from "@/components/ChatWidgetContext";
 import { ToastProvider } from "@/components/ui/toast";
 import { SidebarProvider, useSidebar } from "@/components/layout/SidebarContext";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function TenantLayout({
   children,
@@ -22,11 +23,13 @@ export default function TenantLayout({
 }) {
   return (
     <ToastProvider>
-      <ChatWidgetProvider>
-        <SidebarProvider>
-          <TenantLayoutContent>{children}</TenantLayoutContent>
-        </SidebarProvider>
-      </ChatWidgetProvider>
+      <TooltipProvider delayDuration={200}>
+        <ChatWidgetProvider>
+          <SidebarProvider>
+            <TenantLayoutContent>{children}</TenantLayoutContent>
+          </SidebarProvider>
+        </ChatWidgetProvider>
+      </TooltipProvider>
     </ToastProvider>
   );
 }
