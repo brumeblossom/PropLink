@@ -328,6 +328,91 @@ export const unitsRouter = router({
       });
     }),
 
+  bulkDelete: authedProcedure
+    .input(z.object({ ids: z.array(z.string().uuid()).min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const now = new Date();
+
+      // Find all specified units that are not already deleted
+      const units = await prisma.unit.findMany({
+        where: {
+          id: { in: input.ids },
+          deletedAt: null,
+        },
+        include: {
+          property: true,
+          leases: {
+            where: {
+              terminatedAt: null,
+            },
+            include: {
+              tenant: { select: { fullName: true } },
+            },
+          },
+        },
+      });
+
+      // Verify that all requested units exist and landlord owns every unit
+      if (units.length !== input.ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more units could not be found.",
+        });
+      }
+
+      for (const unit of units) {
+        if (unit.property.landlordId !== ctx.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You do not own all of the selected units.",
+          });
+        }
+
+        // Check if unit has a tenant / occupied / reserved
+        // getUnitStatus returns "occupied" | "reserved" | "vacant"
+        // Also check if any active/ended/reserved lease exists on the unit
+        const status = getUnitStatus(unit.leases, now);
+        if (status === "occupied" || status === "reserved") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Cannot delete unit "${unit.unitNumber}" because it has a tenant or active lease.`,
+          });
+        }
+
+        // Extra check like single delete: any lease where terminatedAt is null and startDate <= now and endDate >= now
+        const hasBlockingLease = unit.leases.some(
+          (l) =>
+            l.terminatedAt === null &&
+            l.status !== "declined" &&
+            l.status !== "cancelled" &&
+            new Date(l.startDate) <= now &&
+            new Date(l.endDate) >= now
+        );
+        if (hasBlockingLease) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Cannot delete unit "${unit.unitNumber}" because it has an active lease.`,
+          });
+        }
+      }
+
+      // Soft-delete (deletedAt) in one transaction, return the count
+      const result = await prisma.$transaction(async (tx) => {
+        const updateResult = await tx.unit.updateMany({
+          where: {
+            id: { in: input.ids },
+            deletedAt: null,
+          },
+          data: {
+            deletedAt: now,
+          },
+        });
+        return updateResult.count;
+      });
+
+      return { count: result };
+    }),
+
   // Get redirect routing information for a unit
   getRedirectInfo: authedProcedure
     .input(z.object({ unitId: z.string().uuid() }))

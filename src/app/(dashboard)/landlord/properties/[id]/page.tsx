@@ -16,6 +16,8 @@ import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { X, Trash2, ChevronDown, Plus, Pencil, Search } from "lucide-react";
 import { getUnitTypesByPropertyType, isResidentialUnitType } from "@/lib/unit-types";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function PropertyDetailPage() {
   const router = useRouter();
@@ -34,12 +36,17 @@ export default function PropertyDetailPage() {
   const [isDeletePropertyConfirmOpen, setIsDeletePropertyConfirmOpen] = useState(false);
   const [unitToDelete, setUnitToDelete] = useState<{ id: string; unitNumber: string } | null>(null);
 
+  // Selection state
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+
   // Search & Filters state (synced with URL)
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
 
   const updateFilters = (newQ: string, newStatus: string, newType: string) => {
+    setSelectedUnitIds([]);
     setSearchQuery(newQ);
     setStatusFilter(newStatus);
     setTypeFilter(newType);
@@ -142,6 +149,21 @@ export default function PropertyDetailPage() {
     },
     onError: (err) => {
       setDeleteError(err.message);
+    },
+  });
+
+  const bulkDeleteUnits = trpc.units.bulkDelete.useMutation({
+    onSuccess: (data) => {
+      utils.units.listByProperty.invalidate({ propertyId });
+      utils.properties.list.invalidate();
+      utils.properties.getById.invalidate({ id: propertyId });
+      toast(`${data.count} ${data.count === 1 ? "unit" : "units"} deleted`, "success");
+      setSelectedUnitIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    },
+    onError: (err) => {
+      setDeleteError(err.message);
+      setIsBulkDeleteConfirmOpen(false);
     },
   });
 
@@ -441,6 +463,59 @@ export default function PropertyDetailPage() {
     return true;
   });
 
+  const deletableUnits = filteredUnits.filter(
+    (u) => u.status !== "occupied" && u.status !== "reserved"
+  );
+  const deletableUnitIds = deletableUnits.map((u) => u.id);
+
+  const isAllDeletableSelected =
+    deletableUnitIds.length > 0 &&
+    deletableUnitIds.every((id) => selectedUnitIds.includes(id));
+  const isSomeDeletableSelected =
+    deletableUnitIds.some((id) => selectedUnitIds.includes(id)) &&
+    !isAllDeletableSelected;
+
+  const handleSelectAllToggle = () => {
+    if (isAllDeletableSelected) {
+      setSelectedUnitIds((prev) =>
+        prev.filter((id) => !deletableUnitIds.includes(id))
+      );
+    } else {
+      setSelectedUnitIds((prev) =>
+        Array.from(new Set([...prev, ...deletableUnitIds]))
+      );
+    }
+  };
+
+  const handleSelectRow = (unitId: string) => {
+    setSelectedUnitIds((prev) =>
+      prev.includes(unitId) ? prev.filter((id) => id !== unitId) : [...prev, unitId]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedUnitIds([]);
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedUnitIds.length === 0) return;
+    setDeleteError(null);
+    try {
+      await bulkDeleteUnits.mutateAsync({ ids: selectedUnitIds });
+    } catch {
+      // handled in mutation onError
+    }
+  };
+
+  const selectedUnitsList = (units ?? []).filter((u) => selectedUnitIds.includes(u.id));
+  const selectedUnitsText = (() => {
+    const names = selectedUnitsList.map((u) => u.unitNumber);
+    if (names.length === 0) return "";
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} and ${names[1]}`;
+    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  })();
+
   if (isLoadingProperty || isLoadingUnits) {
     return (
       <div className="min-h-screen bg-neutral-950 text-white">
@@ -595,79 +670,124 @@ export default function PropertyDetailPage() {
             </div>
           </div>
 
-          {/* Search and Filters Toolbar */}
+          {/* Search and Filters Toolbar / Selection Bar */}
           {units && units.length > 0 && (
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-              <div className="flex flex-col md:flex-row md:items-center gap-2.5 flex-1">
-                {/* Search Input */}
-                <div className="relative w-full md:w-[280px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => updateFilters(e.target.value, statusFilter, typeFilter)}
-                    placeholder="Search unit or tenant"
-                    className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-9 pr-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 h-9"
-                  />
-                </div>
-
-                {/* Filter Dropdowns */}
-                <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto">
-                  <Select
-                    value={statusFilter}
-                    onChange={(e) => updateFilters(searchQuery, e.target.value, typeFilter)}
-                    className="h-9 text-xs"
-                  >
-                    <option value="all">All statuses</option>
-                    <option value="occupied">Occupied</option>
-                    <option value="reserved">Reserved</option>
-                    <option value="vacant">Vacant</option>
-                  </Select>
-
-                  <Select
-                    value={typeFilter}
-                    onChange={(e) => updateFilters(searchQuery, statusFilter, e.target.value)}
-                    className="h-9 text-xs capitalize"
-                  >
-                    <option value="all">All types</option>
-                    {availableUnitTypes.map((t) => (
-                      <option key={t} value={t} className="capitalize">
-                        {t}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {/* Clear button if filtering */}
-                {isFiltering && (
+            selectedUnitIds.length > 0 ? (
+              /* Desktop: replaces search/filter toolbar at same height (h-9 or matching container) */
+              <div className="hidden md:flex items-center justify-between h-9 px-3 rounded-lg border border-neutral-800 bg-neutral-900 mb-4 animate-in fade-in duration-150">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-white">
+                    {selectedUnitIds.length} selected
+                  </span>
                   <button
                     type="button"
-                    onClick={clearFilters}
-                    className="text-xs text-neutral-400 hover:text-white underline py-1 px-1 transition-colors self-start md:self-auto"
+                    onClick={handleClearSelection}
+                    className="text-xs font-medium text-neutral-400 hover:text-white px-2 py-1 rounded hover:bg-neutral-800 transition-colors"
                   >
                     Clear
                   </button>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                  className="h-7 px-2.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                <div className="flex flex-col md:flex-row md:items-center gap-2.5 flex-1">
+                  {/* Search Input */}
+                  <div className="relative w-full md:w-[280px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => updateFilters(e.target.value, statusFilter, typeFilter)}
+                      placeholder="Search unit or tenant"
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-900 pl-9 pr-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 h-9"
+                    />
+                  </div>
+
+                  {/* Filter Dropdowns */}
+                  <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto">
+                    <Select
+                      value={statusFilter}
+                      onChange={(e) => updateFilters(searchQuery, e.target.value, typeFilter)}
+                      className="h-9 text-xs"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="occupied">Occupied</option>
+                      <option value="reserved">Reserved</option>
+                      <option value="vacant">Vacant</option>
+                    </Select>
+
+                    <Select
+                      value={typeFilter}
+                      onChange={(e) => updateFilters(searchQuery, statusFilter, e.target.value)}
+                      className="h-9 text-xs capitalize"
+                    >
+                      <option value="all">All types</option>
+                      {availableUnitTypes.map((t) => (
+                        <option key={t} value={t} className="capitalize">
+                          {t}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  {/* Clear button if filtering */}
+                  {isFiltering && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="text-xs text-neutral-400 hover:text-white underline py-1 px-1 transition-colors self-start md:self-auto"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtered count on right: only when filtering */}
+                {isFiltering && (
+                  <span className="text-xs text-neutral-500 font-medium whitespace-nowrap self-end md:self-auto">
+                    {filteredUnits.length} of {units.length} units
+                  </span>
                 )}
               </div>
-
-              {/* Filtered count on right: only when filtering */}
-              {isFiltering && (
-                <span className="text-xs text-neutral-500 font-medium whitespace-nowrap self-end md:self-auto">
-                  {filteredUnits.length} of {units.length} units
-                </span>
-              )}
-            </div>
+            )
           )}
 
           {/* Units View */}
           {units && units.length > 0 ? (
             filteredUnits.length > 0 ? (
               <>
-                {/* Desktop Table: Unit Name/Number | Unit Type | Current Tenant | Lease Range | Status | Actions */}
+                {/* Desktop Table: Checkbox (44px) | Unit Name/Number | Unit Type | Current Tenant | Lease Range | Status | Actions */}
                 <div className="hidden md:block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/20 backdrop-blur-sm">
                   <table className="min-w-full divide-y divide-neutral-800">
                     <thead className="bg-neutral-900/50">
                       <tr>
+                        <th
+                          scope="col"
+                          className="w-[44px] min-w-[44px] max-w-[44px] px-3.5 py-3.5 text-center"
+                        >
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={
+                                isAllDeletableSelected
+                                  ? true
+                                  : isSomeDeletableSelected
+                                  ? "indeterminate"
+                                  : false
+                              }
+                              onCheckedChange={handleSelectAllToggle}
+                              disabled={deletableUnitIds.length === 0}
+                              aria-label="Select all deletable units on this page"
+                            />
+                          </div>
+                        </th>
                         <th
                           scope="col"
                           className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-400 uppercase tracking-wider"
@@ -707,29 +827,169 @@ export default function PropertyDetailPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-800/60 bg-transparent">
-                      {filteredUnits.map((unit) => (
-                        <tr
-                          key={unit.id}
-                          className="hover:bg-neutral-900/30 transition-colors cursor-pointer"
-                          onClick={() => router.push(`/landlord/properties/${propertyId}/units/${unit.id}`)}
-                        >
-                          <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-white">
-                            {unit.unitNumber}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300 capitalize">
-                            {unit.unitType}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300">
-                            {unit.activeLease?.tenantName || (
-                              <span className="text-neutral-500">Vacant</span>
+                      {filteredUnits.map((unit) => {
+                        const isOccupiedOrReserved = unit.status === "occupied" || unit.status === "reserved";
+                        const isSelected = selectedUnitIds.includes(unit.id);
+
+                        return (
+                          <tr
+                            key={unit.id}
+                            className={cn(
+                              "transition-colors cursor-pointer",
+                              isSelected
+                                ? "bg-neutral-800/40 hover:bg-neutral-800/60"
+                                : "hover:bg-neutral-900/30"
                             )}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-400">
-                            {unit.activeLease
-                              ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
-                              : "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-sm">
+                            onClick={() => router.push(`/landlord/properties/${propertyId}/units/${unit.id}`)}
+                          >
+                            <td
+                              className="w-[44px] min-w-[44px] max-w-[44px] px-3.5 py-4 text-center"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-center">
+                                {isOccupiedOrReserved ? (
+                                  <TooltipProvider delayDuration={200}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="inline-flex cursor-not-allowed">
+                                          <Checkbox
+                                            disabled
+                                            checked={false}
+                                            aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
+                                          />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        This unit has a tenant
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => handleSelectRow(unit.id)}
+                                    aria-label={`Select unit ${unit.unitNumber}`}
+                                  />
+                                )}
+                              </div>
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-white">
+                              {unit.unitNumber}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300 capitalize">
+                              {unit.unitType}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-300">
+                              {unit.activeLease?.tenantName || (
+                                <span className="text-neutral-500">Vacant</span>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-400">
+                              {unit.activeLease
+                                ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
+                                : "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
+                                  unit.status === "occupied"
+                                    ? "bg-green-950/30 text-green-400 border border-green-900/30"
+                                    : unit.status === "reserved"
+                                    ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
+                                    : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
+                                )}
+                              >
+                                {unit.status}
+                              </span>
+                            </td>
+                            <td
+                              className="whitespace-nowrap px-6 py-4 text-sm text-right font-medium"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex justify-end space-x-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditUnit(unit)}
+                                  title="Edit unit"
+                                  aria-label="Edit unit"
+                                  className="p-1.5 text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg transition-colors"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
+                                  title="Delete unit"
+                                  aria-label="Delete unit"
+                                  className="p-1.5 text-rose-400 hover:text-rose-300 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Stacked Cards (< 768px) */}
+                <div className="md:hidden space-y-3">
+                  {filteredUnits.map((unit) => {
+                    const isOccupiedOrReserved = unit.status === "occupied" || unit.status === "reserved";
+                    const isSelected = selectedUnitIds.includes(unit.id);
+
+                    return (
+                      <div
+                        key={unit.id}
+                        onClick={() => router.push(`/landlord/properties/${propertyId}/units/${unit.id}`)}
+                        className={cn(
+                          "rounded-xl border p-4 space-y-3 cursor-pointer transition-colors flex items-start gap-3",
+                          isSelected
+                            ? "bg-neutral-850/80 border-neutral-700 hover:bg-neutral-850"
+                            : "border-neutral-800 bg-neutral-900/20 hover:bg-neutral-900/40 hover:border-neutral-700"
+                        )}
+                      >
+                        {/* Checkbox on left of unit card */}
+                        <div
+                          className="pt-0.5 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {isOccupiedOrReserved ? (
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex cursor-not-allowed">
+                                    <Checkbox
+                                      disabled
+                                      checked={false}
+                                      aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
+                                    />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  This unit has a tenant
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleSelectRow(unit.id)}
+                              aria-label={`Select unit ${unit.unitNumber}`}
+                            />
+                          )}
+                        </div>
+
+                        {/* Card body */}
+                        <div className="flex-1 min-w-0 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-bold text-white text-base">{unit.unitNumber}</span>
+                              <span className="text-xs text-neutral-400 capitalize">· {unit.unitType}</span>
+                            </div>
                             <span
                               className={cn(
                                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
@@ -742,107 +1002,52 @@ export default function PropertyDetailPage() {
                             >
                               {unit.status}
                             </span>
-                          </td>
-                          <td
-                            className="whitespace-nowrap px-6 py-4 text-sm text-right font-medium"
+                          </div>
+
+                          <div className="text-xs space-y-1 text-neutral-400 pt-1 border-t border-neutral-800/60">
+                            <div>
+                              <span className="text-neutral-500">Tenant: </span>
+                              <span className="text-neutral-300 font-medium">
+                                {unit.activeLease?.tenantName || "Vacant"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-500">Lease: </span>
+                              <span>
+                                {unit.activeLease
+                                  ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
+                                  : "—"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div
+                            className="flex items-center justify-end space-x-2 pt-2 border-t border-neutral-800/40"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex justify-end space-x-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditUnit(unit)}
-                                title="Edit unit"
-                                aria-label="Edit unit"
-                                className="p-1.5 text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg transition-colors"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
-                                title="Delete unit"
-                                aria-label="Delete unit"
-                                className="p-1.5 text-rose-400 hover:text-rose-300 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile Stacked Cards (< 768px) */}
-                <div className="md:hidden space-y-3">
-                  {filteredUnits.map((unit) => (
-                    <div
-                      key={unit.id}
-                      onClick={() => router.push(`/landlord/properties/${propertyId}/units/${unit.id}`)}
-                      className="rounded-xl border border-neutral-800 bg-neutral-900/20 p-4 space-y-3 cursor-pointer hover:bg-neutral-900/40 hover:border-neutral-700 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-bold text-white text-base">{unit.unitNumber}</span>
-                          <span className="text-xs text-neutral-400 capitalize">· {unit.unitType}</span>
-                        </div>
-                        <span
-                          className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
-                            unit.status === "occupied"
-                              ? "bg-green-950/30 text-green-400 border border-green-900/30"
-                              : unit.status === "reserved"
-                              ? "bg-blue-950/30 text-blue-400 border border-blue-900/30"
-                              : "bg-yellow-950/30 text-yellow-400 border border-yellow-900/30"
-                          )}
-                        >
-                          {unit.status}
-                        </span>
-                      </div>
-
-                      <div className="text-xs space-y-1 text-neutral-400 pt-1 border-t border-neutral-800/60">
-                        <div>
-                          <span className="text-neutral-500">Tenant: </span>
-                          <span className="text-neutral-300 font-medium">
-                            {unit.activeLease?.tenantName || "Vacant"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-500">Lease: </span>
-                          <span>
-                            {unit.activeLease
-                              ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
-                              : "—"}
-                          </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditUnit(unit)}
+                              title="Edit unit"
+                              aria-label="Edit unit"
+                              className="p-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-850 transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
+                              title="Delete unit"
+                              aria-label="Delete unit"
+                              className="p-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-
-                      <div
-                        className="flex items-center justify-end space-x-2 pt-2 border-t border-neutral-800/40"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditUnit(unit)}
-                          title="Edit unit"
-                          aria-label="Edit unit"
-                          className="p-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-850 transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
-                          title="Delete unit"
-                          aria-label="Delete unit"
-                          className="p-1.5 rounded-lg border border-neutral-800 bg-neutral-900 text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             ) : (
@@ -880,6 +1085,32 @@ export default function PropertyDetailPage() {
           )}
         </div>
       </main>
+
+      {/* Floating Selection Bar on Phones (< 768px) */}
+      {selectedUnitIds.length > 0 && (
+        <div className="md:hidden fixed bottom-3 left-3 right-3 z-40 flex items-center justify-between px-4 py-2.5 rounded-xl border border-neutral-800 bg-neutral-900/95 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom-2 duration-150">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm font-semibold text-white">
+              {selectedUnitIds.length} selected
+            </span>
+            <button
+              type="button"
+              onClick={handleClearSelection}
+              className="text-xs font-medium text-neutral-400 hover:text-white px-2 py-1 rounded hover:bg-neutral-800 transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setIsBulkDeleteConfirmOpen(true)}
+            className="h-8 px-3 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete</span>
+          </Button>
+        </div>
+      )}
 
       {/* Edit Property Modal */}
       {isEditPropertyOpen && (
@@ -1047,6 +1278,19 @@ export default function PropertyDetailPage() {
         }
         confirmText={deleteUnit.isPending ? "Deleting..." : "Delete Unit"}
         isLoading={deleteUnit.isPending}
+      />
+
+      {/* Bulk Delete Units Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={isBulkDeleteConfirmOpen}
+        onClose={() => setIsBulkDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmBulkDelete}
+        title={`Delete ${selectedUnitIds.length} ${selectedUnitIds.length === 1 ? "unit" : "units"}?`}
+        description={`${selectedUnitsText} will be deleted. This can't be undone.`}
+        confirmText={bulkDeleteUnits.isPending ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={bulkDeleteUnits.isPending}
       />
 
       {/* Add Unit Modal */}
