@@ -41,7 +41,6 @@ function GoogleIcon({ className }: { className?: string }) {
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const trpcUtils = trpc.useUtils();
 
   const codeParam = searchParams.get("code") || "";
   const roleParam = searchParams.get("role");
@@ -61,21 +60,22 @@ function SignupForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    if (codeParam) {
+    const err = searchParams.get("error");
+    const reason = searchParams.get("reason");
+
+    if (err === "no-account") {
+      setRole("landlord");
+      setError(
+        "There's no PropLink account for this Google email yet. Landlords can sign up below. Tenants, use the invite code from your landlord."
+      );
+    } else if (codeParam) {
       setRole("tenant");
       setInviteCode(codeParam);
     } else if (roleParam === "tenant") {
       setRole("tenant");
     }
 
-    const err = searchParams.get("error");
-    const reason = searchParams.get("reason");
-
-    if (err === "no-account") {
-      setError(
-        "There's no PropLink account for this Google email yet. Choose Landlord or Tenant to create one."
-      );
-    } else if (err === "invite") {
+    if (err === "invite") {
       if (reason === "expired") {
         setError("This invite code has expired. Ask your landlord for a new one.");
       } else if (reason === "used") {
@@ -97,7 +97,7 @@ function SignupForm() {
       window.history.replaceState(
         {},
         "",
-        "/signup" + (roleParam === "tenant" || codeParam ? "?role=tenant" : "")
+        "/signup" + (err === "no-account" ? "" : roleParam === "tenant" || codeParam ? "?role=tenant" : "")
       );
     }
   }, [codeParam, roleParam, searchParams]);
@@ -127,61 +127,21 @@ function SignupForm() {
 
   const handleGoogleSignUp = async () => {
     setError(null);
-    if (role === "tenant") {
-      const trimmed = inviteCode.trim();
-      if (!trimmed) {
-        setError("Please enter your invite code first.");
-        return;
-      }
-
-      setGoogleLoading(true);
-      try {
-        const check = await trpcUtils.client.auth.checkInviteCode.query({ code: trimmed });
-        if (!check.valid) {
-          const reason = "reason" in check ? check.reason : undefined;
-          if (reason === "expired") {
-            setError("This invite code has expired. Ask your landlord for a new one.");
-          } else if (reason === "used") {
-            setError("This invite code has already been redeemed.");
-          } else {
-            setError("This invite code was not found. Ask your landlord for a new one.");
-          }
-          setGoogleLoading(false);
-          return;
-        }
-
-        const supabase = createClient();
-        const encodedCode = encodeURIComponent(trimmed);
-        const redirectTo = `${window.location.origin}/api/auth/callback?intent=signup&role=tenant&code=${encodedCode}&inviteCode=${encodedCode}`;
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo },
-        });
-        if (oauthError) {
-          setError(oauthError.message);
-          setGoogleLoading(false);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to verify invite code.");
+    setGoogleLoading(true);
+    try {
+      const supabase = createClient();
+      const redirectTo = `${window.location.origin}/api/auth/callback?intent=signup&role=landlord`;
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo },
+      });
+      if (oauthError) {
+        setError(oauthError.message);
         setGoogleLoading(false);
       }
-    } else {
-      setGoogleLoading(true);
-      try {
-        const supabase = createClient();
-        const redirectTo = `${window.location.origin}/api/auth/callback?intent=signup&role=landlord`;
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo },
-        });
-        if (oauthError) {
-          setError(oauthError.message);
-          setGoogleLoading(false);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to sign up with Google.");
-        setGoogleLoading(false);
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to sign up with Google.");
+      setGoogleLoading(false);
     }
   };
 
@@ -217,8 +177,6 @@ function SignupForm() {
       setLoading(false);
     }
   };
-
-  const isGoogleTenantDisabled = role === "tenant" && !inviteCode.trim();
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -268,68 +226,60 @@ function SignupForm() {
           </button>
         </div>
 
-        {/* Tenant Tab: Invite Code Field First */}
-        {role === "tenant" && (
-          <div className="mt-6 space-y-2">
-            <label htmlFor="inviteCode" className="block text-sm font-semibold text-foreground">
-              Invite code
-            </label>
-            <input
-              id="inviteCode"
-              name="inviteCode"
-              type="text"
-              required
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-              className="block w-full h-12 rounded-lg border border-input bg-card px-4 font-mono uppercase text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm tracking-wider"
-              placeholder="E.G. PRO-1234"
-            />
-          </div>
+        {/* Landlord tab only: Continue with Google + "or" divider */}
+        {role === "landlord" && (
+          <>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={googleLoading || loading}
+                className="w-full h-12 rounded-lg bg-card border border-border font-semibold text-sm text-foreground flex items-center justify-center gap-3 hover:bg-accent transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {googleLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                ) : (
+                  <GoogleIcon className="w-[18px] h-[18px]" />
+                )}
+                <span>Continue with Google</span>
+              </button>
+            </div>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-background px-3 text-subtle-foreground font-medium">or</span>
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Continue with Google */}
-        <div className="mt-6">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="block w-full">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignUp}
-                  disabled={isGoogleTenantDisabled || googleLoading || loading}
-                  className="w-full h-12 rounded-lg bg-card border border-border font-semibold text-sm text-foreground flex items-center justify-center gap-3 hover:bg-accent transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {googleLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                  ) : (
-                    <GoogleIcon className="w-[18px] h-[18px]" />
-                  )}
-                  <span>Continue with Google</span>
-                </button>
-              </span>
-            </TooltipTrigger>
-            {isGoogleTenantDisabled && (
-              <TooltipContent side="top">
-                Enter your invite code first
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </div>
-
-        {/* "or" Divider */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-background px-3 text-subtle-foreground font-medium">or</span>
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className={cn("space-y-4", role === "tenant" && "mt-6")}>
           {error && (
             <div className="rounded-lg border border-destructive/20 bg-destructive-tint p-3 text-sm text-destructive font-medium">
               {error}
+            </div>
+          )}
+
+          {/* Tenant tab only: Invite code first */}
+          {role === "tenant" && (
+            <div className="space-y-2">
+              <label htmlFor="inviteCode" className="block text-sm font-semibold text-foreground">
+                Invite code
+              </label>
+              <input
+                id="inviteCode"
+                name="inviteCode"
+                type="text"
+                required
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                className="block w-full h-12 rounded-lg border border-input bg-card px-4 font-mono uppercase text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm tracking-wider"
+                placeholder="E.G. PRO-1234"
+              />
             </div>
           )}
 

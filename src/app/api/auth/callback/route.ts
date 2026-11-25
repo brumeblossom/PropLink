@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { redeemInvite } from "@/server/services/redeemInvite";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -106,47 +105,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // d. If none and role=tenant with a code:
-  // Validate code, create Prisma user as tenant, link to lease, mark code redeemed, notify landlord.
-  // Then updateUser role "tenant" and redirect to /tenant.
-  // If the code fails, sign out and redirect to /signup?role=tenant&error=invite with the reason.
+  // d. If role=tenant and no existing PropLink user:
+  // Remove the role=tenant sign-up branch. If a request arrives with role=tenant and no existing PropLink user, sign out and redirect to /signup?role=tenant.
   if (roleParam === "tenant") {
-    const inviteCode = searchParams.get("inviteCode") || (codes.length > 1 ? codes[0] : null);
-
-    if (!inviteCode) {
-      await supabase.auth.signOut();
-      return NextResponse.redirect(`${origin}/signup?role=tenant&error=no-code`);
-    }
-
-    const fullName =
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email.split("@")[0] ||
-      "Tenant";
-
-    const result = await redeemInvite({
-      code: inviteCode,
-      userId: user.id,
-      email: user.email,
-      fullName,
-    });
-
-    if (!result.success) {
-      await supabase.auth.signOut();
-      const reasonParam = encodeURIComponent(result.reason || result.error || "invalid");
-      return NextResponse.redirect(
-        `${origin}/signup?role=tenant&error=invite&reason=${reasonParam}`
-      );
-    }
-
-    await supabase.auth.updateUser({
-      data: {
-        role: "tenant",
-        full_name: fullName,
-      },
-    });
-
-    return NextResponse.redirect(`${origin}/tenant`);
+    await supabase.auth.signOut();
+    return NextResponse.redirect(`${origin}/signup?role=tenant`);
   }
 
   // e. If none and intent=signin (no PropLink account yet):

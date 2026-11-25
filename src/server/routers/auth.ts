@@ -8,28 +8,6 @@ import { isPasswordValid } from "@/lib/password";
 import { redeemInvite } from "../services/redeemInvite";
 
 export const authRouter = router({
-  checkInviteCode: publicProcedure
-    .input(z.object({ code: z.string() }))
-    .query(async ({ input }) => {
-      const trimmed = input.code.trim();
-      if (!trimmed) {
-        return { valid: false, reason: "not_found" as const };
-      }
-      const invite = await prisma.inviteCode.findFirst({
-        where: { code: trimmed },
-      });
-      if (!invite) {
-        return { valid: false, reason: "not_found" as const };
-      }
-      if (invite.redeemedAt) {
-        return { valid: false, reason: "used" as const };
-      }
-      if (new Date() > invite.expiresAt) {
-        return { valid: false, reason: "expired" as const };
-      }
-      return { valid: true as const, reason: undefined };
-    }),
-
   signupLandlord: publicProcedure
     .input(
       z.object({
