@@ -1068,35 +1068,6 @@ export default function UnitDetailPage() {
               : undefined
           }
           actions={[
-            ...(isLeaseEndedState
-              ? [
-                {
-                  label: "Mark as moved out",
-                  onClick: () => setIsMovedOutConfirmOpen(true),
-                  icon: <LogOut className="w-4 h-4" />,
-                  variant: "outline" as const,
-                },
-                {
-                  label: "Renew",
-                  onClick: () => handleOpenRenewLease(),
-                  icon: <RefreshCw className="w-4 h-4" />,
-                  variant: "primary" as const,
-                  disabled: !renewEligibility.eligible,
-                  disabledTooltip: !renewEligibility.eligible && renewEligibility.reason === "unpaid"
-                    ? `${formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease`
-                    : undefined,
-                },
-              ]
-              : isOpenEndedActive
-                ? [
-                  {
-                    label: "Mark as moved out",
-                    onClick: () => setIsMovedOutConfirmOpen(true),
-                    icon: <LogOut className="w-4 h-4" />,
-                    variant: "outline" as const,
-                  },
-                ]
-                : []),
             {
               label: "Edit unit",
               onClick: () => handleOpenEditUnit(),
@@ -1111,55 +1082,6 @@ export default function UnitDetailPage() {
             },
           ]}
         />
-
-        {/* Mobile two-column row under Back link for Ended state */}
-        {isLeaseEndedState && (
-          <div className="grid grid-cols-2 gap-2 sm:hidden w-full -mt-2">
-            <Button
-              variant="outline"
-              size="action"
-              onClick={() => setIsMovedOutConfirmOpen(true)}
-              className="w-full justify-center"
-            >
-              <LogOut className="w-4 h-4" />
-              Mark as moved out
-            </Button>
-            <div className="w-full">
-              {!renewEligibility.eligible && renewEligibility.reason === "unpaid" ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="block w-full cursor-not-allowed">
-                      <Button
-                        variant="default"
-                        size="action"
-                        onClick={() => handleOpenRenewLease()}
-                        disabled
-                        className="w-full justify-center bg-success text-success-foreground opacity-50 pointer-events-none"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Renew
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    {formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Button
-                  variant="default"
-                  size="action"
-                  onClick={() => handleOpenRenewLease()}
-                  disabled={!renewEligibility.eligible}
-                  className="w-full justify-center bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Renew
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
 
         {deleteError && (
           <div className="rounded-lg border border-destructive/30 bg-destructive-tint p-4 text-sm text-destructive">
@@ -1183,14 +1105,6 @@ export default function UnitDetailPage() {
             ? { fullName: pendingLease.tenant.fullName, email: pendingLease.tenant.email }
             : null;
 
-          const headerInviteStatus = hasUnredeemedCode
-            ? (isCodeExpired ? "expired" as const : "invited" as const)
-            : pendingLease
-            ? (pendingLease.isExpired ? "expired" as const : "invited" as const)
-            : activeLease
-            ? "joined" as const
-            : null;
-
           return (
             <UnitHeaderCard
               viewer="landlord"
@@ -1199,7 +1113,6 @@ export default function UnitDetailPage() {
               propertyAddress={property.address ? `${property.address}, ${property.city}` : property.city}
               status={headerStatus}
               person={headerPerson}
-              inviteStatus={headerInviteStatus}
             />
           );
         })()}
@@ -1211,43 +1124,176 @@ export default function UnitDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
               {/* Timeline Display Card */}
               <div className="lg:col-span-3 rounded-xl border border-border bg-card/20 p-5 space-y-6 h-full flex flex-col justify-between">
-                <div className="flex justify-between items-center">
+                {/* Desktop Header (sm and up) */}
+                <div className="hidden sm:flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center space-x-3">
                     <h3 className="font-bold text-foreground text-lg">Lease Timeline</h3>
                     <button
                       onClick={() => handleOpenEditLease()}
                       className="text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:bg-accent px-2 py-1 rounded transition-colors"
                     >
-                      Edit Details
+                      Edit details
                     </button>
                   </div>
-                  {hasUnredeemedCode ? (
-                    <span
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-full text-xs font-semibold",
-                        isCodeExpired
-                          ? "bg-destructive-tint text-destructive border border-destructive/20"
-                          : "bg-warning-tint text-warning border border-warning/20"
+                  <div className="flex items-center gap-2">
+                    {isLeaseEndedState ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="action"
+                          onClick={() => setIsMovedOutConfirmOpen(true)}
+                          className="justify-center"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Mark as moved out
+                        </Button>
+                        {!renewEligibility.eligible && renewEligibility.reason === "unpaid" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="block cursor-not-allowed">
+                                <Button
+                                  variant="default"
+                                  size="action"
+                                  disabled
+                                  className="justify-center opacity-50 pointer-events-none"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                  Renew
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="center">
+                              {formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Button
+                            variant="default"
+                            size="action"
+                            onClick={() => handleOpenRenewLease()}
+                            disabled={!renewEligibility.eligible}
+                            className="justify-center"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            Renew
+                          </Button>
+                        )}
+                      </>
+                    ) : isOpenEndedActive ? (
+                      <>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
+                          Active
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="action"
+                          onClick={() => setIsMovedOutConfirmOpen(true)}
+                          className="justify-center"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Mark as moved out
+                        </Button>
+                      </>
+                    ) : timeline.status === "moved_out" ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
+                        Moved out
+                      </span>
+                    ) : timeline.status === "upcoming" ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-tint text-primary border border-primary/20">
+                        Upcoming
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile Header (under 640px) */}
+                <div className="sm:hidden flex flex-col gap-3 w-full">
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center space-x-3">
+                      <h3 className="font-bold text-foreground text-lg">Lease Timeline</h3>
+                      <button
+                        onClick={() => handleOpenEditLease()}
+                        className="text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:bg-accent px-2 py-1 rounded transition-colors"
+                      >
+                        Edit details
+                      </button>
+                    </div>
+                    {!isLeaseEndedState && (
+                      timeline.status === "moved_out" ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
+                          Moved out
+                        </span>
+                      ) : timeline.status === "upcoming" ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-tint text-primary border border-primary/20">
+                          Upcoming
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
+                          Active
+                        </span>
+                      )
+                    )}
+                  </div>
+                  {isLeaseEndedState && (
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                      <Button
+                        variant="outline"
+                        size="action"
+                        onClick={() => setIsMovedOutConfirmOpen(true)}
+                        className="w-full justify-center"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Mark as moved out
+                      </Button>
+                      {!renewEligibility.eligible && renewEligibility.reason === "unpaid" ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="block w-full cursor-not-allowed">
+                              <Button
+                                variant="default"
+                                size="action"
+                                disabled
+                                className="w-full justify-center opacity-50 pointer-events-none"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                                Renew
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="center">
+                            {formatCurrency(renewEligibility.unpaidAmount ?? 0)} still unpaid on this lease
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="action"
+                          onClick={() => handleOpenRenewLease()}
+                          disabled={!renewEligibility.eligible}
+                          className="w-full justify-center"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Renew
+                        </Button>
                       )}
-                    >
-                      {isCodeExpired ? "Invite expired" : "Invite sent"}
-                    </span>
-                  ) : timeline.status === "moved_out" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
-                      Moved out
-                    </span>
-                  ) : timeline.status === "ended" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
-                      Ended
-                    </span>
-                  ) : timeline.status === "upcoming" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-tint text-primary border border-primary/20">
-                      Upcoming
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
-                      Active
-                    </span>
+                    </div>
+                  )}
+                  {isOpenEndedActive && (
+                    <div className="grid grid-cols-1 gap-2 w-full">
+                      <Button
+                        variant="outline"
+                        size="action"
+                        onClick={() => setIsMovedOutConfirmOpen(true)}
+                        className="w-full justify-center"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Mark as moved out
+                      </Button>
+                    </div>
                   )}
                 </div>
 

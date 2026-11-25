@@ -13,7 +13,6 @@ interface UnitHeaderCardProps {
     fullName: string;
     email: string;
   } | null;
-  inviteStatus?: "invited" | "expired" | "joined" | null;
   className?: string;
 }
 
@@ -24,7 +23,6 @@ export function UnitHeaderCard({
   propertyAddress,
   status,
   person,
-  inviteStatus,
   className,
 }: UnitHeaderCardProps) {
   const renderStatusPill = () => {
@@ -126,18 +124,6 @@ export function UnitHeaderCard({
                 <span className="text-sm font-semibold text-foreground">
                   {person.fullName}
                 </span>
-                {viewer === "landlord" && inviteStatus && inviteStatus !== "joined" && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
-                      inviteStatus === "expired"
-                        ? "bg-destructive-tint text-destructive border-destructive/20"
-                        : "bg-warning-tint text-warning border-warning/20"
-                    )}
-                  >
-                    {inviteStatus === "expired" ? "Expired" : "Invited"}
-                  </span>
-                )}
               </div>
               <span className="text-xs text-muted-foreground block mt-0.5">
                 {person.email}
