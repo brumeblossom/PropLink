@@ -1,21 +1,18 @@
 'use client';
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { formatDateGB } from "@/lib/billing";
 import { formatRentFrequency } from "@/lib/rent";
 
 interface LeaseDetailsCardProps {
-  viewer: "landlord" | "tenant";
+  viewer?: "tenant";
   startDate: Date | string;
   endDate: Date | string;
   rentAmount: number | string;
   rentFrequency: string;
   depositAmount?: number | string | null;
   unitType?: string | null;
-  onEditLease?: () => void;
   className?: string;
 }
 
@@ -27,18 +24,17 @@ function formatUnitType(type: string): string {
 }
 
 export function LeaseDetailsCard({
-  viewer,
   startDate,
   endDate,
   rentAmount,
   rentFrequency,
   depositAmount,
   unitType,
-  onEditLease,
   className,
 }: LeaseDetailsCardProps) {
   const numericRent = Number(rentAmount) || 0;
   const numericDeposit = depositAmount != null && depositAmount !== "" ? Number(depositAmount) : null;
+
   return (
     <div
       className={cn(
@@ -47,24 +43,11 @@ export function LeaseDetailsCard({
       )}
     >
       <div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-foreground text-lg">Lease</h3>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              Tenancy terms and duration.
-            </p>
-          </div>
-          {viewer === "landlord" && onEditLease && (
-            <Button
-              variant="outline"
-              size="action"
-              onClick={onEditLease}
-              className="gap-1.5"
-            >
-              <Pencil className="w-4 h-4" />
-              Edit lease
-            </Button>
-          )}
+        <div>
+          <h3 className="font-bold text-foreground text-lg">Lease</h3>
+          <p className="text-muted-foreground text-xs mt-0.5">
+            Tenancy terms and duration.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 pt-4 text-xs">

@@ -494,7 +494,7 @@ export default function TenantRentalDetailsPage({
           {/* Desktop Payments Table (>= 640px) */}
           <div className="hidden sm:block rounded-xl border border-border bg-card/20 overflow-x-auto">
             <table className="w-full min-w-[640px] table-fixed divide-y divide-border/80 text-left text-sm">
-              <thead className="bg-muted/60 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <thead className="bg-muted text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <tr>
                   <th scope="col" className="w-[20%] px-4 py-3 whitespace-nowrap">
                     Date logged
@@ -577,7 +577,7 @@ export default function TenantRentalDetailsPage({
                     ];
 
                     return (
-                      <tr key={p.id} className="hover:bg-accent/50 transition-colors">
+                      <tr key={p.id} className="hover:bg-accent/40 transition-colors">
                         <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {formatDateGB(p.paymentDate)}
                         </td>
@@ -690,7 +690,7 @@ export default function TenantRentalDetailsPage({
                 return (
                   <div
                     key={p.id}
-                    className="rounded-xl border border-border bg-card/40 p-4 space-y-3"
+                    className="rounded-xl border border-border bg-card/20 p-4 space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-base font-semibold text-foreground">

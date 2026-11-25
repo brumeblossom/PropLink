@@ -18,7 +18,7 @@ import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-ty
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import { formatDateGB } from "@/lib/billing";
 import { getCurrentLease, getRenewEligibility } from "@/lib/leases";
-import { RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
+import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
@@ -26,7 +26,6 @@ import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { InviteCard } from "@/components/leases/InviteCard";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
 import { UnitHeaderCard } from "@/components/leases/UnitHeaderCard";
-import { LeaseDetailsCard } from "@/components/leases/LeaseDetailsCard";
 import { BillingSummaryCard } from "@/components/leases/BillingSummaryCard";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -242,14 +241,17 @@ export default function UnitDetailPage() {
     },
   });
 
-  const handleOpenEditLease = (leaseToEdit = currentLease) => {
-    if (leaseToEdit) {
-      setEditingLeaseId(leaseToEdit.id);
-      setEditRentAmount(Number(leaseToEdit.rentAmount) === 0 ? "" : formatInputNumber(leaseToEdit.rentAmount.toString()));
-      setEditRentFrequency(leaseToEdit.rentFrequency);
-      setEditDepositAmount(leaseToEdit.depositAmount ? formatInputNumber(leaseToEdit.depositAmount.toString()) : "");
-      setEditStartDate(new Date(leaseToEdit.startDate).toISOString().split("T")[0]);
-      setEditEndDate(new Date(leaseToEdit.endDate).toISOString().split("T")[0]);
+  const handleOpenEditLease = (leaseToEdit?: typeof currentLease | unknown) => {
+    const target = (leaseToEdit && typeof leaseToEdit === "object" && "rentAmount" in leaseToEdit)
+      ? (leaseToEdit as typeof currentLease)
+      : currentLease;
+    if (target) {
+      setEditingLeaseId(target.id);
+      setEditRentAmount(Number(target.rentAmount) === 0 ? "" : formatInputNumber(target.rentAmount.toString()));
+      setEditRentFrequency(target.rentFrequency);
+      setEditDepositAmount(target.depositAmount ? formatInputNumber(target.depositAmount.toString()) : "");
+      setEditStartDate(new Date(target.startDate).toISOString().split("T")[0]);
+      setEditEndDate(new Date(target.endDate).toISOString().split("T")[0]);
       setEditLeaseError(null);
       setIsEditLeaseOpen(true);
     }
@@ -972,6 +974,18 @@ export default function UnitDetailPage() {
     router.push(`${window.location.pathname}?${currentUrlParams.toString()}`);
   };
 
+  // Visual Timeline math
+  let todayPercent = 0;
+  if (timeline) {
+    const startMs = new Date(timeline.startDate).getTime();
+    const endMs = new Date(timeline.endDate).getTime();
+    const todayMs = new Date().getTime();
+
+    const totalDuration = endMs - startMs;
+    const elapsed = Math.max(0, Math.min(totalDuration, todayMs - startMs));
+    todayPercent = totalDuration > 0 ? (elapsed / totalDuration) * 100 : 0;
+  }
+
   // availableYears and filteredPayments are declared above, before the early returns.
 
   return (
@@ -1018,7 +1032,7 @@ export default function UnitDetailPage() {
                 },
                 {
                   label: "Renew",
-                  onClick: handleOpenRenewLease,
+                  onClick: () => handleOpenRenewLease(),
                   icon: <RefreshCw className="w-4 h-4" />,
                   variant: "primary" as const,
                   disabled: !renewEligibility.eligible,
@@ -1030,13 +1044,13 @@ export default function UnitDetailPage() {
               : []),
             {
               label: "Edit unit",
-              onClick: handleOpenEditUnit,
+              onClick: () => handleOpenEditUnit(),
               icon: <Pencil className="w-4 h-4" />,
               variant: "outline" as const,
             },
             {
               label: "Delete unit",
-              onClick: handleDeleteUnit,
+              onClick: () => handleDeleteUnit(),
               icon: <Trash2 className="w-4 h-4" />,
               variant: "danger" as const,
             },
@@ -1063,7 +1077,7 @@ export default function UnitDetailPage() {
                       <Button
                         variant="default"
                         size="action"
-                        onClick={handleOpenRenewLease}
+                        onClick={() => handleOpenRenewLease()}
                         disabled
                         className="w-full justify-center bg-success text-success-foreground opacity-50 pointer-events-none"
                       >
@@ -1080,7 +1094,7 @@ export default function UnitDetailPage() {
                 <Button
                   variant="default"
                   size="action"
-                  onClick={handleOpenRenewLease}
+                  onClick={() => handleOpenRenewLease()}
                   disabled={!renewEligibility.eligible}
                   className="w-full justify-center bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50"
                 >
@@ -1138,19 +1152,114 @@ export default function UnitDetailPage() {
         {/* Active Lease Section */}
         {activeLease && timeline ? (
           <div className="space-y-6">
-            {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
+            {/* Two cards side by side (Lease Timeline 3fr & Documents 2fr) */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
-              <LeaseDetailsCard
-                viewer="landlord"
-                startDate={timeline.startDate}
-                endDate={timeline.endDate}
-                rentAmount={timeline.rentAmount}
-                rentFrequency={timeline.rentFrequency}
-                depositAmount={activeLease.depositAmount}
-                unitType={unit.unitType}
-                onEditLease={handleOpenEditLease}
-                className="lg:col-span-3"
-              />
+              {/* Timeline Display Card */}
+              <div className="lg:col-span-3 rounded-xl border border-border bg-card/20 p-5 space-y-6 h-full flex flex-col justify-between">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-3">
+                    <h3 className="font-bold text-foreground text-lg">Lease Timeline</h3>
+                    <button
+                      onClick={() => handleOpenEditLease()}
+                      className="text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:bg-accent px-2 py-1 rounded transition-colors"
+                    >
+                      Edit Details
+                    </button>
+                  </div>
+                  {hasUnredeemedCode ? (
+                    <span
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                        isCodeExpired
+                          ? "bg-destructive-tint text-destructive border border-destructive/20"
+                          : "bg-warning-tint text-warning border border-warning/20"
+                      )}
+                    >
+                      {isCodeExpired ? "Invite expired" : "Invite sent"}
+                    </span>
+                  ) : timeline.status === "moved_out" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
+                      Moved out
+                    </span>
+                  ) : timeline.status === "ended" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
+                      Ended
+                    </span>
+                  ) : timeline.status === "upcoming" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-tint text-primary border border-primary/20">
+                      Upcoming
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress Visual Tracker */}
+                <div className="space-y-3 pt-4">
+                  <div className="relative w-full h-3 rounded-full bg-muted overflow-visible">
+                    {/* Elapsed progress tracker */}
+                    <div
+                      className="absolute top-0 bottom-0 left-0 bg-primary/40 rounded-l-full"
+                      style={{ width: `${todayPercent}%` }}
+                    />
+                    {/* Current day marker dot */}
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-primary bg-primary shadow-md cursor-pointer transition-transform hover:scale-110"
+                      style={{ left: `calc(${todayPercent}% - 10px)` }}
+                      title="Today"
+                    />
+                  </div>
+
+                  <div className="flex justify-between text-xs text-subtle-foreground font-medium pt-1">
+                    <span>Start: {formatDateGB(timeline.startDate)}</span>
+                    <span>End: {formatDateGB(timeline.endDate)}</span>
+                  </div>
+                </div>
+
+                {/* Summary details */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t border-border/40 text-sm">
+                  <div>
+                    <span className="block text-subtle-foreground text-xs">Rent</span>
+                    <span className="font-semibold text-foreground mt-0.5 block">
+                      {formatCurrency(timeline.rentAmount)} / {formatRentFrequency(timeline.rentFrequency)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-subtle-foreground text-xs">Deposit</span>
+                    <span className="font-semibold text-foreground mt-0.5 block">
+                      {activeLease.depositAmount ? formatCurrency(activeLease.depositAmount) : "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-subtle-foreground text-xs">Invite Status</span>
+                    <span className="mt-1 block">
+                      {codeInvite ? (
+                        codeInvite.redeemedAt ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
+                            Joined
+                          </span>
+                        ) : isCodeExpired ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-destructive-tint text-destructive border border-destructive/20">
+                            Expired
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint text-warning border border-warning/20">
+                            Awaiting tenant
+                          </span>
+                        )
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
+                          Joined
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Documents Card */}
               <LeaseDocumentsCard leaseId={activeLease.id} mode="landlord" className="lg:col-span-2 h-full" />
             </div>
 
@@ -1306,7 +1415,7 @@ export default function UnitDetailPage() {
                 return (
                   <>
                     {/* Desktop Table (>= 640px) */}
-                    <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card">
+                    <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card/20">
                       <table className="min-w-full divide-y divide-border">
                         <thead className="bg-muted">
                           <tr>
@@ -1341,14 +1450,14 @@ export default function UnitDetailPage() {
                               return (
                                 <tr
                                   key={p.id}
-                                  className="hover:bg-accent transition-colors cursor-pointer"
+                                  className="hover:bg-accent/40 transition-colors cursor-pointer"
                                   onClick={() => {
                                     setSelectedLandlordPayment(p);
                                     setIsLandlordPaymentDetailOpen(true);
                                   }}
                                 >
                                   <td className="px-6 py-4 text-sm text-foreground/80 whitespace-nowrap">
-                                    {new Date(p.paymentDate).toLocaleDateString()}
+                                    {formatDateGB(p.paymentDate)}
                                   </td>
                                   <td className="px-6 py-4 text-sm font-semibold text-foreground whitespace-nowrap">
                                     {formatCurrency(p.amount)}
@@ -1400,7 +1509,7 @@ export default function UnitDetailPage() {
                     <div className="sm:hidden space-y-2">
                       {isLoadingPayments ? (
                         [...Array(3)].map((_, i) => (
-                          <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-2 animate-pulse">
+                          <div key={i} className="rounded-xl border border-border bg-card/20 p-4 space-y-2 animate-pulse">
                             <div className="flex justify-between items-center">
                               <Skeleton className="h-5 w-24" />
                               <Skeleton className="h-8 w-8 rounded-lg" />
@@ -1410,7 +1519,7 @@ export default function UnitDetailPage() {
                           </div>
                         ))
                       ) : filteredPayments.length === 0 ? (
-                        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-subtle-foreground italic">
+                        <div className="rounded-xl border border-border bg-card/20 p-8 text-center text-sm text-subtle-foreground italic">
                           {!payments || payments.length === 0 ? "No payments recorded yet." : "No payments recorded for this lease."}
                         </div>
                       ) : (
@@ -1423,7 +1532,7 @@ export default function UnitDetailPage() {
                                 setSelectedLandlordPayment(p);
                                 setIsLandlordPaymentDetailOpen(true);
                               }}
-                              className="rounded-xl border border-border bg-card p-4 space-y-2 cursor-pointer hover:bg-accent hover:border-border/80 transition-colors"
+                              className="rounded-xl border border-border bg-card/20 p-4 space-y-2 cursor-pointer hover:bg-accent/40 hover:border-border/80 transition-colors"
                             >
                               {/* Top line: amount on left, ActionMenu ⋯ on right */}
                               <div className="flex items-center justify-between">
@@ -1440,7 +1549,7 @@ export default function UnitDetailPage() {
 
                               {/* Second line: date and method, muted */}
                               <div className="text-xs text-muted-foreground capitalize">
-                                {new Date(p.paymentDate).toLocaleDateString()} · {p.method.replace('_', ' ')}
+                                {formatDateGB(p.paymentDate)} · {p.method.replace('_', ' ')}
                               </div>
 
                               {/* Bottom: status pill + Flagged pill */}
