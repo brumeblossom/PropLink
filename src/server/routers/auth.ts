@@ -3,17 +3,41 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, authedProcedure } from "../trpc";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { createNotification } from "../utils/notifications";
 import { getSanitizedAuthError } from "@/lib/auth-errors";
+import { isPasswordValid } from "@/lib/password";
+import { redeemInvite } from "../services/redeemInvite";
 
 export const authRouter = router({
+  checkInviteCode: publicProcedure
+    .input(z.object({ code: z.string() }))
+    .query(async ({ input }) => {
+      const trimmed = input.code.trim();
+      if (!trimmed) {
+        return { valid: false, reason: "not_found" as const };
+      }
+      const invite = await prisma.inviteCode.findFirst({
+        where: { code: trimmed },
+      });
+      if (!invite) {
+        return { valid: false, reason: "not_found" as const };
+      }
+      if (invite.redeemedAt) {
+        return { valid: false, reason: "used" as const };
+      }
+      if (new Date() > invite.expiresAt) {
+        return { valid: false, reason: "expired" as const };
+      }
+      return { valid: true as const, reason: undefined };
+    }),
+
   signupLandlord: publicProcedure
     .input(
       z.object({
         email: z.string().email(),
-        password: z.string().min(6),
+        password: z.string().refine((val) => isPasswordValid(val), {
+          message: "Password doesn't meet the rules.",
+        }),
         fullName: z.string().min(2),
-        phone: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -51,7 +75,6 @@ export const authRouter = router({
           data: {
             id: data.user.id,
             email: input.email,
-            phone: input.phone || null,
             role: "landlord",
             fullName: input.fullName,
           },
@@ -76,24 +99,21 @@ export const authRouter = router({
       z.object({
         inviteCode: z.string().min(3),
         email: z.string().email(),
-        password: z.string().min(6),
+        password: z.string().refine((val) => isPasswordValid(val), {
+          message: "Password doesn't meet the rules.",
+        }),
         fullName: z.string().min(2),
-        phone: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
       // 1. Fetch and validate the invite code
+      const trimmedCode = input.inviteCode.trim();
       const invite = await prisma.inviteCode.findFirst({
-        where: { code: input.inviteCode },
+        where: { code: trimmedCode },
         include: {
           lease: {
             include: {
               tenant: true,
-              unit: {
-                include: {
-                  property: true,
-                },
-              },
             },
           },
         },
@@ -156,62 +176,23 @@ export const authRouter = router({
         });
       }
 
-      // 3. Update public user profile and redeem the code
-      try {
-        await prisma.$transaction([
-          // Update database profile id to match new Supabase auth user id
-          // CASCADE ON UPDATE on all related tables ensures all tenantId references are updated!
-          prisma.user.update({
-            where: { id: invite.lease.tenantId },
-            data: {
-              id: data.user.id,
-              fullName: input.fullName,
-              phone: input.phone || null,
-            },
-          }),
-          // Mark invite code as redeemed
-          prisma.inviteCode.update({
-            where: { id: invite.id },
-            data: {
-              redeemedAt: new Date(),
-            },
-          }),
-        ]);
+      // 3. Update public user profile and redeem the code via shared service
+      const result = await redeemInvite({
+        code: trimmedCode,
+        userId: data.user.id,
+        email: input.email,
+        fullName: input.fullName,
+      });
 
-        try {
-          // Notify the landlord
-          await createNotification({
-            recipientId: invite.lease.unit.property.landlordId,
-            type: "invite_redeemed",
-            title: "Tenant Invite Redeemed",
-            body: `${input.fullName} has redeemed their invite code for unit ${invite.lease.unit.unitNumber}.`,
-            relatedType: "unit",
-            relatedId: invite.lease.unitId,
-          });
-
-          // Notify the tenant
-          await createNotification({
-            recipientId: data.user.id,
-            type: "lease_created",
-            title: "Lease Agreement Linked",
-            body: `Your lease agreement for unit ${invite.lease.unit.unitNumber} has been successfully linked to your account.`,
-            relatedType: "lease",
-            relatedId: invite.leaseId,
-          });
-        } catch (err) {
-          console.error("Failed to create notifications on invite redemption:", err);
-        }
-
-        return { success: true };
-      } catch (dbError) {
+      if (!result.success) {
+        await supabase.auth.admin.deleteUser(data.user.id);
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: getSanitizedAuthError(
-            dbError,
-            "An unexpected error occurred while linking your account. Please try again."
-          ),
+          message: result.error,
         });
       }
+
+      return { success: true };
     }),
 
   login: publicProcedure

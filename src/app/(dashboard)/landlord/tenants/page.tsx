@@ -8,7 +8,6 @@ import {
   Users, 
   Search, 
   Mail, 
-  Phone, 
   X,
   ChevronLeft,
   ChevronRight
@@ -68,7 +67,6 @@ interface TenantRow {
   id: string;
   fullName: string;
   email: string;
-  phone: string | null;
   avatarUrl: string | null;
   leases: ProcessedLease[];
   units?: UnitLeaseGroup[];
@@ -307,7 +305,7 @@ function LandlordTenantsContent() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search name, email or phone"
+              placeholder="Search name or email"
               className="w-full pl-9 pr-8 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
             />
             {searchInput && (
@@ -432,17 +430,15 @@ function LandlordTenantsContent() {
             <div className="hidden md:block rounded-xl border border-border bg-card/40 overflow-hidden">
               <table className="w-full table-fixed text-left text-sm">
                 <colgroup>
-                  <col className="w-[28%] xl:w-[24%]" />
-                  <col className="hidden xl:table-column xl:w-[13%]" />
-                  <col className="w-[15%] xl:w-[13%]" />
-                  <col className="w-[21%] xl:w-[18%]" />
-                  <col className="w-[15%] xl:w-[13%]" />
-                  <col className="w-[21%] xl:w-[19%]" />
+                  <col className="w-[30%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[21%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[18%]" />
                 </colgroup>
                 <thead className="border-b border-border bg-muted/70 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <tr>
                     <th scope="col" className="px-5 py-3.5">Tenant</th>
-                    <th scope="col" className="hidden xl:table-cell px-5 py-3.5">Phone</th>
                     <th scope="col" className="px-5 py-3.5">Unit(s)</th>
                     <th scope="col" className="px-5 py-3.5">Property</th>
                     <th scope="col" className="px-5 py-3.5">Lease status</th>
@@ -475,13 +471,6 @@ function LandlordTenantsContent() {
                           </div>
                           <div className="text-xs text-muted-foreground mt-0.5 truncate" title={tenant.email}>
                             {tenant.email}
-                          </div>
-                        </td>
-
-                        {/* Phone: hidden 768-1279px, shows xl */}
-                        <td className="hidden xl:table-cell px-5 py-4 text-muted-foreground">
-                          <div className="truncate" title={tenant.phone || undefined}>
-                            {tenant.phone || "—"}
                           </div>
                         </td>
 
@@ -667,7 +656,7 @@ function LandlordTenantsContent() {
                       </Dialog.Close>
                     </div>
 
-                    {/* Email and Phone */}
+                    {/* Email */}
                     <div className="space-y-1.5 text-xs text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -678,22 +667,6 @@ function LandlordTenantsContent() {
                           {selectedTenant.email}
                         </a>
                       </div>
-                      {selectedTenant.phone ? (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <a
-                            href={`tel:${selectedTenant.phone}`}
-                            className="hover:text-foreground transition-colors"
-                          >
-                            {selectedTenant.phone}
-                          </a>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-3.5 h-3.5 shrink-0" />
-                          <span>No phone number</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 

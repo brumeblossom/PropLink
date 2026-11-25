@@ -1133,7 +1133,6 @@ export default function UnitDetailPage() {
               <span className="text-sm font-semibold text-foreground">{activeLease.tenant.fullName}</span>
               <div className="text-xs text-muted-foreground space-y-0.5">
                 <p className="truncate">Email: {activeLease.tenant.email}</p>
-                <p>Phone: {activeLease.tenant.phone || "—"}</p>
               </div>
             </div>
           ) : pendingLease ? (
@@ -1142,7 +1141,6 @@ export default function UnitDetailPage() {
               <span className="text-sm font-semibold text-foreground">{pendingLease.tenant.fullName}</span>
               <div className="text-xs text-muted-foreground space-y-0.5">
                 <p className="truncate">Email: {pendingLease.tenant.email}</p>
-                <p>Phone: {pendingLease.tenant.phone || "—"}</p>
               </div>
             </div>
           ) : (

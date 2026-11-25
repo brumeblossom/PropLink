@@ -2,9 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { NotificationChannel, NotificationStatus, RelatedType } from "@prisma/client";
 
 /**
- * Dispatches an email or WhatsApp notification, handles status logging, and returns the log.
+ * Dispatches an email notification, handles status logging, and returns the log.
  * - Email: Sent via Resend API using standard fetch.
- * - WhatsApp: Stubbed as 'pending' with a TODO comment because template approval/credentials are pending.
  */
 export async function dispatchNotification(params: {
   recipientId: string;
@@ -17,7 +16,7 @@ export async function dispatchNotification(params: {
 }) {
   const recipient = await prisma.user.findUnique({
     where: { id: params.recipientId },
-    select: { email: true, phone: true },
+    select: { email: true },
   });
 
   if (!recipient) {
@@ -69,13 +68,6 @@ export async function dispatchNotification(params: {
         providerMessageId = params.customId ? `${params.customId}|error` : "error";
       }
     }
-  } else if (params.channel === NotificationChannel.whatsapp) {
-    // WhatsApp template approval / API credentials pending.
-    // As per user instructions, we stub the send and log status to notification_log as 'pending'.
-    // TODO: Integrate actual WhatsApp Cloud API or Termii dispatching when credentials/templates are ready.
-    status = "pending";
-    providerMessageId = params.customId ? `${params.customId}|pending_whatsapp_setup` : "pending_whatsapp_setup";
-    console.log(`[dispatchNotification] WhatsApp template approval/credentials pending. Logged as pending for recipient: ${recipient.phone || params.recipientId}`);
   }
 
   // Write results to notification_log

@@ -17,9 +17,6 @@ export function getSanitizedAuthError(
     const errStr = `${targetStr} ${errorObj.message || ""}`.toLowerCase();
 
     if (errorObj.code === "P2002" || errStr.includes("unique constraint")) {
-      if (errStr.includes("phone")) {
-        return "This phone number is already registered. Use a different number or leave it blank.";
-      }
       if (errStr.includes("email")) {
         return "An account with this email already exists. Log in instead.";
       }

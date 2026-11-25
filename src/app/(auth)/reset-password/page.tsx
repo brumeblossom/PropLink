@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { Eye, EyeOff, Check, Loader2 } from "lucide-react";
 import { PasswordChecklist, isPasswordValid } from "@/components/auth/PasswordChecklist";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { toast } = useToast();
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,53 +19,58 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [hasValidSession, setHasValidSession] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
-        setError("Invalid or expired password reset session. Please request a new link.");
+        setError("Invalid or expired password reset link. Please request a new link.");
+        setHasValidSession(false);
+      } else {
+        setHasValidSession(true);
       }
       setSessionChecked(true);
     };
-    
+
     checkSession();
   }, []);
 
+  const allRulesPass = isPasswordValid(password);
+  const passwordsMatch = Boolean(password && confirmPassword && password === confirmPassword);
+  const canSubmit = allRulesPass && passwordsMatch && !loading;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSubmit) return;
+
     setError(null);
-
-    if (!isPasswordValid(password)) {
-      setError("Password does not satisfy all security requirements.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
     setLoading(true);
 
     try {
       const supabase = createClient();
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        password,
       });
 
       if (updateError) {
         throw updateError;
       }
 
-      // Log out to clear recovery session and ensure they log in with the new password
-      await supabase.auth.signOut();
+      toast("Password updated", "success");
 
-      router.push("/login?reset=success");
+      // Redirect to user's dashboard based on metadata role
+      const userRole = data.user?.user_metadata?.role;
+      const redirectUrl = userRole === "tenant" ? "/tenant" : "/landlord";
+      router.push(redirectUrl);
+      router.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to reset password. Please request a new link.";
+      const message =
+        err instanceof Error ? err.message : "Failed to reset password. Please try again.";
       setError(message);
       setLoading(false);
     }
@@ -71,123 +78,149 @@ export default function ResetPasswordPage() {
 
   if (!sessionChecked) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
-        <p className="text-lg">Verifying session...</p>
-      </main>
+      <div className="py-12 flex flex-col items-center justify-center space-y-3">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Verifying reset session...</p>
+      </div>
+    );
+  }
+
+  if (!hasValidSession) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col space-y-1.5">
+          <h1 className="text-[34px] font-extrabold tracking-tight text-foreground font-sans leading-tight">
+            Reset password
+          </h1>
+        </div>
+
+        <div className="rounded-lg border border-destructive/20 bg-destructive-tint p-4 text-sm text-destructive font-medium">
+          {error}
+        </div>
+
+        <div className="pt-2">
+          <Link
+            href="/forgot-password"
+            className="block w-full h-[50px] rounded-lg bg-primary text-primary-foreground font-semibold text-sm text-center leading-[50px] hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            Request new reset link
+          </Link>
+        </div>
+
+        <div className="text-center">
+          <Link href="/login" className="text-sm font-semibold text-primary hover:underline">
+            Back to sign in
+          </Link>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950/50 p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-white font-sans">Reset Password</h1>
-          <p className="text-sm text-neutral-400">
-            Set your new account password
-          </p>
+    <div>
+      <div className="flex flex-col space-y-1.5">
+        <h1 className="text-[34px] font-extrabold tracking-tight text-foreground font-sans leading-tight">
+          Set a new password
+        </h1>
+        <p className="text-sm text-muted-foreground font-sans">
+          Choose a new password for your PropLink account.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        {error && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive-tint p-3 text-sm text-destructive font-medium">
+            {error}
+          </div>
+        )}
+
+        {/* New Password */}
+        <div className="space-y-2">
+          <label htmlFor="password" className="block text-sm font-semibold text-foreground">
+            New password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
+          <PasswordChecklist password={password} className="mt-2.5" />
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && (
-            <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400 font-sans">
-              {error}
+        {/* Confirm Password */}
+        <div className="space-y-2">
+          <label htmlFor="confirmPassword" className="block text-sm font-semibold text-foreground">
+            Confirm password
+          </label>
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-muted-foreground hover:text-foreground"
+              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+            >
+              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
+          {passwordsMatch && (
+            <div className="flex items-center gap-1.5 text-xs text-success font-medium mt-1.5">
+              <Check className="w-3.5 h-3.5" />
+              <span>Passwords match</span>
             </div>
           )}
+        </div>
 
-          {(!error || loading || password) && (
-            <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-neutral-300"
-                >
-                  New Password
-                </label>
-                <div className="mt-1 relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 pl-4 pr-10 py-2.5 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-white transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                <PasswordChecklist password={password} className="mt-2.5" />
-              </div>
+        {/* Update Password Button */}
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full h-[50px] rounded-lg bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <span>Updating password...</span>
+              </>
+            ) : (
+              <span>Update password</span>
+            )}
+          </button>
+        </div>
+      </form>
 
-              <div>
-                <label
-                  htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-neutral-300"
-                >
-                  Confirm New Password
-                </label>
-                <div className="mt-1 relative">
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 pl-4 pr-10 py-2.5 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-white transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {confirmPassword && password !== confirmPassword && (
-                  <p className="mt-1.5 text-xs text-red-500">
-                    Passwords don&apos;t match
-                  </p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading || !isPasswordValid(password) || !confirmPassword || password !== confirmPassword}
-                className="w-full bg-white py-2.5 text-neutral-950 hover:bg-neutral-200 transition-colors h-11 text-sm font-medium"
-              >
-                {loading ? "Resetting..." : "Reset Password"}
-              </Button>
-            </div>
-          )}
-
-          {error && !password && (
-            <p className="text-center text-sm text-neutral-400 mt-4">
-              <Link
-                href="/forgot-password"
-                className="font-medium text-white hover:underline"
-              >
-                Request a new password reset link
-              </Link>
-            </p>
-          )}
-        </form>
+      <div className="mt-8 text-center">
+        <Link href="/login" className="text-sm font-semibold text-primary hover:underline">
+          Back to sign in
+        </Link>
       </div>
-    </main>
+    </div>
   );
 }

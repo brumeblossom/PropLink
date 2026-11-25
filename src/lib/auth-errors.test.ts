@@ -2,17 +2,6 @@ import { describe, it, expect } from "vitest";
 import { getSanitizedAuthError } from "./auth-errors";
 
 describe("Signup Error Sanitization", () => {
-  it("sanitizes Prisma P2002 error on phone target", () => {
-    const error = {
-      code: "P2002",
-      meta: { target: ["phone"] },
-      message: "Unique constraint failed on the fields: (`phone`)",
-    };
-    expect(getSanitizedAuthError(error)).toBe(
-      "This phone number is already registered. Use a different number or leave it blank."
-    );
-  });
-
   it("sanitizes Prisma P2002 error on email target", () => {
     const error = {
       code: "P2002",

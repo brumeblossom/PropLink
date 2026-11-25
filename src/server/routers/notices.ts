@@ -89,8 +89,7 @@ export const noticesRouter = router({
       }
 
       // Decision: announcements are in-app only for now.
-      // Email (Resend) only reaches the account owner's address until a domain is verified,
-      // and WhatsApp was never enabled.
+      // Email (Resend) only reaches the account owner's address until a domain is verified.
       // WHERE TO TURN EMAIL BACK ON:
       // To re-enable email dispatching for announcements once a domain is verified,
       // change `channels` to include `NotificationChannel.email`, and restore the
@@ -119,14 +118,13 @@ export const noticesRouter = router({
           tenantId,
           inAppDeliveredAt: new Date(),
           emailStatus: null,
-          whatsappStatus: null,
         }));
 
         await prisma.noticeRecipient.createMany({
           data: recipientsData,
         });
 
-        // NOTE: Email and WhatsApp dispatch for notices is currently paused (in-app only).
+        // NOTE: Email dispatch for notices is currently paused (in-app only).
         // To turn email back on, restore the dispatchNotification loop with NotificationChannel.email here.
       }
 

@@ -82,7 +82,6 @@ enum RelatedType {
 model User {
   id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique
-  phone         String?  @unique
   passwordHash  String?  @map("password_hash")
   role          Role
   fullName      String   @map("full_name")
@@ -278,7 +277,6 @@ model NoticeRecipient {
   tenantId          String          @map("tenant_id") @db.Uuid
   inAppDeliveredAt  DateTime?       @map("in_app_delivered_at") @db.Timestamptz
   emailStatus       DeliveryStatus? @map("email_status")
-  whatsappStatus    DeliveryStatus? @map("whatsapp_status")
   readAt            DateTime?       @map("read_at") @db.Timestamptz
 
   // Relations

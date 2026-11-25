@@ -1,28 +1,37 @@
 'use client';
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Button } from "@/components/ui/button";
+import { Mail, Loader2 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(60);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (sent && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [sent, countdown]);
+
+  const sendResetEmail = async (targetEmail: string) => {
     setError(null);
-    setMessage(null);
     setLoading(true);
 
     try {
       const supabase = createClient();
       const redirectTo = `${window.location.origin}/api/auth/callback?next=/reset-password`;
-      
+
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email.trim(),
+        targetEmail.trim(),
         { redirectTo }
       );
 
@@ -30,86 +39,135 @@ export default function ForgotPasswordPage() {
         if (resetError.status === 429) {
           setError("Rate limit exceeded. Please try again in a few minutes.");
           setLoading(false);
-          return;
+          return false;
         }
-        console.error("Reset error:", resetError);
+        console.error("Reset password error:", resetError);
       }
 
-      // Generic message to prevent user enumeration
-      setMessage("If that email exists on our platform, a password reset link has been sent to it.");
+      setSent(true);
+      setCountdown(60);
+      return true;
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred. Please try again.");
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-950 to-neutral-900 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950/50 p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-white font-sans">Forgot Password</h1>
-          <p className="text-sm text-neutral-400">
-            Enter your email to receive a password reset link
-          </p>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendResetEmail(email);
+  };
+
+  const handleResend = async () => {
+    if (countdown > 0 || loading) return;
+    await sendResetEmail(email);
+  };
+
+  if (sent) {
+    return (
+      <div className="flex flex-col items-center text-center">
+        {/* 56px round icon tile */}
+        <div className="w-14 h-14 rounded-full bg-primary-tint flex items-center justify-center text-primary mb-4">
+          <Mail className="w-7 h-7" />
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && (
-            <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">
-              {error}
-            </div>
-          )}
+        <h2 className="text-2xl font-bold tracking-tight text-foreground font-sans">
+          Check your email
+        </h2>
+        <p className="text-sm text-muted-foreground mt-2 max-w-[340px]">
+          We sent a reset link to <span className="font-semibold text-foreground">{email}</span>. It expires in 1 hour.
+        </p>
 
-          {message && (
-            <div className="rounded-lg border border-emerald-900/30 bg-emerald-950/20 p-3 text-sm text-emerald-400 font-sans">
-              {message}
-            </div>
-          )}
+        {error && (
+          <div className="w-full mt-4 rounded-lg border border-destructive/20 bg-destructive-tint p-3 text-sm text-destructive font-medium text-left">
+            {error}
+          </div>
+        )}
 
-          {!message && (
-            <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-neutral-300"
-                >
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-neutral-800 bg-neutral-900/50 px-4 py-2.5 text-white placeholder-neutral-500 focus:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-neutral-700 text-sm"
-                  placeholder="you@example.com"
-                />
-              </div>
+        <div className="mt-8 space-y-4 w-full">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={countdown > 0 || loading}
+            className="text-sm font-semibold text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? "Sending..." : countdown > 0 ? `Resend link (${countdown}s)` : "Resend link"}
+          </button>
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-white py-2.5 text-neutral-950 hover:bg-neutral-200 transition-colors h-11 text-sm font-medium"
-              >
-                {loading ? "Sending..." : "Send Reset Link"}
-              </Button>
-            </div>
-          )}
-
-          <p className="text-center text-sm text-neutral-400 mt-4">
-            Back to{" "}
+          <div>
             <Link
               href="/login"
-              className="font-medium text-white hover:underline"
+              className="inline-block text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Sign In
+              Back to sign in
             </Link>
-          </p>
-        </form>
+          </div>
+        </div>
       </div>
-    </main>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex flex-col space-y-1.5">
+        <h1 className="text-[34px] font-extrabold tracking-tight text-foreground font-sans leading-tight">
+          Reset your password
+        </h1>
+        <p className="text-sm text-muted-foreground font-sans">
+          Enter your email and we&apos;ll send you a link to set a new one.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        {error && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive-tint p-3 text-sm text-destructive font-medium">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-sm font-semibold text-foreground">
+            Email address
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={!email || loading}
+            className="w-full h-[50px] rounded-lg bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <span>Sending...</span>
+              </>
+            ) : (
+              <span>Send reset link</span>
+            )}
+          </button>
+        </div>
+      </form>
+
+      <div className="mt-8 text-center">
+        <Link href="/login" className="text-sm font-semibold text-primary hover:underline">
+          Back to sign in
+        </Link>
+      </div>
+    </div>
   );
 }

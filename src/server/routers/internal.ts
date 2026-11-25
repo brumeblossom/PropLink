@@ -95,17 +95,6 @@ export const internalRouter = router({
             customId,
           });
 
-          // Dispatch WhatsApp (stubbed)
-          await dispatchNotification({
-            recipientId: lease.tenantId,
-            channel: NotificationChannel.whatsapp,
-            relatedType: RelatedType.reminder,
-            relatedId: lease.id,
-            title,
-            body,
-            customId,
-          });
-
           remindersSent++;
         }
       }

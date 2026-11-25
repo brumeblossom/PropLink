@@ -62,8 +62,8 @@ export const conversationsRouter = router({
               sender: { select: { id: true, fullName: true, role: true, avatarUrl: true } },
             },
           },
-          landlord: { select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true } },
-          tenant: { select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true } },
+          landlord: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
+          tenant: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
           unit: { select: { unitNumber: true } },
         },
       });

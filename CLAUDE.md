@@ -11,7 +11,7 @@ This file is the standing context for any Claude Code session working in this re
 **MVP scope, locked:**
 - Two roles only: `landlord`, `tenant`. No staff/manager sub-role.
 - Payments are **manually logged by either party**, with a confirmation workflow — never processed. No payment gateway in this phase.
-- Reminders and notices deliver via in-app, email, and WhatsApp. No SMS.
+- Reminders and notices deliver in-app only.
 
 **Explicitly out of scope — do not build these unless the PRD is revised:**
 - Online rent payment/collection (Paystack, Flutterwave, etc.)
@@ -87,8 +87,6 @@ Derived-status logic (lease status, unit status, outstanding balance) belongs in
 | Auth | Supabase Auth |
 | Realtime | Supabase Realtime (chat, live updates) |
 | File storage | Supabase Storage (lease documents, payment proofs) |
-| Email | Resend |
-| WhatsApp | WhatsApp Cloud API (Meta) or Termii — confirm which has credentials configured before building Prompt 8 |
 | Scheduled jobs | Vercel Cron |
 | Deployment | Vercel (app) + Supabase (managed backend) |
 

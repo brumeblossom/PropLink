@@ -247,7 +247,7 @@ export const leasesRouter = router({
         },
         include: {
           tenant: {
-            select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true },
+            select: { id: true, fullName: true, email: true, avatarUrl: true },
           },
           inviteCodes: {
             select: {
@@ -862,7 +862,6 @@ export const leasesRouter = router({
                       id: true,
                       fullName: true,
                       email: true,
-                      phone: true,
                       avatarUrl: true,
                     },
                   },
@@ -1046,7 +1045,6 @@ export const leasesRouter = router({
                       id: true,
                       fullName: true,
                       email: true,
-                      phone: true,
                       avatarUrl: true,
                     },
                   },
@@ -1085,7 +1083,6 @@ export const leasesRouter = router({
                       id: true,
                       fullName: true,
                       email: true,
-                      phone: true,
                       avatarUrl: true,
                     },
                   },
@@ -1356,7 +1353,6 @@ export const leasesRouter = router({
                 OR: [
                   { fullName: { contains: searchTrimmed, mode: "insensitive" } },
                   { email: { contains: searchTrimmed, mode: "insensitive" } },
-                  { phone: { contains: searchTrimmed, mode: "insensitive" } },
                 ],
               }
             : {}),
@@ -1365,7 +1361,6 @@ export const leasesRouter = router({
           id: true,
           fullName: true,
           email: true,
-          phone: true,
           avatarUrl: true,
           leasesAsTenant: {
             where: {
@@ -1634,7 +1629,6 @@ export const leasesRouter = router({
           id: user.id,
           fullName: user.fullName,
           email: user.email,
-          phone: user.phone,
           avatarUrl: user.avatarUrl,
           leases: allProcessedLeases,
           units: processedUnits,

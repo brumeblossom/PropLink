@@ -136,17 +136,6 @@ async function runReminderCheck() {
         customId,
       });
 
-      // WhatsApp dispatch
-      await dispatchNotification({
-        recipientId: lease.tenantId,
-        channel: "whatsapp",
-        relatedType: "reminder",
-        relatedId: lease.id,
-        title,
-        body,
-        customId,
-      });
-
       remindersSent++;
       actions.push({ leaseId: lease.id, status: "sent", threshold, dueDateStr });
     }
@@ -178,7 +167,6 @@ async function main() {
       email: 'cron-tenant@test.com',
       fullName: 'Test Tenant',
       role: 'tenant',
-      phone: '+2348000000000'
     }
   });
   console.log(`Tenant: ${tenant.id}`);
@@ -235,13 +223,13 @@ async function main() {
   const logs1 = await prisma.notificationLog.findMany({
     where: { relatedId: lease.id }
   });
-  console.log(`Found ${logs1.length} logs in DB (expect 2: 1 email, 1 whatsapp)`);
+  console.log(`Found ${logs1.length} logs in DB (expect 1: email)`);
   logs1.forEach(log => {
     console.log(` - Channel: ${log.channel}, Status: ${log.status}, ID: ${log.providerMessageId}`);
   });
 
-  if (logs1.length !== 2) {
-    throw new Error("TEST 1 FAILED: Expected 2 notification logs.");
+  if (logs1.length !== 1) {
+    throw new Error("TEST 1 FAILED: Expected 1 notification log.");
   }
 
   // TEST 2: Run check twice (should skip due to idempotency)
