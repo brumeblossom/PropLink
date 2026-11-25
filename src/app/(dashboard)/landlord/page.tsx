@@ -139,55 +139,57 @@ export default function LandlordDashboard() {
         {/* 1. Stat Cards: 4 across desktop, 2 across mobile */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           {/* Card 1: Total properties (kpi-navy, Building2) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-navy-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-kpi-navy" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Total properties</span>
-              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-navy-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-kpi-navy" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Total properties</span>
+              <span className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight">
                 {stats.totalProperties}
               </span>
             </div>
           </div>
 
           {/* Card 2: Total units (kpi-gold, LayoutGrid) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-gold-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <LayoutGrid className="w-5 h-5 text-kpi-gold" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Total units</span>
-              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-gold-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <LayoutGrid className="w-5 h-5 text-kpi-gold" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Total units</span>
+              <span className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight">
                 {stats.totalUnits}
               </span>
             </div>
           </div>
 
           {/* Card 3: Occupied (kpi-sage, UserCheck) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-sage-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-kpi-sage" />
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-sage-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <UserCheck className="w-5 h-5 text-kpi-sage" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Occupied</span>
+              <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-baseline mt-0.5">
+                <span className="text-2xl font-bold tracking-tight tabular-nums text-foreground leading-tight">
+                  {stats.occupiedUnits}
+                </span>
+                <span className="text-xs text-subtle-foreground min-[380px]:ml-2">
+                  {stats.occupancyRate}% occupancy
+                </span>
               </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Occupied</span>
-              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
-                {stats.occupiedUnits}
-              </span>
-              <span className="text-xs text-subtle-foreground mt-1 block">
-                {stats.occupancyRate}% occupancy
-              </span>
             </div>
           </div>
 
           {/* Card 4: Vacant (kpi-clay, DoorOpen) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-clay-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <DoorOpen className="w-5 h-5 text-kpi-clay" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Vacant</span>
-              <span className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-clay-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <DoorOpen className="w-5 h-5 text-kpi-clay" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Vacant</span>
+              <span className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight">
                 {stats.vacantUnits}
               </span>
             </div>

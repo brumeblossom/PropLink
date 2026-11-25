@@ -80,7 +80,7 @@ export default function LandingPage() {
                 </Link>
                 <Link
                   href="/login"
-                  className="h-12 w-full rounded-full bg-secondary text-secondary-foreground font-medium text-[15px] flex items-center justify-center hover:opacity-90 transition-opacity"
+                  className="h-12 w-full rounded-full bg-card border-[1.5px] border-primary/30 dark:border-border text-primary dark:text-foreground font-semibold text-[15px] flex items-center justify-center hover:bg-accent transition-colors"
                 >
                   Sign in
                 </Link>

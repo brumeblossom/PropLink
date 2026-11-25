@@ -446,14 +446,14 @@ export default function TenantHomePage() {
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           {/* Card 1: Active leases (kpi-navy, Home) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-navy-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <Home className="w-5 h-5 text-kpi-navy" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Active leases</span>
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-navy-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <Home className="w-5 h-5 text-kpi-navy" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Active leases</span>
               <span
-                className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block truncate whitespace-nowrap"
+                className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight truncate"
                 title={String(activeLeasesCount)}
               >
                 {activeLeasesCount}
@@ -462,14 +462,14 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 2: Landlords (kpi-gold, Users) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-gold-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <Users className="w-5 h-5 text-kpi-gold" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Landlords</span>
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-gold-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5 text-kpi-gold" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Landlords</span>
               <span
-                className="text-[26px] font-bold tracking-tight tabular-nums text-foreground mt-1 block truncate whitespace-nowrap"
+                className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight truncate"
                 title={String(distinctLandlordsCount)}
               >
                 {distinctLandlordsCount}
@@ -478,15 +478,15 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 3: Outstanding (kpi-clay, CreditCard) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-clay-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-kpi-clay" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Outstanding</span>
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-clay-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <CreditCard className="w-5 h-5 text-kpi-clay" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Outstanding</span>
               <span
                 className={cn(
-                  "text-[26px] font-bold tracking-tight tabular-nums mt-1 block truncate whitespace-nowrap",
+                  "text-2xl font-bold tracking-tight tabular-nums mt-0.5 block leading-tight truncate",
                   totalOutstanding > 0 ? "text-destructive" : "text-foreground"
                 )}
                 title={totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "₦0"}
@@ -497,29 +497,29 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 4: Next payment (kpi-sage, Calendar) */}
-          <div className="rounded-xl p-[18px] border border-transparent bg-kpi-sage-fill flex flex-col justify-between h-full">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-kpi-sage" />
-              </div>
-              <span className="block text-[13px] font-medium text-muted-foreground mt-3.5">Next payment</span>
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-sage-fill flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
+              <Calendar className="w-5 h-5 text-kpi-sage" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[13px] font-medium text-muted-foreground leading-none">Next payment</span>
               {nextPayment ? (
-                <div className="min-w-0 mt-1">
+                <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-baseline mt-0.5 min-w-0">
                   <span
-                    className="text-[26px] font-bold tracking-tight tabular-nums text-foreground block truncate whitespace-nowrap leading-tight"
+                    className="text-2xl font-bold tracking-tight tabular-nums text-foreground block truncate leading-tight"
                     title={formatCurrency(nextPayment.amount)}
                   >
                     {formatCurrency(nextPayment.amount)}
                   </span>
                   <span
-                    className="text-xs text-subtle-foreground block truncate mt-1 whitespace-nowrap"
+                    className="text-xs text-subtle-foreground min-[380px]:ml-2 block truncate"
                     title={`${nextPayment.dateStr} · ${nextPayment.unitName}`}
                   >
                     {nextPayment.dateStr} · {nextPayment.unitName}
                   </span>
                 </div>
               ) : (
-                <span className="text-[26px] font-bold tracking-tight tabular-nums text-subtle-foreground mt-1 block truncate whitespace-nowrap leading-tight">
+                <span className="text-2xl font-bold tracking-tight tabular-nums text-subtle-foreground mt-0.5 block leading-tight">
                   —
                 </span>
               )}
