@@ -767,8 +767,8 @@ export default function PropertyDetailPage() {
             filteredUnits.length > 0 ? (
               <>
                 {/* Desktop Table: Checkbox (44px) | Unit Name/Number | Unit Type | Current Tenant | Lease Range | Status | Actions */}
-                <div className="hidden md:block overflow-hidden rounded-xl border border-border bg-card backdrop-blur-sm">
-                  <table className="min-w-full divide-y divide-border">
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-border bg-card backdrop-blur-sm">
+                  <table className="w-full min-w-[800px] divide-y divide-border">
                     <thead className="bg-muted">
                       <tr>
                         <th

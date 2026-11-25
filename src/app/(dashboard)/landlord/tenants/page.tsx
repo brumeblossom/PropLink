@@ -143,23 +143,23 @@ function LeaseStatusBadge({ status }: { status: string }) {
 
 function TwoLineRentDue({ data }: { data: RentDueLines }) {
   if (data.status === "expired") {
-    return <span className="text-muted-foreground text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm whitespace-nowrap">—</span>;
   }
   if (data.status === "paid_in_full") {
     return (
-      <span className="text-success font-medium text-sm block truncate" title={data.line1}>
+      <span className="text-success font-medium text-sm block whitespace-nowrap" title={data.line1}>
         {data.line1}
       </span>
     );
   }
   if (data.status === "overdue") {
     return (
-      <div className="leading-tight">
-        <div className="text-destructive font-medium text-sm truncate" title={data.line1}>
+      <div className="leading-tight whitespace-nowrap">
+        <div className="text-destructive font-medium text-sm whitespace-nowrap" title={data.line1}>
           {data.line1}
         </div>
         {data.line2 && (
-          <div className="text-muted-foreground text-xs mt-0.5 truncate" title={data.line2}>
+          <div className="text-muted-foreground text-xs mt-0.5 whitespace-nowrap" title={data.line2}>
             {data.line2}
           </div>
         )}
@@ -167,12 +167,12 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
     );
   }
   return (
-    <div className="leading-tight">
-      <div className="text-foreground font-medium text-sm truncate" title={data.line1}>
+    <div className="leading-tight whitespace-nowrap">
+      <div className="text-foreground font-medium text-sm whitespace-nowrap" title={data.line1}>
         {data.line1}
       </div>
       {data.line2 && (
-        <div className="text-muted-foreground text-xs mt-0.5 truncate" title={data.line2}>
+        <div className="text-muted-foreground text-xs mt-0.5 whitespace-nowrap" title={data.line2}>
           {data.line2}
         </div>
       )}
@@ -426,9 +426,9 @@ function LandlordTenantsContent() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Desktop Table: table-layout: fixed, set column widths, no sideways scroll at 1024px+ */}
-            <div className="hidden md:block rounded-xl border border-border bg-card/40 overflow-hidden">
-              <table className="w-full table-fixed text-left text-sm">
+            {/* Desktop Table: wrapped in overflow-x-auto with min-w-[1000px] */}
+            <div className="hidden md:block rounded-xl border border-border bg-card/40 overflow-x-auto">
+              <table className="w-full min-w-[1000px] table-fixed text-left text-sm">
                 <colgroup>
                   <col className="w-[30%]" />
                   <col className="w-[16%]" />
@@ -438,11 +438,11 @@ function LandlordTenantsContent() {
                 </colgroup>
                 <thead className="border-b border-border bg-muted/70 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <tr>
-                    <th scope="col" className="px-5 py-3.5">Tenant</th>
-                    <th scope="col" className="px-5 py-3.5">Unit(s)</th>
-                    <th scope="col" className="px-5 py-3.5">Property</th>
-                    <th scope="col" className="px-5 py-3.5">Lease status</th>
-                    <th scope="col" className="px-5 py-3.5">Next rent due</th>
+                    <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Tenant</th>
+                    <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Unit(s)</th>
+                    <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Property</th>
+                    <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Lease status</th>
+                    <th scope="col" className="px-5 py-3.5 whitespace-nowrap">Next rent due</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -465,7 +465,7 @@ function LandlordTenantsContent() {
                         )}
                       >
                         {/* Tenant: Name + Email (truncated) */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 min-w-0 overflow-hidden">
                           <div className="font-semibold text-foreground truncate" title={tenant.fullName}>
                             {tenant.fullName}
                           </div>
@@ -475,13 +475,13 @@ function LandlordTenantsContent() {
                         </td>
 
                         {/* Unit(s) */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center min-w-0">
-                            <span className="font-medium text-foreground truncate" title={tenant.unitDisplay.primaryUnit}>
+                            <span className="font-medium text-foreground whitespace-nowrap" title={tenant.unitDisplay.primaryUnit}>
                               {tenant.unitDisplay.primaryUnit}
                             </span>
                             {tenant.unitDisplay.moreCount > 0 && (
-                              <span className="shrink-0 ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border">
+                              <span className="shrink-0 ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium bg-muted text-muted-foreground border border-border whitespace-nowrap">
                                 +{tenant.unitDisplay.moreCount} more
                               </span>
                             )}
@@ -489,19 +489,19 @@ function LandlordTenantsContent() {
                         </td>
 
                         {/* Property */}
-                        <td className="px-5 py-4 text-muted-foreground">
+                        <td className="px-5 py-4 text-muted-foreground min-w-0 overflow-hidden">
                           <div className="truncate" title={tenant.propertyDisplay}>
                             {tenant.propertyDisplay}
                           </div>
                         </td>
 
                         {/* Lease Status */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <LeaseStatusBadge status={tenant.overallStatus} />
                         </td>
 
                         {/* Next Rent Due: Two short lines, column title not repeated */}
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <TwoLineRentDue data={rentDueLines} />
                         </td>
                       </tr>

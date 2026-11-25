@@ -13,14 +13,15 @@ import { ActionMenu } from "@/components/ui/action-menu";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
+import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import {
   formatDateGB,
   formatLagosYMD,
-  getDueDateStatus,
 } from "@/lib/billing";
-import { formatRentFrequency } from "@/lib/rent";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
+import { UnitHeaderCard } from "@/components/leases/UnitHeaderCard";
+import { LeaseDetailsCard } from "@/components/leases/LeaseDetailsCard";
+import { BillingSummaryCard } from "@/components/leases/BillingSummaryCard";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Plus,
@@ -50,47 +51,6 @@ function computeLeaseStatus(
   if (todayStr < startStr) return "upcoming";
   if (todayStr >= endStr) return "ended";
   return "active";
-}
-
-function StatusBadge({
-  status,
-}: {
-  status: "active" | "ended" | "moved_out" | "upcoming";
-}) {
-  switch (status) {
-    case "active":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-tint border border-success/20 text-success">
-          Active
-        </span>
-      );
-    case "upcoming":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-tint border border-primary/20 text-primary">
-          Upcoming
-        </span>
-      );
-    case "moved_out":
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
-          Moved out
-        </span>
-      );
-    case "ended":
-    default:
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
-          Ended
-        </span>
-      );
-  }
-}
-
-function formatUnitType(type: string): string {
-  return type
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default function TenantRentalDetailsPage({
@@ -416,16 +376,6 @@ export default function TenantRentalDetailsPage({
   const property = unit.property;
   const landlord = property.landlord;
 
-  // Billing status
-  const dueStatus = billingSummary
-    ? getDueDateStatus(
-        billingSummary.nextDueDate,
-        lease.endDate,
-        today,
-        billingSummary.unpaidPeriods
-      )
-    : null;
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <PageHeader title={`Unit ${unit.unitNumber}`} />
@@ -446,82 +396,31 @@ export default function TenantRentalDetailsPage({
         />
 
         {/* Title Box */}
-        <div className="rounded-xl border border-border bg-card/40 p-6 backdrop-blur-sm">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground font-sans">
-                  Unit {unit.unitNumber}
-                </h1>
-                <StatusBadge status={leaseStatus} />
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {property.name} · {property.address}, {property.city}
-              </p>
-            </div>
-
-            <div className="sm:text-right shrink-0">
-              <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                Landlord
-              </span>
-              <span className="text-sm font-semibold text-foreground block mt-0.5">
-                {landlord.fullName}
-              </span>
-              <span className="text-xs text-muted-foreground block mt-0.5">
-                {landlord.email}
-              </span>
-            </div>
-          </div>
-        </div>
+        <UnitHeaderCard
+          viewer="tenant"
+          unitNumber={unit.unitNumber}
+          propertyName={property.name}
+          propertyAddress={property.address ? `${property.address}, ${property.city}` : property.city}
+          status={leaseStatus}
+          person={{
+            fullName: landlord.fullName,
+            email: landlord.email,
+          }}
+        />
 
         {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
           {/* Lease Details Card (3fr) */}
-          <div className="lg:col-span-3 rounded-xl border border-border bg-card/20 p-5 space-y-4 h-full flex flex-col justify-between">
-            <div>
-              <div>
-                <h3 className="font-bold text-foreground text-lg">Lease</h3>
-                <p className="text-muted-foreground text-xs mt-0.5">
-                  Tenancy terms and duration.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-2 text-xs">
-                <div>
-                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
-                    Period
-                  </span>
-                  <span className="text-foreground font-medium block mt-1">
-                    {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
-                    Rent
-                  </span>
-                  <span className="text-foreground font-semibold block mt-1">
-                    {formatCurrency(lease.rentAmount)} / {formatRentFrequency(lease.rentFrequency)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
-                    Deposit
-                  </span>
-                  <span className="text-foreground font-medium block mt-1">
-                    {lease.depositAmount ? formatCurrency(lease.depositAmount) : "—"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block uppercase tracking-wider text-[10px] font-bold">
-                    Unit type
-                  </span>
-                  <span className="text-foreground font-medium block mt-1">
-                    {formatUnitType(unit.unitType)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <LeaseDetailsCard
+            viewer="tenant"
+            startDate={lease.startDate}
+            endDate={lease.endDate}
+            rentAmount={lease.rentAmount}
+            rentFrequency={lease.rentFrequency}
+            depositAmount={lease.depositAmount}
+            unitType={unit.unitType}
+            className="lg:col-span-3"
+          />
 
           {/* Documents Card (2fr) */}
           <LeaseDocumentsCard leaseId={lease.id} mode="tenant" className="lg:col-span-2 h-full" />
@@ -529,73 +428,12 @@ export default function TenantRentalDetailsPage({
 
         {/* Billing Summary Card */}
         {billingSummary && (
-          <div className="rounded-xl border border-border bg-card/20 p-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  RENT DUE TO DATE
-                </span>
-                <span className="text-[22px] font-semibold text-foreground block leading-tight">
-                  {formatCurrency(billingSummary.rentDueToDate)}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} finished
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  PAID (CONFIRMED)
-                </span>
-                <span className="text-[22px] font-semibold text-foreground block leading-tight">
-                  {formatCurrency(billingSummary.paidToDate)}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  OUTSTANDING
-                </span>
-                {billingSummary.credit > 0 ? (
-                  <span className="text-[22px] font-semibold text-success block leading-tight">
-                    Credit {formatCurrency(billingSummary.credit)}
-                  </span>
-                ) : billingSummary.outstanding > 0 ? (
-                  <span className="text-[22px] font-semibold text-destructive block leading-tight">
-                    {formatCurrency(billingSummary.outstanding)}
-                  </span>
-                ) : (
-                  <span className="text-[22px] font-semibold text-success block leading-tight">
-                    ₦0
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Overdue / Paid-to-end / Status line */}
-            {dueStatus && (
-              <div className="pt-3 border-t border-border/60 text-xs sm:text-sm text-foreground/80">
-                <span
-                  className={cn(
-                    dueStatus.status === "overdue"
-                      ? "text-destructive font-medium"
-                      : dueStatus.status === "today"
-                      ? "text-warning font-medium"
-                      : dueStatus.status === "paid_in_full"
-                      ? "text-success font-medium"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {dueStatus.text}
-                </span>
-                {billingSummary.pendingAmount > 0 && (
-                  <span className="text-warning font-medium ml-1">
-                    • {formatCurrency(billingSummary.pendingAmount)} waiting for landlord confirmation
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+          <BillingSummaryCard
+            viewer="tenant"
+            billingSummary={billingSummary}
+            leaseEndDate={lease.endDate}
+            today={today}
+          />
         )}
 
         {/* Payment History */}
@@ -654,26 +492,26 @@ export default function TenantRentalDetailsPage({
           </div>
 
           {/* Desktop Payments Table (>= 640px) */}
-          <div className="hidden sm:block rounded-xl border border-border bg-card/20 overflow-hidden">
-            <table className="w-full table-fixed divide-y divide-border/80 text-left text-sm">
+          <div className="hidden sm:block rounded-xl border border-border bg-card/20 overflow-x-auto">
+            <table className="w-full min-w-[640px] table-fixed divide-y divide-border/80 text-left text-sm">
               <thead className="bg-muted/60 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <tr>
-                  <th scope="col" className="w-[20%] px-4 py-3">
+                  <th scope="col" className="w-[20%] px-4 py-3 whitespace-nowrap">
                     Date logged
                   </th>
-                  <th scope="col" className="w-[20%] px-4 py-3">
+                  <th scope="col" className="w-[20%] px-4 py-3 whitespace-nowrap">
                     Amount
                   </th>
-                  <th scope="col" className="w-[18%] px-4 py-3">
+                  <th scope="col" className="w-[18%] px-4 py-3 whitespace-nowrap">
                     Method
                   </th>
-                  <th scope="col" className="w-[18%] px-4 py-3">
+                  <th scope="col" className="w-[18%] px-4 py-3 whitespace-nowrap">
                     Receipt
                   </th>
-                  <th scope="col" className="w-[14%] px-4 py-3">
+                  <th scope="col" className="w-[14%] px-4 py-3 whitespace-nowrap">
                     Status
                   </th>
-                  <th scope="col" className="w-[10%] px-4 py-3 text-right">
+                  <th scope="col" className="w-[10%] px-4 py-3 text-right whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
@@ -707,46 +545,46 @@ export default function TenantRentalDetailsPage({
                       },
                       ...(p.proofUrl
                         ? [
-                            {
-                              label: "Download receipt",
-                              icon: <Paperclip className="w-4 h-4" />,
-                              onClick: () => handleViewReceipt(p.proofUrl!),
-                            },
-                          ]
+                          {
+                            label: "Download receipt",
+                            icon: <Paperclip className="w-4 h-4" />,
+                            onClick: () => handleViewReceipt(p.proofUrl!),
+                          },
+                        ]
                         : []),
                       ...(isPending
                         ? [
-                            {
-                              label: "Edit payment",
-                              icon: <Pencil className="w-4 h-4" />,
-                              onClick: () => handleOpenEditPayment(p),
-                            },
-                          ]
+                          {
+                            label: "Edit payment",
+                            icon: <Pencil className="w-4 h-4" />,
+                            onClick: () => handleOpenEditPayment(p),
+                          },
+                        ]
                         : []),
                       ...(isConfirmed && !isFlagged
                         ? [
-                            {
-                              label: "Dispute payment",
-                              icon: <AlertTriangle className="w-4 h-4" />,
-                              variant: "danger" as const,
-                              onClick: () => {
-                                setDisputePaymentId(p.id);
-                                setIsDisputeOpen(true);
-                              },
+                          {
+                            label: "Dispute payment",
+                            icon: <AlertTriangle className="w-4 h-4" />,
+                            variant: "danger" as const,
+                            onClick: () => {
+                              setDisputePaymentId(p.id);
+                              setIsDisputeOpen(true);
                             },
-                          ]
+                          },
+                        ]
                         : []),
                     ];
 
                     return (
                       <tr key={p.id} className="hover:bg-accent/50 transition-colors">
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                           {formatDateGB(p.paymentDate)}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-foreground">
+                        <td className="px-4 py-3 font-semibold text-foreground whitespace-nowrap">
                           {formatCurrency(p.amount)}
                         </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize">
+                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize whitespace-nowrap">
                           {p.method.replace(/_/g, " ")}
                         </td>
                         <td className="px-4 py-3 text-xs truncate">
@@ -765,7 +603,7 @@ export default function TenantRentalDetailsPage({
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 whitespace-nowrap">
                           {isPending ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint border border-warning/20 text-warning">
                               Pending
@@ -780,7 +618,7 @@ export default function TenantRentalDetailsPage({
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
                           <ActionMenu items={actions} />
                         </td>
                       </tr>
@@ -818,34 +656,34 @@ export default function TenantRentalDetailsPage({
                   },
                   ...(p.proofUrl
                     ? [
-                        {
-                          label: "Download receipt",
-                          icon: <Paperclip className="w-4 h-4" />,
-                          onClick: () => handleViewReceipt(p.proofUrl!),
-                        },
-                      ]
+                      {
+                        label: "Download receipt",
+                        icon: <Paperclip className="w-4 h-4" />,
+                        onClick: () => handleViewReceipt(p.proofUrl!),
+                      },
+                    ]
                     : []),
                   ...(isPending
                     ? [
-                        {
-                          label: "Edit payment",
-                          icon: <Pencil className="w-4 h-4" />,
-                          onClick: () => handleOpenEditPayment(p),
-                        },
-                      ]
+                      {
+                        label: "Edit payment",
+                        icon: <Pencil className="w-4 h-4" />,
+                        onClick: () => handleOpenEditPayment(p),
+                      },
+                    ]
                     : []),
                   ...(isConfirmed && !isFlagged
                     ? [
-                        {
-                          label: "Dispute payment",
-                          icon: <AlertTriangle className="w-4 h-4" />,
-                          variant: "danger" as const,
-                          onClick: () => {
-                            setDisputePaymentId(p.id);
-                            setIsDisputeOpen(true);
-                          },
+                      {
+                        label: "Dispute payment",
+                        icon: <AlertTriangle className="w-4 h-4" />,
+                        variant: "danger" as const,
+                        onClick: () => {
+                          setDisputePaymentId(p.id);
+                          setIsDisputeOpen(true);
                         },
-                      ]
+                      },
+                    ]
                     : []),
                 ];
 

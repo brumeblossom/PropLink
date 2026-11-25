@@ -16,15 +16,18 @@ import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
-import { getDueDateStatus, formatDateGB } from "@/lib/billing";
+import { formatDateGB } from "@/lib/billing";
 import { getCurrentLease, getRenewEligibility } from "@/lib/leases";
-import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
+import { RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { InviteCard } from "@/components/leases/InviteCard";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
+import { UnitHeaderCard } from "@/components/leases/UnitHeaderCard";
+import { LeaseDetailsCard } from "@/components/leases/LeaseDetailsCard";
+import { BillingSummaryCard } from "@/components/leases/BillingSummaryCard";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function UnitDetailPage() {
@@ -969,18 +972,6 @@ export default function UnitDetailPage() {
     router.push(`${window.location.pathname}?${currentUrlParams.toString()}`);
   };
 
-  // Visual Timeline math
-  let todayPercent = 0;
-  if (timeline) {
-    const startMs = new Date(timeline.startDate).getTime();
-    const endMs = new Date(timeline.endDate).getTime();
-    const todayMs = new Date().getTime();
-
-    const totalDuration = endMs - startMs;
-    const elapsed = Math.max(0, Math.min(totalDuration, todayMs - startMs));
-    todayPercent = totalDuration > 0 ? (elapsed / totalDuration) * 100 : 0;
-  }
-
   // availableYears and filteredPayments are declared above, before the early returns.
 
   return (
@@ -1106,167 +1097,60 @@ export default function UnitDetailPage() {
             {deleteError}
           </div>
         )}
-        {/* Unit Info Card */}
-        <div className="rounded-xl border border-border bg-card p-6 backdrop-blur-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="flex items-center space-x-3">
-              <h1 className="text-3xl font-extrabold tracking-tight">Unit {unit.unitNumber}</h1>
-              <span
-                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${unitStatus?.status === "occupied"
-                  ? "bg-success-tint text-success border border-success/20"
-                  : unitStatus?.status === "reserved"
-                    ? "bg-primary-tint text-primary border border-primary/20"
-                    : "bg-warning-tint text-warning border border-warning/20"
-                  }`}
-              >
-                {unitStatus?.status === "reserved" ? "Reserved" : unitStatus?.status}
-              </span>
-            </div>
-            <p className="text-muted-foreground text-sm mt-1 capitalize">
-              {unit.unitType} {unit.sizeSqm ? `• ${unit.sizeSqm} sqm` : ""}
-            </p>
-          </div>
 
-          {activeLease ? (
-            <div className="border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
-              <span className="text-xs font-bold text-subtle-foreground uppercase tracking-wider">Current Tenant</span>
-              <span className="text-sm font-semibold text-foreground">{activeLease.tenant.fullName}</span>
-              <div className="text-xs text-muted-foreground space-y-0.5">
-                <p className="truncate">Email: {activeLease.tenant.email}</p>
-              </div>
-            </div>
-          ) : pendingLease ? (
-            <div className="border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1.5 min-w-[250px]">
-              <span className="text-xs font-bold text-subtle-foreground uppercase tracking-wider">Prospective Tenant</span>
-              <span className="text-sm font-semibold text-foreground">{pendingLease.tenant.fullName}</span>
-              <div className="text-xs text-muted-foreground space-y-0.5">
-                <p className="truncate">Email: {pendingLease.tenant.email}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 flex flex-col space-y-1 min-w-[200px]">
-              <span className="text-xs font-bold text-subtle-foreground uppercase tracking-wider">Current Tenant</span>
-              <p className="text-sm text-subtle-foreground italic">Vacant, no active tenant</p>
-            </div>
-          )}
-        </div>
+        {/* Unit Header Card */}
+        {(() => {
+          const headerStatus = isLeaseEndedState || timeline?.status === "ended" || timeline?.status === "moved_out"
+            ? "ended"
+            : unitStatus?.status === "occupied"
+            ? "occupied"
+            : unitStatus?.status === "reserved"
+            ? "reserved"
+            : "vacant";
+
+          const headerPerson = activeLease
+            ? { fullName: activeLease.tenant.fullName, email: activeLease.tenant.email }
+            : pendingLease
+            ? { fullName: pendingLease.tenant.fullName, email: pendingLease.tenant.email }
+            : null;
+
+          const headerInviteStatus = hasUnredeemedCode
+            ? (isCodeExpired ? "expired" as const : "invited" as const)
+            : pendingLease
+            ? (pendingLease.isExpired ? "expired" as const : "invited" as const)
+            : activeLease
+            ? "joined" as const
+            : null;
+
+          return (
+            <UnitHeaderCard
+              viewer="landlord"
+              unitNumber={unit.unitNumber}
+              propertyName={property.name}
+              propertyAddress={property.address ? `${property.address}, ${property.city}` : property.city}
+              status={headerStatus}
+              person={headerPerson}
+              inviteStatus={headerInviteStatus}
+            />
+          );
+        })()}
 
         {/* Active Lease Section */}
         {activeLease && timeline ? (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold tracking-tight">Active Tenancy</h2>
-
+            {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
-              {/* Timeline Display Card */}
-              <div className="lg:col-span-3 rounded-xl border border-border bg-card p-5 space-y-6 h-full flex flex-col justify-between">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-3">
-                    <h3 className="font-bold text-foreground text-lg">Lease Timeline</h3>
-                    <button
-                      onClick={() => handleOpenEditLease()}
-                      className="text-xs text-muted-foreground hover:text-foreground bg-card border border-border hover:bg-accent px-2 py-1 rounded transition-colors"
-                    >
-                      Edit Details
-                    </button>
-                  </div>
-                  {hasUnredeemedCode ? (
-                    <span
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-full text-xs font-semibold",
-                        isCodeExpired
-                          ? "bg-destructive-tint text-destructive border border-destructive/20"
-                          : "bg-warning-tint text-warning border border-warning/20"
-                      )}
-                    >
-                      {isCodeExpired ? "Invite expired" : "Invite sent"}
-                    </span>
-                  ) : timeline.status === "moved_out" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
-                      Moved out
-                    </span>
-                  ) : timeline.status === "ended" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted border border-border text-muted-foreground">
-                      Ended
-                    </span>
-                  ) : timeline.status === "upcoming" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-tint text-primary border border-primary/20">
-                      Upcoming
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-tint text-success border border-success/20">
-                      Active
-                    </span>
-                  )}
-                </div>
-
-                {/* Progress Visual Tracker */}
-                <div className="space-y-3 pt-4">
-                  <div className="relative w-full h-3 rounded-full bg-muted overflow-visible">
-                    {/* Elapsed progress tracker */}
-                    <div
-                      className="absolute top-0 bottom-0 left-0 bg-primary/40 rounded-l-full"
-                      style={{ width: `${todayPercent}%` }}
-                    />
-                    {/* Current day marker dot */}
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-primary bg-primary shadow-md cursor-pointer transition-transform hover:scale-110"
-                      style={{ left: `calc(${todayPercent}% - 10px)` }}
-                      title="Today"
-                    />
-                  </div>
-
-                  <div className="flex justify-between text-xs text-subtle-foreground font-medium pt-1">
-                    <span>Start: {new Date(timeline.startDate).toLocaleDateString()}</span>
-                    <span>End: {new Date(timeline.endDate).toLocaleDateString()}</span>
-                  </div>
-                </div>
-
-                {/* Summary details */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border/40 text-sm">
-                  <div>
-                    <span className="block text-subtle-foreground text-xs">Tenant</span>
-                    <span className="font-semibold text-foreground mt-0.5 block">{timeline.tenantName}</span>
-                  </div>
-                  <div>
-                    <span className="block text-subtle-foreground text-xs">Rent</span>
-                    <span className="font-semibold text-foreground mt-0.5 block">
-                      {formatCurrency(timeline.rentAmount)} / {formatRentFrequency(timeline.rentFrequency)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-subtle-foreground text-xs">Deposit</span>
-                    <span className="font-semibold text-foreground mt-0.5 block">
-                      {activeLease.depositAmount ? formatCurrency(activeLease.depositAmount) : "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-subtle-foreground text-xs">Invite Status</span>
-                    <span className="mt-1 block">
-                      {codeInvite ? (
-                        codeInvite.redeemedAt ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
-                            Joined
-                          </span>
-                        ) : isCodeExpired ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-destructive-tint text-destructive border border-destructive/20">
-                            Expired
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-tint text-warning border border-warning/20">
-                            Awaiting tenant
-                          </span>
-                        )
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-tint text-success border border-success/20">
-                          Joined
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Documents Card */}
+              <LeaseDetailsCard
+                viewer="landlord"
+                startDate={timeline.startDate}
+                endDate={timeline.endDate}
+                rentAmount={timeline.rentAmount}
+                rentFrequency={timeline.rentFrequency}
+                depositAmount={activeLease.depositAmount}
+                unitType={unit.unitType}
+                onEditLease={handleOpenEditLease}
+                className="lg:col-span-3"
+              />
               <LeaseDocumentsCard leaseId={activeLease.id} mode="landlord" className="lg:col-span-2 h-full" />
             </div>
 
@@ -1292,13 +1176,19 @@ export default function UnitDetailPage() {
               />
             )}
 
+            {/* Billing Summary Banner placed ABOVE Payment history */}
+            {billingSummary && (
+              <BillingSummaryCard
+                viewer="landlord"
+                billingSummary={billingSummary}
+                leaseEndDate={activeLease.endDate}
+              />
+            )}
+
             {/* Payment Ledger Section */}
-            <div className="pt-6 border-t border-border space-y-6">
+            <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h3 className="font-bold text-foreground text-xl">Payment history</h3>
-                  <p className="text-muted-foreground text-sm mt-0.5">Track rent payments, pending approvals, and disputes.</p>
-                </div>
+                <h3 className="font-bold text-foreground text-xl">Payment history</h3>
                 {/* Mobile: Add payment on row above dropdown */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
                   <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
@@ -1359,71 +1249,6 @@ export default function UnitDetailPage() {
                 </div>
               </div>
 
-              {/* Billing Summary Banner */}
-              {billingSummary && (
-                <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-subtle-foreground uppercase tracking-wider">RENT DUE TO DATE</span>
-                      <span className="text-[22px] font-semibold text-foreground block leading-tight">
-                        {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.rentDueToDate)}
-                      </span>
-                      {billingSummary.isRentSet && (
-                        <span className="block text-xs text-muted-foreground">
-                          {billingSummary.periodsDue} {billingSummary.periodsDue === 1 ? "period" : "periods"} finished
-                        </span>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-subtle-foreground uppercase tracking-wider">PAID (CONFIRMED)</span>
-                      <span className="text-[22px] font-semibold text-foreground block leading-tight">
-                        {!billingSummary.isRentSet ? "Rent not set" : formatCurrency(billingSummary.paidToDate)}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="block text-[11px] font-semibold text-subtle-foreground uppercase tracking-wider">OUTSTANDING</span>
-                      {!billingSummary.isRentSet ? (
-                        <span className="text-[22px] font-semibold text-muted-foreground block leading-tight">Rent not set</span>
-                      ) : billingSummary.credit > 0 ? (
-                        <span className="text-[22px] font-semibold text-success block leading-tight">Credit {formatCurrency(billingSummary.credit)}</span>
-                      ) : billingSummary.outstanding > 0 ? (
-                        <span className="text-[22px] font-semibold text-destructive block leading-tight">{formatCurrency(billingSummary.outstanding)}</span>
-                      ) : (
-                        <span className="text-[22px] font-semibold text-success block leading-tight">₦0</span>
-                      )}
-                    </div>
-                  </div>
-                  {billingSummary.isRentSet && (() => {
-                    const status = getDueDateStatus(
-                      billingSummary.nextDueDate,
-                      activeLease.endDate,
-                      new Date(),
-                      billingSummary.unpaidPeriods
-                    );
-                    const statusColor =
-                      status.status === "overdue"
-                        ? "text-destructive font-medium"
-                        : status.status === "today"
-                          ? "text-warning font-medium"
-                          : status.status === "paid_in_full"
-                            ? "text-success font-medium"
-                            : "text-foreground/80";
-
-                    return (
-                      <div className="pt-3 border-t border-border/60 text-sm text-foreground/80">
-                        <span className={statusColor}>{status.text}</span>
-                        {billingSummary.pendingAmount > 0 && (
-                          <span className="text-warning font-medium">
-                            {" • "}
-                            {formatCurrency(billingSummary.pendingAmount)} pending your confirmation
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
               {/* Payments Ledger List */}
               {(() => {
                 const getLandlordPaymentMenuItems = (p: NonNullable<typeof payments>[number]): ActionMenuItem[] => {
@@ -1481,15 +1306,15 @@ export default function UnitDetailPage() {
                 return (
                   <>
                     {/* Desktop Table (>= 640px) */}
-                    <div className="hidden sm:block overflow-hidden rounded-xl border border-border bg-card">
+                    <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card">
                       <table className="min-w-full divide-y divide-border">
                         <thead className="bg-muted">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date Logged</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Method</th>
-                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Date Logged</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Method</th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Status</th>
+                            <th className="px-6 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60">
@@ -1522,16 +1347,16 @@ export default function UnitDetailPage() {
                                     setIsLandlordPaymentDetailOpen(true);
                                   }}
                                 >
-                                  <td className="px-6 py-4 text-sm text-foreground/80">
+                                  <td className="px-6 py-4 text-sm text-foreground/80 whitespace-nowrap">
                                     {new Date(p.paymentDate).toLocaleDateString()}
                                   </td>
-                                  <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                                  <td className="px-6 py-4 text-sm font-semibold text-foreground whitespace-nowrap">
                                     {formatCurrency(p.amount)}
                                   </td>
-                                  <td className="px-6 py-4 text-sm text-muted-foreground capitalize">
+                                  <td className="px-6 py-4 text-sm text-muted-foreground capitalize whitespace-nowrap">
                                     {p.method.replace('_', ' ')}
                                   </td>
-                                  <td className="px-6 py-4 text-sm">
+                                  <td className="px-6 py-4 text-sm whitespace-nowrap">
                                     <div className="flex flex-col space-y-1">
                                       <div className="flex items-center space-x-2">
                                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${p.status === "confirmed"
@@ -1555,7 +1380,7 @@ export default function UnitDetailPage() {
                                       )}
                                     </div>
                                   </td>
-                                  <td className="px-6 py-4 text-sm text-center" onClick={(e) => e.stopPropagation()}>
+                                  <td className="px-6 py-4 text-sm text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-center justify-center">
                                       <ActionMenu
                                         items={getLandlordPaymentMenuItems(p)}

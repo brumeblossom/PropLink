@@ -81,19 +81,19 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
   }
   if (data.status === "paid_in_full") {
     return (
-      <span className="text-success font-medium text-sm block truncate" title={data.line1}>
+      <span className="text-success font-medium text-sm block whitespace-nowrap" title={data.line1}>
         {data.line1}
       </span>
     );
   }
   if (data.status === "overdue") {
     return (
-      <div className="leading-tight text-right md:text-left">
-        <div className="text-destructive font-medium text-sm truncate" title={data.line1}>
+      <div className="leading-tight text-right md:text-left whitespace-nowrap">
+        <div className="text-destructive font-medium text-sm whitespace-nowrap" title={data.line1}>
           {data.line1}
         </div>
         {data.line2 && (
-          <div className="text-muted-foreground text-xs mt-0.5 truncate" title={data.line2}>
+          <div className="text-muted-foreground text-xs mt-0.5 whitespace-nowrap" title={data.line2}>
             {data.line2}
           </div>
         )}
@@ -101,12 +101,12 @@ function TwoLineRentDue({ data }: { data: RentDueLines }) {
     );
   }
   return (
-    <div className="leading-tight text-right md:text-left">
-      <div className="text-foreground font-medium text-sm truncate" title={data.line1}>
+    <div className="leading-tight text-right md:text-left whitespace-nowrap">
+      <div className="text-foreground font-medium text-sm whitespace-nowrap" title={data.line1}>
         {data.line1}
       </div>
       {data.line2 && (
-        <div className="text-muted-foreground text-xs mt-0.5 truncate" title={data.line2}>
+        <div className="text-muted-foreground text-xs mt-0.5 whitespace-nowrap" title={data.line2}>
           {data.line2}
         </div>
       )}
@@ -446,15 +446,14 @@ export default function TenantHomePage() {
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           {/* Card 1: Active leases (kpi-navy, Home) */}
-          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-navy-fill flex items-center gap-3.5">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-navy-fill flex items-center gap-3.5 min-h-[96px]">
             <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
               <Home className="w-5 h-5 text-kpi-navy" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-[13px] font-medium text-muted-foreground leading-none">Active leases</span>
               <span
-                className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight truncate"
-                title={String(activeLeasesCount)}
+                className="text-xl xl:text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight whitespace-nowrap"
               >
                 {activeLeasesCount}
               </span>
@@ -462,15 +461,14 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 2: Landlords (kpi-gold, Users) */}
-          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-gold-fill flex items-center gap-3.5">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-gold-fill flex items-center gap-3.5 min-h-[96px]">
             <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5 text-kpi-gold" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-[13px] font-medium text-muted-foreground leading-none">Landlords</span>
               <span
-                className="text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight truncate"
-                title={String(distinctLandlordsCount)}
+                className="text-xl xl:text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight whitespace-nowrap"
               >
                 {distinctLandlordsCount}
               </span>
@@ -478,7 +476,7 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 3: Outstanding (kpi-clay, CreditCard) */}
-          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-clay-fill flex items-center gap-3.5">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-clay-fill flex items-center gap-3.5 min-h-[96px]">
             <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
               <CreditCard className="w-5 h-5 text-kpi-clay" />
             </div>
@@ -486,10 +484,9 @@ export default function TenantHomePage() {
               <span className="block text-[13px] font-medium text-muted-foreground leading-none">Outstanding</span>
               <span
                 className={cn(
-                  "text-2xl font-bold tracking-tight tabular-nums mt-0.5 block leading-tight truncate",
+                  "text-xl xl:text-2xl font-bold tracking-tight tabular-nums mt-0.5 block leading-tight whitespace-nowrap",
                   totalOutstanding > 0 ? "text-destructive" : "text-foreground"
                 )}
-                title={totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "₦0"}
               >
                 {totalOutstanding > 0 ? formatCurrency(totalOutstanding) : "₦0"}
               </span>
@@ -497,29 +494,28 @@ export default function TenantHomePage() {
           </div>
 
           {/* Card 4: Next payment (kpi-sage, Calendar) */}
-          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-sage-fill flex items-center gap-3.5">
+          <div className="rounded-xl px-[18px] py-4 border border-transparent bg-kpi-sage-fill flex items-center gap-3.5 min-h-[96px]">
             <div className="w-10 h-10 rounded-xl bg-white/80 dark:bg-black/25 flex items-center justify-center shrink-0">
               <Calendar className="w-5 h-5 text-kpi-sage" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="block text-[13px] font-medium text-muted-foreground leading-none">Next payment</span>
               {nextPayment ? (
-                <div className="flex flex-col min-[380px]:flex-row min-[380px]:items-baseline mt-0.5 min-w-0">
+                <>
                   <span
-                    className="text-2xl font-bold tracking-tight tabular-nums text-foreground block truncate leading-tight"
-                    title={formatCurrency(nextPayment.amount)}
+                    className="text-xl xl:text-2xl font-bold tracking-tight tabular-nums text-foreground mt-0.5 block leading-tight whitespace-nowrap"
                   >
                     {formatCurrency(nextPayment.amount)}
                   </span>
                   <span
-                    className="text-xs text-subtle-foreground min-[380px]:ml-2 block truncate"
+                    className="text-xs text-subtle-foreground mt-0.5 block truncate"
                     title={`${nextPayment.dateStr} · ${nextPayment.unitName}`}
                   >
                     {nextPayment.dateStr} · {nextPayment.unitName}
                   </span>
-                </div>
+                </>
               ) : (
-                <span className="text-2xl font-bold tracking-tight tabular-nums text-subtle-foreground mt-0.5 block leading-tight">
+                <span className="text-xl xl:text-2xl font-bold tracking-tight tabular-nums text-subtle-foreground mt-0.5 block leading-tight whitespace-nowrap">
                   —
                 </span>
               )}
@@ -577,9 +573,9 @@ export default function TenantHomePage() {
             </div>
           </div>
 
-          {/* Desktop Table (>= 768px): fixed layout with colgroup */}
-          <div className="hidden md:block rounded-xl border border-border bg-card overflow-hidden">
-            <table className="w-full table-fixed divide-y divide-border text-left text-sm">
+          {/* Desktop Table (>= 768px): fixed layout with colgroup, wrapped in overflow-x-auto */}
+          <div className="hidden md:block rounded-xl border border-border bg-card overflow-x-auto">
+            <table className="w-full min-w-[1100px] table-fixed divide-y divide-border text-left text-sm">
               <colgroup>
                 <col className="w-[20%]" />
                 <col className="w-[10%]" />
@@ -591,25 +587,25 @@ export default function TenantHomePage() {
               </colgroup>
               <thead className="border-b border-border bg-muted text-xs font-semibold text-subtle-foreground uppercase tracking-wider">
                 <tr>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Property
                   </th>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Unit
                   </th>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Landlord
                   </th>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Rent
                   </th>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Lease period
                   </th>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Status
                   </th>
-                  <th scope="col" className="px-5 py-3.5">
+                  <th scope="col" className="px-5 py-3.5 whitespace-nowrap">
                     Next rent due
                   </th>
                 </tr>
@@ -658,10 +654,9 @@ export default function TenantHomePage() {
                       </td>
 
                       {/* Unit (10%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <span
-                          className="text-sm font-medium text-foreground/80 truncate block"
-                          title={lease.unit.unitNumber}
+                          className="text-sm font-medium text-foreground/80 whitespace-nowrap block"
                         >
                           {lease.unit.unitNumber}
                         </span>
@@ -684,10 +679,9 @@ export default function TenantHomePage() {
                       </td>
 
                       {/* Rent (13%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <span
-                          className="font-medium text-foreground truncate block text-sm"
-                          title={`${formatCurrency(lease.rentAmount)} / ${formatRentFrequency(lease.rentFrequency)}`}
+                          className="font-medium text-foreground whitespace-nowrap block text-sm"
                         >
                           {formatCurrency(lease.rentAmount)}
                           <span className="text-muted-foreground text-xs font-normal">
@@ -697,22 +691,21 @@ export default function TenantHomePage() {
                       </td>
 
                       {/* Lease period (16%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden text-xs text-foreground/80 whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap text-xs text-foreground/80">
                         <span
-                          className="truncate block"
-                          title={`${formatDateGB(lease.startDate)} – ${formatDateGB(lease.endDate)}`}
+                          className="whitespace-nowrap block"
                         >
                           {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
                         </span>
                       </td>
 
                       {/* Status (10%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <StatusBadge status={lease.leaseStatus} />
                       </td>
 
                       {/* Next rent due (12%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <TwoLineRentDue data={lease.rentDueLines} />
                       </td>
                     </tr>
