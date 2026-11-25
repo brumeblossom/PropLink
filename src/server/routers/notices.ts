@@ -36,8 +36,8 @@ export const noticesRouter = router({
       let activeLeases: Lease[] = [];
 
       if (input.targetType === "unit" && input.targetId) {
-        const unit = await prisma.unit.findUnique({
-          where: { id: input.targetId },
+        const unit = await prisma.unit.findFirst({
+          where: { id: input.targetId, deletedAt: null, property: { deletedAt: null } },
           include: { property: true },
         });
         if (!unit || unit.property.landlordId !== ctx.user.id) {
@@ -56,8 +56,8 @@ export const noticesRouter = router({
           },
         });
       } else if (input.targetType === "property" && input.targetId) {
-        const property = await prisma.property.findUnique({
-          where: { id: input.targetId },
+        const property = await prisma.property.findFirst({
+          where: { id: input.targetId, deletedAt: null },
         });
         if (!property || property.landlordId !== ctx.user.id) {
           throw new TRPCError({
@@ -68,7 +68,7 @@ export const noticesRouter = router({
 
         activeLeases = await prisma.lease.findMany({
           where: {
-            unit: { propertyId: input.targetId },
+            unit: { propertyId: input.targetId, deletedAt: null },
             terminatedAt: null,
             startDate: { lte: now },
             endDate: { gte: now },
@@ -79,7 +79,8 @@ export const noticesRouter = router({
         activeLeases = await prisma.lease.findMany({
           where: {
             unit: {
-              property: { landlordId: ctx.user.id },
+              deletedAt: null,
+              property: { landlordId: ctx.user.id, deletedAt: null },
             },
             terminatedAt: null,
             startDate: { lte: now },
@@ -163,11 +164,26 @@ export const noticesRouter = router({
         ...(input?.propertyId
           ? {
               OR: [
-                { propertyId: input.propertyId },
-                { unit: { propertyId: input.propertyId } },
+                { propertyId: input.propertyId, property: { deletedAt: null } },
+                { unit: { propertyId: input.propertyId, deletedAt: null, property: { deletedAt: null } } },
               ],
             }
-          : {}),
+          : {
+              AND: [
+                {
+                  OR: [
+                    { propertyId: null },
+                    { property: { deletedAt: null } },
+                  ],
+                },
+                {
+                  OR: [
+                    { unitId: null },
+                    { unit: { deletedAt: null, property: { deletedAt: null } } },
+                  ],
+                },
+              ],
+            }),
         ...(searchTrimmed
           ? {
               OR: [
@@ -203,7 +219,7 @@ export const noticesRouter = router({
             },
           },
         }),
-        prisma.property.count({ where: { landlordId: ctx.user.id } }),
+        prisma.property.count({ where: { landlordId: ctx.user.id, deletedAt: null } }),
       ]);
 
       return {

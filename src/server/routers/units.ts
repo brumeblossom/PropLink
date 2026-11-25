@@ -3,14 +3,15 @@ import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
 import { getCurrentLease, getNextLease, getUnitStatus } from "@/lib/leases";
+import { canDeleteUnit, getUnitDeleteErrorMessage } from "@/lib/unit-delete";
 
 
 export const unitsRouter = router({
   listByProperty: authedProcedure
     .input(z.object({ propertyId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const property = await prisma.property.findUnique({
-        where: { id: input.propertyId },
+      const property = await prisma.property.findFirst({
+        where: { id: input.propertyId, deletedAt: null },
       });
 
       if (!property || property.landlordId !== ctx.user.id) {
@@ -26,7 +27,7 @@ export const unitsRouter = router({
         include: {
           leases: {
             where: {
-              terminatedAt: null,
+              status: { notIn: ["declined", "cancelled"] },
             },
             include: {
               tenant: {
@@ -46,6 +47,7 @@ export const unitsRouter = router({
         const currentLease = getCurrentLease(unit.leases, now);
         const nextLease = getNextLease(unit.leases, now);
         const status = getUnitStatus(unit.leases, now);
+        const deleteCheck = canDeleteUnit(unit.leases, now);
         return {
           id: unit.id,
           propertyId: unit.propertyId,
@@ -54,6 +56,7 @@ export const unitsRouter = router({
           sizeSqm: unit.sizeSqm,
           createdAt: unit.createdAt,
           status,
+          deleteCheck,
           activeLease: currentLease
             ? {
                 id: currentLease.id,
@@ -148,7 +151,7 @@ export const unitsRouter = router({
     .query(async ({ ctx, input }) => {
       const now = new Date();
       const unit = await prisma.unit.findFirst({
-        where: { id: input.id, deletedAt: null },
+        where: { id: input.id, deletedAt: null, property: { deletedAt: null } },
         include: {
           property: true,
           leases: {
@@ -171,8 +174,8 @@ export const unitsRouter = router({
 
       if (!unit || unit.property.landlordId !== ctx.user.id) {
         throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You do not own this unit.",
+          code: "NOT_FOUND",
+          message: "Unit not found.",
         });
       }
 
@@ -289,43 +292,40 @@ export const unitsRouter = router({
         include: {
           property: true,
           leases: {
-            where: {
-              terminatedAt: null,
-              startDate: { lte: now },
-              endDate: { gte: now },
-            },
             include: {
-              tenant: { select: { fullName: true } }
-            }
+              tenant: { select: { fullName: true } },
+              inviteCodes: { select: { code: true, redeemedAt: true, expiresAt: true } },
+            },
           },
         },
       });
 
-      if (!unit || unit.property.landlordId !== ctx.user.id) {
+      if (!unit || unit.property.landlordId !== ctx.user.id || unit.property.deletedAt !== null) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You do not own this unit.",
         });
       }
 
-      // Block deletion if unit has active lease
-      const activeLease = unit.leases[0];
-      if (activeLease) {
-        const endStr = activeLease.endDate
-          ? new Date(activeLease.endDate).toLocaleDateString()
-          : "Ongoing";
+      const check = canDeleteUnit(unit.leases, now);
+      if (!check.ok) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Cannot delete unit with an active lease. Blocking lease: ${
-            activeLease.tenant.fullName
-          } from ${new Date(activeLease.startDate).toLocaleDateString()} to ${endStr}. Please terminate active leases first.`,
+          message: getUnitDeleteErrorMessage(unit.unitNumber, check),
         });
       }
 
-      // Soft-delete: update deletedAt
-      return await prisma.unit.update({
-        where: { id: input.id },
-        data: { deletedAt: now },
+      const leaseIds = unit.leases.map((l) => l.id);
+      return await prisma.$transaction(async (tx) => {
+        if (leaseIds.length > 0) {
+          await tx.inviteCode.deleteMany({
+            where: { leaseId: { in: leaseIds } },
+          });
+        }
+        return await tx.unit.update({
+          where: { id: input.id },
+          data: { deletedAt: now },
+        });
       });
     }),
 
@@ -339,15 +339,14 @@ export const unitsRouter = router({
         where: {
           id: { in: input.ids },
           deletedAt: null,
+          property: { deletedAt: null },
         },
         include: {
           property: true,
           leases: {
-            where: {
-              terminatedAt: null,
-            },
             include: {
               tenant: { select: { fullName: true } },
+              inviteCodes: { select: { code: true, redeemedAt: true, expiresAt: true } },
             },
           },
         },
@@ -369,36 +368,22 @@ export const unitsRouter = router({
           });
         }
 
-        // Check if unit has a tenant / occupied / reserved
-        // getUnitStatus returns "occupied" | "reserved" | "vacant"
-        // Also check if any active/ended/reserved lease exists on the unit
-        const status = getUnitStatus(unit.leases, now);
-        if (status === "occupied" || status === "reserved") {
+        const check = canDeleteUnit(unit.leases, now);
+        if (!check.ok) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Cannot delete unit "${unit.unitNumber}" because it has a tenant or active lease.`,
-          });
-        }
-
-        // Extra check like single delete: any lease where terminatedAt is null and startDate <= now and (endDate is null or >= now)
-        const hasBlockingLease = unit.leases.some(
-          (l) =>
-            l.terminatedAt === null &&
-            l.status !== "declined" &&
-            l.status !== "cancelled" &&
-            new Date(l.startDate) <= now &&
-            (!l.endDate || new Date(l.endDate) >= now)
-        );
-        if (hasBlockingLease) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Cannot delete unit "${unit.unitNumber}" because it has an active lease.`,
+            message: getUnitDeleteErrorMessage(unit.unitNumber, check),
           });
         }
       }
 
-      // Soft-delete (deletedAt) in one transaction, return the count
+      const allLeaseIds = units.flatMap((u) => u.leases.map((l) => l.id));
       const result = await prisma.$transaction(async (tx) => {
+        if (allLeaseIds.length > 0) {
+          await tx.inviteCode.deleteMany({
+            where: { leaseId: { in: allLeaseIds } },
+          });
+        }
         const updateResult = await tx.unit.updateMany({
           where: {
             id: { in: input.ids },
@@ -418,8 +403,8 @@ export const unitsRouter = router({
   getRedirectInfo: authedProcedure
     .input(z.object({ unitId: z.string().uuid() }))
     .query(async ({ input }) => {
-      const unit = await prisma.unit.findUnique({
-        where: { id: input.unitId },
+      const unit = await prisma.unit.findFirst({
+        where: { id: input.unitId, deletedAt: null, property: { deletedAt: null } },
         select: { id: true, propertyId: true },
       });
       return unit ? { unitId: unit.id, propertyId: unit.propertyId } : null;

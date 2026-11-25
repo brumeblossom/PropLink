@@ -175,10 +175,13 @@ export default function TenantRentalDetailsPage({
   }, [payments]);
 
   // Compute status
+  const isRemoved = Boolean(lease?.unit?.deletedAt || lease?.unit?.property?.deletedAt);
+
   const leaseStatus = useMemo(() => {
     if (!lease) return "active";
+    if (isRemoved) return "removed";
     return computeLeaseStatus(lease, today);
-  }, [lease, today]);
+  }, [lease, today, isRemoved]);
 
   // Options for LeasePeriodDropdown
   const leaseDropdownOptions: LeaseOption[] = useMemo(() => {
@@ -386,13 +389,17 @@ export default function TenantRentalDetailsPage({
         <DetailActionRow
           backHref="/tenant"
           backLabel="Home"
-          phonePrimaryAction={{
-            label: "Add payment",
-            icon: <Plus className="w-4 h-4" />,
-            onClick: handleOpenAddPayment,
-            disabled: isPaidInFull,
-            title: isPaidInFull ? "This lease is fully paid." : undefined,
-          }}
+          phonePrimaryAction={
+            isRemoved
+              ? undefined
+              : {
+                  label: "Add payment",
+                  icon: <Plus className="w-4 h-4" />,
+                  onClick: handleOpenAddPayment,
+                  disabled: isPaidInFull,
+                  title: isPaidInFull ? "This lease is fully paid." : undefined,
+                }
+          }
           actions={[]}
         />
 
@@ -408,6 +415,12 @@ export default function TenantRentalDetailsPage({
             email: landlord.email,
           }}
         />
+
+        {isRemoved && (
+          <p className="text-sm text-muted-foreground">
+            Your landlord removed this unit. Your payment history and receipts are kept here.
+          </p>
+        )}
 
         {/* Two cards side by side (Lease 3fr & Documents 2fr) */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
@@ -448,36 +461,38 @@ export default function TenantRentalDetailsPage({
                   Payment history
                 </div>
                 {/* Add payment button */}
-                <div>
-                  {isPaidInFull ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex cursor-not-allowed">
-                          <Button
-                            disabled
-                            size="action"
-                            className="bg-muted text-muted-foreground opacity-50 pointer-events-none"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add payment
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" align="end">
-                        This lease is fully paid.
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <Button
-                      onClick={handleOpenAddPayment}
-                      size="action"
-                      className="bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add payment
-                    </Button>
-                  )}
-                </div>
+                {!isRemoved && (
+                  <div>
+                    {isPaidInFull ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex cursor-not-allowed">
+                            <Button
+                              disabled
+                              size="action"
+                              className="bg-muted text-muted-foreground opacity-50 pointer-events-none"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add payment
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="end">
+                          This lease is fully paid.
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        onClick={handleOpenAddPayment}
+                        size="action"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add payment
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Lease period dropdown */}
@@ -553,7 +568,7 @@ export default function TenantRentalDetailsPage({
                           },
                         ]
                         : []),
-                      ...(isPending
+                      ...(!isRemoved && isPending
                         ? [
                           {
                             label: "Edit payment",
@@ -562,7 +577,7 @@ export default function TenantRentalDetailsPage({
                           },
                         ]
                         : []),
-                      ...(isConfirmed && !isFlagged
+                      ...(!isRemoved && isConfirmed && !isFlagged
                         ? [
                           {
                             label: "Dispute payment",
@@ -664,7 +679,7 @@ export default function TenantRentalDetailsPage({
                       },
                     ]
                     : []),
-                  ...(isPending
+                  ...(!isRemoved && isPending
                     ? [
                       {
                         label: "Edit payment",
@@ -673,7 +688,7 @@ export default function TenantRentalDetailsPage({
                       },
                     ]
                     : []),
-                  ...(isConfirmed && !isFlagged
+                  ...(!isRemoved && isConfirmed && !isFlagged
                     ? [
                       {
                         label: "Dispute payment",

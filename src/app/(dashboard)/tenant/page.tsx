@@ -28,9 +28,16 @@ function computeLeaseStatus(
     endDate?: Date | string | null;
     renewalWindowDays?: number | null;
     terminatedAt?: Date | string | null;
+    unit?: {
+      deletedAt?: Date | string | null;
+      property?: {
+        deletedAt?: Date | string | null;
+      } | null;
+    } | null;
   },
   today = new Date()
-): "active" | "ended" | "moved_out" | "upcoming" {
+): "active" | "ended" | "moved_out" | "upcoming" | "removed" {
+  if (lease.unit?.deletedAt || lease.unit?.property?.deletedAt) return "removed";
   if (lease.terminatedAt) return "moved_out";
   const todayStr = formatLagosYMD(today);
   const startStr = formatLagosYMD(lease.startDate);
@@ -44,9 +51,15 @@ function computeLeaseStatus(
 function StatusBadge({
   status,
 }: {
-  status: "active" | "ended" | "moved_out" | "upcoming";
+  status: "active" | "ended" | "moved_out" | "upcoming" | "removed";
 }) {
   switch (status) {
+    case "removed":
+      return (
+        <span className="inline-flex items-center px-2.5 h-[22px] rounded-full text-xs font-semibold bg-muted text-muted-foreground">
+          Removed
+        </span>
+      );
     case "active":
       return (
         <span className="inline-flex items-center px-2.5 h-[22px] rounded-full text-xs font-semibold bg-success-tint text-success">
@@ -154,7 +167,7 @@ export default function TenantHomePage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "upcoming" | "ended"
+    "all" | "active" | "upcoming" | "ended" | "removed"
   >("all");
 
   const today = useMemo(() => new Date(), []);
@@ -281,7 +294,7 @@ export default function TenantHomePage() {
     return processedLeases.filter((l) => {
       // Status filter
       if (statusFilter === "all") {
-        // Current and upcoming; ended and moved_out only when filter says Ended
+        // Current and upcoming and removed; ended and moved_out only when filter says Ended
         if (l.leaseStatus === "ended" || l.leaseStatus === "moved_out") {
           return false;
         }
@@ -293,6 +306,8 @@ export default function TenantHomePage() {
         if (l.leaseStatus !== "ended" && l.leaseStatus !== "moved_out") {
           return false;
         }
+      } else if (statusFilter === "removed") {
+        if (l.leaseStatus !== "removed") return false;
       }
 
       // Search filter: property, unit, landlord
@@ -560,7 +575,7 @@ export default function TenantHomePage() {
                 value={statusFilter}
                 onChange={(e) =>
                   setStatusFilter(
-                    e.target.value as "all" | "active" | "upcoming" | "ended"
+                    e.target.value as "all" | "active" | "upcoming" | "ended" | "removed"
                   )
                 }
                 className="w-full h-9 text-xs"
@@ -569,6 +584,7 @@ export default function TenantHomePage() {
                 <option value="active">Active</option>
                 <option value="upcoming">Upcoming</option>
                 <option value="ended">Ended</option>
+                <option value="removed">Removed</option>
               </Select>
             </div>
           </div>
@@ -622,94 +638,119 @@ export default function TenantHomePage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredRentals.map((lease) => (
-                    <tr
-                      key={lease.id}
-                      tabIndex={0}
-                      onClick={() => router.push(`/tenant/rentals/${lease.id}`)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          router.push(`/tenant/rentals/${lease.id}`);
-                        }
-                      }}
-                      className="h-16 hover:bg-accent/50 transition-colors cursor-pointer group focus:outline-none focus:bg-accent/50"
-                    >
-                      {/* Property (20%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
-                        <div
-                          className="font-medium text-foreground truncate group-hover:text-foreground/90"
-                          title={lease.unit.property.name}
-                        >
-                          {lease.unit.property.name}
-                        </div>
-                        {lease.unit.property.address && (
+                  filteredRentals.map((lease) => {
+                    const isRemoved = lease.leaseStatus === "removed";
+                    return (
+                      <tr
+                        key={lease.id}
+                        tabIndex={0}
+                        onClick={() => router.push(`/tenant/rentals/${lease.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            router.push(`/tenant/rentals/${lease.id}`);
+                          }
+                        }}
+                        className={cn(
+                          "h-16 hover:bg-accent/50 transition-colors cursor-pointer group focus:outline-none focus:bg-accent/50",
+                          isRemoved && "text-muted-foreground"
+                        )}
+                      >
+                        {/* Property (20%) */}
+                        <td className="px-5 py-3.5 min-w-0 overflow-hidden">
+                          <div
+                            className={cn(
+                              "font-medium truncate",
+                              isRemoved ? "text-muted-foreground" : "text-foreground group-hover:text-foreground/90"
+                            )}
+                            title={lease.unit.property.name}
+                          >
+                            {lease.unit.property.name}
+                          </div>
+                          {lease.unit.property.address && (
+                            <div
+                              className="text-xs text-muted-foreground truncate mt-0.5"
+                              title={lease.unit.property.address}
+                            >
+                              {lease.unit.property.address}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Unit (10%) */}
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <span
+                            className={cn(
+                              "text-sm font-medium whitespace-nowrap block",
+                              isRemoved ? "text-muted-foreground" : "text-foreground/80"
+                            )}
+                          >
+                            {lease.unit.unitNumber}
+                          </span>
+                        </td>
+
+                        {/* Landlord (19%) */}
+                        <td className="px-5 py-3.5 min-w-0 overflow-hidden">
+                          <div
+                            className={cn(
+                              "text-sm font-medium truncate",
+                              isRemoved ? "text-muted-foreground" : "text-foreground"
+                            )}
+                            title={lease.unit.property.landlord.fullName}
+                          >
+                            {lease.unit.property.landlord.fullName}
+                          </div>
                           <div
                             className="text-xs text-muted-foreground truncate mt-0.5"
-                            title={lease.unit.property.address}
+                            title={lease.unit.property.landlord.email}
                           >
-                            {lease.unit.property.address}
+                            {lease.unit.property.landlord.email}
                           </div>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Unit (10%) */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <span
-                          className="text-sm font-medium text-foreground/80 whitespace-nowrap block"
-                        >
-                          {lease.unit.unitNumber}
-                        </span>
-                      </td>
-
-                      {/* Landlord (19%) */}
-                      <td className="px-5 py-3.5 min-w-0 overflow-hidden">
-                        <div
-                          className="text-sm font-medium text-foreground truncate"
-                          title={lease.unit.property.landlord.fullName}
-                        >
-                          {lease.unit.property.landlord.fullName}
-                        </div>
-                        <div
-                          className="text-xs text-muted-foreground truncate mt-0.5"
-                          title={lease.unit.property.landlord.email}
-                        >
-                          {lease.unit.property.landlord.email}
-                        </div>
-                      </td>
-
-                      {/* Rent (13%) */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <span
-                          className="font-medium text-foreground whitespace-nowrap block text-sm"
-                        >
-                          {formatCurrency(lease.rentAmount)}
-                          <span className="text-muted-foreground text-xs font-normal">
-                            {" "}/ {formatRentFrequency(lease.rentFrequency)}
+                        {/* Rent (13%) */}
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <span
+                            className={cn(
+                              "font-medium whitespace-nowrap block text-sm",
+                              isRemoved ? "text-muted-foreground" : "text-foreground"
+                            )}
+                          >
+                            {formatCurrency(lease.rentAmount)}
+                            <span className="text-muted-foreground text-xs font-normal">
+                              {" "}/ {formatRentFrequency(lease.rentFrequency)}
+                            </span>
                           </span>
-                        </span>
-                      </td>
+                        </td>
 
-                      {/* Lease period (16%) */}
-                      <td className="px-5 py-3.5 whitespace-nowrap text-xs text-foreground/80">
-                        <span
-                          className="whitespace-nowrap block"
-                        >
-                          {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
-                        </span>
-                      </td>
+                        {/* Lease period (16%) */}
+                        <td className="px-5 py-3.5 whitespace-nowrap text-xs">
+                          <span
+                            className={cn(
+                              "whitespace-nowrap block",
+                              isRemoved ? "text-muted-foreground" : "text-foreground/80"
+                            )}
+                          >
+                            {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
+                          </span>
+                        </td>
 
-                      {/* Status (10%) */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <StatusBadge status={lease.leaseStatus} />
-                      </td>
+                        {/* Status (10%) */}
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <StatusBadge status={lease.leaseStatus} />
+                        </td>
 
-                      {/* Next rent due (12%) */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <TwoLineRentDue data={lease.rentDueLines} />
-                      </td>
-                    </tr>
-                  ))
+                        {/* Next rent due (12%) */}
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          {isRemoved ? (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          ) : (
+                            <TwoLineRentDue data={lease.rentDueLines} />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -726,45 +767,60 @@ export default function TenantHomePage() {
                 </p>
               </div>
             ) : (
-              filteredRentals.map((lease) => (
-                <div
-                  key={lease.id}
-                  onClick={() => router.push(`/tenant/rentals/${lease.id}`)}
-                  className="rounded-xl border border-border bg-card hover:bg-accent/40 transition-colors p-4 space-y-3 cursor-pointer"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-foreground truncate">
-                        {lease.unit.unitNumber} · {lease.unit.property.name}
+              filteredRentals.map((lease) => {
+                const isRemoved = lease.leaseStatus === "removed";
+                return (
+                  <div
+                    key={lease.id}
+                    onClick={() => router.push(`/tenant/rentals/${lease.id}`)}
+                    className={cn(
+                      "rounded-xl border border-border bg-card hover:bg-accent/40 transition-colors p-4 space-y-3 cursor-pointer",
+                      isRemoved && "text-muted-foreground"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className={cn(
+                            "text-sm font-semibold truncate",
+                            isRemoved ? "text-muted-foreground" : "text-foreground"
+                          )}
+                        >
+                          {lease.unit.unitNumber} · {lease.unit.property.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                          {lease.unit.property.landlord.fullName}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground truncate mt-0.5">
-                        {lease.unit.property.landlord.fullName}
+                      <div className="shrink-0">
+                        <StatusBadge status={lease.leaseStatus} />
                       </div>
                     </div>
-                    <div className="shrink-0">
-                      <StatusBadge status={lease.leaseStatus} />
+
+                    <div className="text-xs text-foreground/80">
+                      <span className={cn("font-medium", isRemoved ? "text-muted-foreground" : "text-foreground")}>
+                        {formatCurrency(lease.rentAmount)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}/ {formatRentFrequency(lease.rentFrequency)}
+                      </span>
+                      <span className="text-subtle-foreground mx-1.5">·</span>
+                      <span className={cn(isRemoved && "text-muted-foreground")}>
+                        {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
+                      </span>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-border flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Next rent due</span>
+                      {isRemoved ? (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      ) : (
+                        <TwoLineRentDue data={lease.rentDueLines} />
+                      )}
                     </div>
                   </div>
-
-                  <div className="text-xs text-foreground/80">
-                    <span className="font-medium text-foreground">
-                      {formatCurrency(lease.rentAmount)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {" "}/ {formatRentFrequency(lease.rentFrequency)}
-                    </span>
-                    <span className="text-subtle-foreground mx-1.5">·</span>
-                    <span>
-                      {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
-                    </span>
-                  </div>
-
-                  <div className="pt-2.5 border-t border-border flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Next rent due</span>
-                    <TwoLineRentDue data={lease.rentDueLines} />
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

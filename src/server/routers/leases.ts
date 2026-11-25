@@ -47,8 +47,8 @@ export const leasesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const unit = await prisma.unit.findUnique({
-        where: { id: input.unitId },
+      const unit = await prisma.unit.findFirst({
+        where: { id: input.unitId, deletedAt: null, property: { deletedAt: null } },
         include: { property: true },
       });
 
@@ -245,8 +245,8 @@ export const leasesRouter = router({
   getForUnit: authedProcedure
     .input(z.object({ unitId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const unit = await prisma.unit.findUnique({
-        where: { id: input.unitId },
+      const unit = await prisma.unit.findFirst({
+        where: { id: input.unitId, deletedAt: null, property: { deletedAt: null } },
         include: { property: true },
       });
 
@@ -658,6 +658,13 @@ export const leasesRouter = router({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You do not have access to this lease timeline.",
+        });
+      }
+
+      if (isLandlord && (lease.unit.deletedAt !== null || lease.unit.property.deletedAt !== null)) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lease not found.",
         });
       }
 
@@ -1183,7 +1190,11 @@ export const leasesRouter = router({
       }
 
       // 2. Auth: landlord must own the property
-      if (sourceLease.unit.property.landlordId !== ctx.user.id) {
+      if (
+        sourceLease.unit.property.landlordId !== ctx.user.id ||
+        sourceLease.unit.deletedAt !== null ||
+        sourceLease.unit.property.deletedAt !== null
+      ) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You do not own this lease's parent property.",
@@ -1309,7 +1320,11 @@ export const leasesRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Lease not found." });
       }
 
-      if (lease.unit.property.landlordId !== ctx.user.id) {
+      if (
+        lease.unit.property.landlordId !== ctx.user.id ||
+        lease.unit.deletedAt !== null ||
+        lease.unit.property.deletedAt !== null
+      ) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You do not own this unit.",
@@ -1385,7 +1400,7 @@ export const leasesRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const landlordProperties = await prisma.property.findMany({
-        where: { landlordId: ctx.user.id },
+        where: { landlordId: ctx.user.id, deletedAt: null },
         select: { id: true, name: true },
       });
       const propertyIds = landlordProperties.map((p) => p.id);
@@ -1409,6 +1424,8 @@ export const leasesRouter = router({
             some: {
               unit: {
                 propertyId: activePropertyFilter,
+                deletedAt: null,
+                property: { deletedAt: null },
               },
             },
           },
@@ -1430,6 +1447,8 @@ export const leasesRouter = router({
             where: {
               unit: {
                 propertyId: activePropertyFilter,
+                deletedAt: null,
+                property: { deletedAt: null },
               },
             },
             include: {

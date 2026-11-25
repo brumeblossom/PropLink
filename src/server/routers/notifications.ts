@@ -122,7 +122,8 @@ export const notificationsRouter = router({
                     unit: {
                       select: {
                         unitNumber: true,
-                        property: { select: { name: true } },
+                        deletedAt: true,
+                        property: { select: { name: true, deletedAt: true } },
                       },
                     },
                   },
@@ -140,7 +141,8 @@ export const notificationsRouter = router({
                 unit: {
                   select: {
                     unitNumber: true,
-                    property: { select: { name: true } },
+                    deletedAt: true,
+                    property: { select: { name: true, deletedAt: true } },
                   },
                 },
               },
@@ -152,7 +154,8 @@ export const notificationsRouter = router({
               select: {
                 id: true,
                 unitNumber: true,
-                property: { select: { name: true } },
+                deletedAt: true,
+                property: { select: { name: true, deletedAt: true } },
               },
             })
           : [],
@@ -164,7 +167,8 @@ export const notificationsRouter = router({
                 unit: {
                   select: {
                     unitNumber: true,
-                    property: { select: { name: true } },
+                    deletedAt: true,
+                    property: { select: { name: true, deletedAt: true } },
                   },
                 },
               },
@@ -177,7 +181,35 @@ export const notificationsRouter = router({
       const unitMap = new Map(units.map((u) => [u.id, u]));
       const conversationMap = new Map(conversations.map((c) => [c.id, c]));
 
-      const items = notifications.map((n) => {
+      const isLandlord = ctx.user.role === "landlord";
+      const validNotifications = notifications.filter((n) => {
+        if (isLandlord) {
+          if (n.relatedType === "payment" && n.relatedId) {
+            const p = paymentMap.get(n.relatedId);
+            if (!p || p.lease.unit.deletedAt !== null || p.lease.unit.property.deletedAt !== null) {
+              return false;
+            }
+          } else if (n.relatedType === "lease" && n.relatedId) {
+            const l = leaseMap.get(n.relatedId);
+            if (!l || l.unit.deletedAt !== null || l.unit.property.deletedAt !== null) {
+              return false;
+            }
+          } else if (n.relatedType === "unit" && n.relatedId) {
+            const u = unitMap.get(n.relatedId);
+            if (!u || u.deletedAt !== null || u.property.deletedAt !== null) {
+              return false;
+            }
+          } else if (n.relatedType === "conversation" && n.relatedId) {
+            const c = conversationMap.get(n.relatedId);
+            if (!c || c.unit.deletedAt !== null || c.unit.property.deletedAt !== null) {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+
+      const items = validNotifications.map((n) => {
         let unitNumber: string | null = null;
         let propertyName: string | null = null;
         let quote: string | null = null;
@@ -254,7 +286,8 @@ export const notificationsRouter = router({
                   unit: {
                     select: {
                       unitNumber: true,
-                      property: { select: { name: true } },
+                      deletedAt: true,
+                      property: { select: { name: true, deletedAt: true } },
                     },
                   },
                 },
@@ -272,7 +305,8 @@ export const notificationsRouter = router({
               unit: {
                 select: {
                   unitNumber: true,
-                  property: { select: { name: true } },
+                  deletedAt: true,
+                  property: { select: { name: true, deletedAt: true } },
                 },
               },
             },
@@ -284,7 +318,8 @@ export const notificationsRouter = router({
             select: {
               id: true,
               unitNumber: true,
-              property: { select: { name: true } },
+              deletedAt: true,
+              property: { select: { name: true, deletedAt: true } },
             },
           })
         : [],
@@ -296,7 +331,8 @@ export const notificationsRouter = router({
               unit: {
                 select: {
                   unitNumber: true,
-                  property: { select: { name: true } },
+                  deletedAt: true,
+                  property: { select: { name: true, deletedAt: true } },
                 },
               },
             },
@@ -330,10 +366,35 @@ export const notificationsRouter = router({
     const unitMap = new Map(units.map((u) => [u.id, u]));
     const conversationMap = new Map(conversations.map((c) => [c.id, c]));
 
+    const isLandlord = ctx.user.role === "landlord";
     const filtered = notifications.filter((n) => {
-      if (n.relatedType === "lease") {
-        if (!n.relatedId || !leaseMap.has(n.relatedId)) return false;
-        if (n.type === "lease_invitation" && expiredLeaseIds.includes(n.relatedId)) return false;
+      if (isLandlord) {
+        if (n.relatedType === "payment" && n.relatedId) {
+          const p = paymentMap.get(n.relatedId);
+          if (!p || p.lease.unit.deletedAt !== null || p.lease.unit.property.deletedAt !== null) {
+            return false;
+          }
+        } else if (n.relatedType === "lease" && n.relatedId) {
+          const l = leaseMap.get(n.relatedId);
+          if (!l || l.unit.deletedAt !== null || l.unit.property.deletedAt !== null) {
+            return false;
+          }
+        } else if (n.relatedType === "unit" && n.relatedId) {
+          const u = unitMap.get(n.relatedId);
+          if (!u || u.deletedAt !== null || u.property.deletedAt !== null) {
+            return false;
+          }
+        } else if (n.relatedType === "conversation" && n.relatedId) {
+          const c = conversationMap.get(n.relatedId);
+          if (!c || c.unit.deletedAt !== null || c.unit.property.deletedAt !== null) {
+            return false;
+          }
+        }
+      } else {
+        if (n.relatedType === "lease") {
+          if (!n.relatedId || !leaseMap.has(n.relatedId)) return false;
+          if (n.type === "lease_invitation" && expiredLeaseIds.includes(n.relatedId)) return false;
+        }
       }
       return true;
     });

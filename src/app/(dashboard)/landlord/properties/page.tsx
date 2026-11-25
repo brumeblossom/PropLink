@@ -16,6 +16,7 @@ import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { canDeleteUnit, getUnitDeleteErrorMessage } from "@/lib/unit-delete";
 
 export default function PropertiesPage() {
   const router = useRouter();
@@ -245,7 +246,22 @@ export default function PropertiesPage() {
 
         {properties && properties.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {properties.map((property) => (
+            {properties.map((property) => {
+              const now = new Date();
+              const propertyDeleteCheck = (() => {
+                for (const u of property.units || []) {
+                  const check = canDeleteUnit(u.leases || [], now);
+                  if (!check.ok) {
+                    return {
+                      ok: false,
+                      message: getUnitDeleteErrorMessage(u.unitNumber, check),
+                    };
+                  }
+                }
+                return { ok: true, message: undefined };
+              })();
+
+              return (
               <div
                 key={property.id}
                 onClick={() => router.push(`/landlord/properties/${property.id}`)}
@@ -274,6 +290,8 @@ export default function PropertiesPage() {
                             label: "Delete property",
                             icon: <Trash2 className="w-3.5 h-3.5" />,
                             variant: "danger",
+                            disabled: !propertyDeleteCheck.ok,
+                            disabledTooltip: propertyDeleteCheck.message,
                             onClick: () => setPropertyToDelete({ id: property.id, name: property.name }),
                           },
                         ]}
@@ -305,7 +323,8 @@ export default function PropertiesPage() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="mt-12 rounded-xl border border-border bg-card/20 p-12 text-center max-w-xl mx-auto">
@@ -615,13 +634,11 @@ export default function PropertiesPage() {
         isOpen={Boolean(propertyToDelete)}
         onClose={() => setPropertyToDelete(null)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Property"
-        description={
-          propertyToDelete
-            ? `Are you sure you want to delete "${propertyToDelete.name}"? This action cannot be undone.`
-            : ""
-        }
-        confirmText={deleteProperty.isPending ? "Deleting..." : "Delete Property"}
+        title={`Delete ${propertyToDelete?.name || ""}?`}
+        description="The property, its units and their lease history will be removed from your account. Tenants keep their past payment receipts. This can't be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
         isLoading={deleteProperty.isPending}
       />
 

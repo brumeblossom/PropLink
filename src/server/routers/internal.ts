@@ -116,6 +116,10 @@ export const internalRouter = router({
         where: {
           terminatedAt: null,
           endDate: { gte: now },
+          unit: {
+            deletedAt: null,
+            property: { deletedAt: null },
+          },
         },
         include: {
           tenant: true,
@@ -203,6 +207,10 @@ export const internalRouter = router({
           terminatedAt: null,
           endDate: { gte: now },
           status: "active",
+          unit: {
+            deletedAt: null,
+            property: { deletedAt: null },
+          },
         },
         include: {
           tenant: true,

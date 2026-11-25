@@ -120,6 +120,7 @@ model Property {
   propertyType  PropertyType @map("property_type")
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
   expectedUnits Int?         @map("expected_units")
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz
 
   // Relations
   landlord User     @relation("LandlordProperties", fields: [landlordId], references: [id], onDelete: Cascade)

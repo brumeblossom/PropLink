@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/utils/trpc";
@@ -16,6 +16,7 @@ import { PropertyType } from "@prisma/client";
 import { NIGERIA_STATES, NIGERIA_LGAS } from "@/utils/nigeriaGeo";
 import { X, Trash2, ChevronDown, Plus, Pencil, Search } from "lucide-react";
 import { getUnitTypesByPropertyType, isResidentialUnitType } from "@/lib/unit-types";
+import { canDeleteUnit, getUnitDeleteErrorMessage } from "@/lib/unit-delete";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -40,6 +41,21 @@ export default function PropertyDetailPage() {
   // Selection state
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+
+  const propertyDeleteCheck = useMemo(() => {
+    if (!property?.units) return { ok: true as const };
+    const now = new Date();
+    for (const u of property.units) {
+      const check = canDeleteUnit(u.leases || [], now);
+      if (!check.ok) {
+        return {
+          ok: false as const,
+          message: getUnitDeleteErrorMessage(u.unitNumber, check),
+        };
+      }
+    }
+    return { ok: true as const };
+  }, [property]);
 
   // Search & Filters state (synced with URL)
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
@@ -508,15 +524,6 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const selectedUnitsList = (units ?? []).filter((u) => selectedUnitIds.includes(u.id));
-  const selectedUnitsText = (() => {
-    const names = selectedUnitsList.map((u) => u.unitNumber);
-    if (names.length === 0) return "";
-    if (names.length === 1) return names[0];
-    if (names.length === 2) return `${names[0]} and ${names[1]}`;
-    return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-  })();
-
   if (isLoadingProperty || isLoadingUnits) {
     return (
       <div className="min-h-screen bg-background text-foreground">
@@ -586,6 +593,8 @@ export default function PropertyDetailPage() {
               onClick: () => setIsDeletePropertyConfirmOpen(true),
               icon: <Trash2 className="w-4 h-4" />,
               variant: "danger",
+              disabled: !propertyDeleteCheck.ok,
+              disabledTooltip: !propertyDeleteCheck.ok ? propertyDeleteCheck.message : undefined,
             },
           ]}
         />
@@ -830,7 +839,10 @@ export default function PropertyDetailPage() {
                     </thead>
                     <tbody className="divide-y divide-border/60 bg-transparent">
                       {filteredUnits.map((unit) => {
-                        const isOccupiedOrReserved = unit.status === "occupied" || unit.status === "reserved";
+                        const isBlocked = unit.deleteCheck ? !unit.deleteCheck.ok : (unit.status === "occupied" || unit.status === "reserved");
+                        const blockedTooltip = unit.deleteCheck && !unit.deleteCheck.ok
+                          ? getUnitDeleteErrorMessage(unit.unitNumber, unit.deleteCheck)
+                          : "This unit has a tenant";
                         const isSelected = selectedUnitIds.includes(unit.id);
 
                         return (
@@ -849,19 +861,19 @@ export default function PropertyDetailPage() {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <div className="flex items-center justify-center">
-                                {isOccupiedOrReserved ? (
+                                {isBlocked ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span className="inline-flex cursor-not-allowed">
                                         <Checkbox
                                           disabled
                                           checked={false}
-                                          aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
+                                          aria-label={`Unit ${unit.unitNumber} cannot be selected: ${blockedTooltip}`}
                                         />
                                       </span>
                                     </TooltipTrigger>
                                     <TooltipContent side="right" align="center">
-                                      This unit has a tenant
+                                      {blockedTooltip}
                                     </TooltipContent>
                                   </Tooltip>
                                 ) : (
@@ -917,15 +929,35 @@ export default function PropertyDetailPage() {
                                 >
                                   <Pencil className="w-3.5 h-3.5" />
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
-                                  title="Delete unit"
-                                  aria-label="Delete unit"
-                                  className="p-1.5 text-destructive hover:text-destructive/80 bg-card border border-border hover:border-border/80 rounded-lg transition-colors"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                {isBlocked ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex cursor-not-allowed">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          aria-label={`Cannot delete unit: ${blockedTooltip}`}
+                                          className="p-1.5 text-muted-foreground opacity-50 cursor-not-allowed bg-card border border-border rounded-lg"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" align="end">
+                                      {blockedTooltip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
+                                    title="Delete unit"
+                                    aria-label="Delete unit"
+                                    className="p-1.5 text-destructive hover:text-destructive/80 bg-card border border-border hover:border-border/80 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -938,7 +970,10 @@ export default function PropertyDetailPage() {
                 {/* Mobile Stacked Cards (< 768px) */}
                 <div className="md:hidden space-y-3">
                   {filteredUnits.map((unit) => {
-                    const isOccupiedOrReserved = unit.status === "occupied" || unit.status === "reserved";
+                    const isBlocked = unit.deleteCheck ? !unit.deleteCheck.ok : (unit.status === "occupied" || unit.status === "reserved");
+                    const blockedTooltip = unit.deleteCheck && !unit.deleteCheck.ok
+                      ? getUnitDeleteErrorMessage(unit.unitNumber, unit.deleteCheck)
+                      : "This unit has a tenant";
                     const isSelected = selectedUnitIds.includes(unit.id);
 
                     return (
@@ -957,19 +992,19 @@ export default function PropertyDetailPage() {
                           className="pt-0.5 shrink-0"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {isOccupiedOrReserved ? (
+                          {isBlocked ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className="inline-flex cursor-not-allowed">
                                   <Checkbox
                                     disabled
                                     checked={false}
-                                    aria-label={`Unit ${unit.unitNumber} has a tenant and cannot be selected`}
+                                    aria-label={`Unit ${unit.unitNumber} cannot be selected: ${blockedTooltip}`}
                                   />
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="right" align="center">
-                                This unit has a tenant
+                                {blockedTooltip}
                               </TooltipContent>
                             </Tooltip>
                           ) : (
@@ -992,10 +1027,10 @@ export default function PropertyDetailPage() {
                               className={cn(
                                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
                                 unit.status === "occupied"
-                                  ? "bg-success-tint text-success border border-success/20"
-                                  : unit.status === "reserved"
-                                    ? "bg-primary-tint text-primary border border-primary/20"
-                                    : "bg-warning-tint text-warning border border-warning/20"
+                                    ? "bg-success-tint text-success border border-success/20"
+                                    : unit.status === "reserved"
+                                      ? "bg-primary-tint text-primary border border-primary/20"
+                                      : "bg-warning-tint text-warning border border-warning/20"
                               )}
                             >
                               {unit.status}
@@ -1032,15 +1067,35 @@ export default function PropertyDetailPage() {
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
-                              title="Delete unit"
-                              aria-label="Delete unit"
-                              className="p-1.5 rounded-lg border border-border bg-card text-destructive hover:text-destructive/80 hover:bg-destructive-tint transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {isBlocked ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex cursor-not-allowed">
+                                    <button
+                                      type="button"
+                                      disabled
+                                      aria-label={`Cannot delete unit: ${blockedTooltip}`}
+                                      className="p-1.5 rounded-lg border border-border bg-card text-muted-foreground opacity-50 cursor-not-allowed"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" align="end">
+                                  {blockedTooltip}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setUnitToDelete({ id: unit.id, unitNumber: unit.unitNumber })}
+                                title="Delete unit"
+                                aria-label="Delete unit"
+                                className="p-1.5 rounded-lg border border-border bg-card text-destructive hover:text-destructive/80 hover:bg-destructive-tint transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1227,9 +1282,11 @@ export default function PropertyDetailPage() {
         isOpen={isDeletePropertyConfirmOpen}
         onClose={() => setIsDeletePropertyConfirmOpen(false)}
         onConfirm={handleDeleteProperty}
-        title="Delete Property"
-        description={`Are you sure you want to delete "${property.name}"? This action cannot be undone.`}
-        confirmText={deleteProperty.isPending ? "Deleting..." : "Delete Property"}
+        title={`Delete ${property.name}?`}
+        description="The property, its units and their lease history will be removed from your account. Tenants keep their past payment receipts. This can't be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
         isLoading={deleteProperty.isPending}
       />
 
@@ -1238,13 +1295,11 @@ export default function PropertyDetailPage() {
         isOpen={Boolean(unitToDelete)}
         onClose={() => setUnitToDelete(null)}
         onConfirm={handleDeleteUnit}
-        title="Delete Unit"
-        description={
-          unitToDelete
-            ? `Are you sure you want to delete unit "${unitToDelete.unitNumber}"? This action cannot be undone.`
-            : ""
-        }
-        confirmText={deleteUnit.isPending ? "Deleting..." : "Delete Unit"}
+        title={`Delete Unit ${unitToDelete?.unitNumber || ""}?`}
+        description="The unit and its lease history will be removed from your account. Tenants keep their past payment receipts. This can't be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
         isLoading={deleteUnit.isPending}
       />
 
@@ -1253,9 +1308,9 @@ export default function PropertyDetailPage() {
         isOpen={isBulkDeleteConfirmOpen}
         onClose={() => setIsBulkDeleteConfirmOpen(false)}
         onConfirm={handleConfirmBulkDelete}
-        title={`Delete ${selectedUnitIds.length} ${selectedUnitIds.length === 1 ? "unit" : "units"}?`}
-        description={`${selectedUnitsText} will be deleted. This can't be undone.`}
-        confirmText={bulkDeleteUnits.isPending ? "Deleting..." : "Delete"}
+        title={`Delete ${selectedUnitIds.length} units?`}
+        description="The units and their lease history will be removed from your account. Tenants keep their past payment receipts. This can't be undone."
+        confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
         isLoading={bulkDeleteUnits.isPending}

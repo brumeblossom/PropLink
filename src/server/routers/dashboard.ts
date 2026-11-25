@@ -20,7 +20,7 @@ export const dashboardRouter = router({
     const [properties, activeLeasesEndingSoon, pendingPaymentsData] = await Promise.all([
       // 1. All properties for the landlord with active non-deleted units and their active leases
       prisma.property.findMany({
-        where: { landlordId: ctx.user.id },
+        where: { landlordId: ctx.user.id, deletedAt: null },
         include: {
           units: {
             where: { deletedAt: null },
@@ -55,8 +55,8 @@ export const dashboardRouter = router({
       prisma.lease.findMany({
         where: {
           unit: {
-            property: { landlordId: ctx.user.id },
             deletedAt: null,
+            property: { landlordId: ctx.user.id, deletedAt: null },
           },
           terminatedAt: null,
           startDate: { lte: now },
@@ -91,8 +91,8 @@ export const dashboardRouter = router({
         where: {
           lease: {
             unit: {
-              property: { landlordId: ctx.user.id },
               deletedAt: null,
+              property: { landlordId: ctx.user.id, deletedAt: null },
             },
           },
           status: PaymentStatus.pending,

@@ -45,6 +45,13 @@ export const paymentsRouter = router({
         });
       }
 
+      if (isLandlord && (lease.unit.deletedAt !== null || lease.unit.property.deletedAt !== null)) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lease not found.",
+        });
+      }
+
       return await prisma.payment.findMany({
         where: { leaseId: input.leaseId },
         orderBy: { paymentDate: "desc" },
@@ -102,6 +109,13 @@ export const paymentsRouter = router({
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You are not authorized to log a payment against this lease.",
+        });
+      }
+
+      if (isLandlord && (lease.unit.deletedAt !== null || lease.unit.property.deletedAt !== null)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not own this unit.",
         });
       }
 
@@ -1030,6 +1044,13 @@ export const paymentsRouter = router({
         });
       }
 
+      if (isLandlord && (lease.unit.deletedAt !== null || lease.unit.property.deletedAt !== null)) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Lease not found.",
+        });
+      }
+
       const confirmedPayments = await prisma.payment.findMany({
         where: {
           leaseId: input.leaseId,
@@ -1060,12 +1081,19 @@ export const paymentsRouter = router({
         include: {
           lease: {
             include: {
-              unit: { select: { id: true, propertyId: true } }
-            }
-          }
-        }
+              unit: {
+                select: {
+                  id: true,
+                  propertyId: true,
+                  deletedAt: true,
+                  property: { select: { deletedAt: true } },
+                },
+              },
+            },
+          },
+        },
       });
-      return payment
+      return payment && !payment.lease.unit.deletedAt && !payment.lease.unit.property.deletedAt
         ? {
             unitId: payment.lease.unit.id,
             propertyId: payment.lease.unit.propertyId,

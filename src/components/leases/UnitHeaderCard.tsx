@@ -47,6 +47,12 @@ export function UnitHeaderCard({
               Moved out
             </span>
           );
+        case "removed":
+          return (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
+              Removed
+            </span>
+          );
         case "ended":
         default:
           return (
@@ -80,6 +86,12 @@ export function UnitHeaderCard({
           return (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
               Moved out
+            </span>
+          );
+        case "removed":
+          return (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted border border-border text-muted-foreground">
+              Removed
             </span>
           );
         case "ended":

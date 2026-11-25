@@ -18,6 +18,7 @@ import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-ty
 import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { formatDateGB } from "@/lib/billing";
 import { getCurrentLease, getRenewEligibility, defaultEndDate } from "@/lib/leases";
+import { canDeleteUnit, getUnitDeleteErrorMessage } from "@/lib/unit-delete";
 import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -555,6 +556,9 @@ export default function UnitDetailPage() {
 
   // Renew eligibility
   const today = useMemo(() => new Date(), []);
+  const deleteCheck = useMemo(() => {
+    return canDeleteUnit(leases || [], today);
+  }, [leases, today]);
   const renewEligibility = useMemo(() => {
     if (!activeLease || !payments) return { eligible: false, reason: "not_ended" as const };
     const confirmed = payments.filter((p) => p.status === "confirmed");
@@ -1079,6 +1083,8 @@ export default function UnitDetailPage() {
               onClick: () => handleDeleteUnit(),
               icon: <Trash2 className="w-4 h-4" />,
               variant: "danger" as const,
+              disabled: !deleteCheck.ok,
+              disabledTooltip: !deleteCheck.ok ? getUnitDeleteErrorMessage(unit?.unitNumber || "", deleteCheck) : undefined,
             },
           ]}
         />
@@ -2697,7 +2703,7 @@ export default function UnitDetailPage() {
           }
         }}
         title={`Delete Unit ${unit?.unitNumber || ""}?`}
-        description="Are you sure you want to delete this unit? This action is permanent."
+        description="The unit and its lease history will be removed from your account. Tenants keep their past payment receipts. This can't be undone."
         confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
