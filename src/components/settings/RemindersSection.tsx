@@ -136,7 +136,7 @@ export function RemindersSection() {
                 min={todayStr}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-40"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-40"
               />
             </div>
           )}

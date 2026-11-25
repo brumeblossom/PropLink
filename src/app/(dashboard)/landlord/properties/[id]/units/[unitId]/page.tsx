@@ -15,7 +15,7 @@ import { X, Trash2, Plus, Pencil, Check, LogOut, RefreshCw } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button";
 import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
-import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
+import { formatCurrency, formatInputNumber } from "@/lib/utils";
 import { formatDateGB } from "@/lib/billing";
 import { getCurrentLease, getRenewEligibility, defaultEndDate } from "@/lib/leases";
 import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
@@ -1768,7 +1768,7 @@ export default function UnitDetailPage() {
                 required
                 value={editUnitNumber}
                 onChange={(e) => setEditUnitNumber(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="e.g. Flat 101, Shop 5"
               />
             </ModalField>
@@ -1803,7 +1803,7 @@ export default function UnitDetailPage() {
                   value={editRoomsCount}
                   onChange={(e) => setEditRoomsCount(e.target.value)}
                   placeholder="e.g. 3"
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 />
               </ModalField>
             )}
@@ -1869,7 +1869,7 @@ export default function UnitDetailPage() {
                       required
                       value={renewStartDate}
                       onChange={(e) => handleRenewStartDateChange(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
                     />
                   </ModalField>
                   <ModalField
@@ -1882,7 +1882,7 @@ export default function UnitDetailPage() {
                       disabled={renewNoFixedEndDate}
                       value={renewEndDate}
                       onChange={(e) => setRenewEndDate(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <div className="flex items-center gap-2 mt-2">
                       <Checkbox
@@ -1908,7 +1908,7 @@ export default function UnitDetailPage() {
                       inputMode="decimal"
                       value={renewRentAmount}
                       onChange={(e) => setRenewRentAmount(formatInputNumber(e.target.value))}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                       placeholder="e.g. 150,000"
                     />
                   </ModalField>
@@ -1935,7 +1935,7 @@ export default function UnitDetailPage() {
                     inputMode="decimal"
                     value={renewDepositAmount}
                     onChange={(e) => setRenewDepositAmount(formatInputNumber(e.target.value))}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     placeholder="e.g. 300,000"
                   />
                 </ModalField>
@@ -1986,17 +1986,13 @@ export default function UnitDetailPage() {
                   id="tenantName"
                   type="text"
                   required
+                  aria-invalid={Boolean(tenantNameError)}
                   value={tenantName}
                   onChange={(e) => {
                     setTenantName(e.target.value);
                     if (tenantNameError) setTenantNameError(null);
                   }}
-                  className={cn(
-                    "block w-full h-12 rounded-lg border bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
-                    tenantNameError
-                      ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
-                      : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
-                  )}
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="e.g. Sandra Okon"
                 />
                 {tenantNameError && (
@@ -2009,17 +2005,13 @@ export default function UnitDetailPage() {
                   id="tenantEmail"
                   type="email"
                   required
+                  aria-invalid={Boolean(tenantEmailError || tenantEmailCheck?.isLandlord)}
                   value={tenantEmail}
                   onChange={(e) => {
                     setTenantEmail(e.target.value);
                     if (tenantEmailError) setTenantEmailError(null);
                   }}
-                  className={cn(
-                    "block w-full h-12 rounded-lg border bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 text-sm",
-                    tenantEmailError || tenantEmailCheck?.isLandlord
-                      ? "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/30"
-                      : "border-input focus-visible:border-ring focus-visible:ring-ring/30"
-                  )}
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="sandra@example.com"
                 />
                 {tenantEmailError && (
@@ -2045,7 +2037,7 @@ export default function UnitDetailPage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
                 />
               </ModalField>
               <ModalField label="End Date (optional)" htmlFor="endDate">
@@ -2055,7 +2047,7 @@ export default function UnitDetailPage() {
                   disabled={noFixedEndDate}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <div className="flex items-center gap-2 mt-2">
                   <Checkbox
@@ -2084,7 +2076,7 @@ export default function UnitDetailPage() {
                     setRentAmount(formatInputNumber(e.target.value));
                     if (rentAmountError) setRentAmountError(null);
                   }}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="e.g. 150,000"
                 />
                 {rentAmountError && (
@@ -2156,7 +2148,7 @@ export default function UnitDetailPage() {
                       required
                       value={editStartDate}
                       onChange={(e) => handleEditStartDateChange(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
                     />
                   </ModalField>
                   <ModalField label="End Date (optional)" htmlFor="editEndDate">
@@ -2166,7 +2158,7 @@ export default function UnitDetailPage() {
                       disabled={editNoFixedEndDate}
                       value={editEndDate}
                       onChange={(e) => setEditEndDate(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <div className="flex items-center gap-2 mt-2">
                       <Checkbox
@@ -2192,7 +2184,7 @@ export default function UnitDetailPage() {
                       inputMode="decimal"
                       value={editRentAmount}
                       onChange={(e) => setEditRentAmount(formatInputNumber(e.target.value))}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                       placeholder="e.g. 150,000"
                     />
                   </ModalField>
@@ -2219,7 +2211,7 @@ export default function UnitDetailPage() {
                     inputMode="decimal"
                     value={editDepositAmount}
                     onChange={(e) => setEditDepositAmount(formatInputNumber(e.target.value))}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     placeholder="e.g. 50,000"
                   />
                 </ModalField>
@@ -2288,7 +2280,7 @@ export default function UnitDetailPage() {
                     required
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(formatInputNumber(e.target.value))}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     placeholder="e.g. 150,000"
                   />
                   {billingSummary && billingSummary.isRentSet && (
@@ -2306,7 +2298,7 @@ export default function UnitDetailPage() {
                     max={new Date().toISOString().split("T")[0]}
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
                   />
                 </ModalField>
 
@@ -2329,7 +2321,7 @@ export default function UnitDetailPage() {
                     id="paymentNotes"
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
-                    className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full min-h-[120px] rounded-lg field-focus p-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     placeholder="Reference, receipt numbers or bank metadata..."
                   />
                 </ModalField>
@@ -2391,7 +2383,7 @@ export default function UnitDetailPage() {
                 required
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full min-h-[120px] rounded-lg field-focus p-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="Specify why this payment is incorrect (e.g. money never received, wrong amount)..."
               />
             </ModalField>
@@ -2629,7 +2621,7 @@ export default function UnitDetailPage() {
                     required
                     value={editAmount}
                     onChange={(e) => setEditAmount(formatInputNumber(e.target.value))}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
                   />
                 </ModalField>
                 <ModalField label="Corrected Date" htmlFor="editPaymentDate" required>
@@ -2639,7 +2631,7 @@ export default function UnitDetailPage() {
                     required
                     value={editPaymentDate}
                     onChange={(e) => setEditPaymentDate(e.target.value)}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
                   />
                 </ModalField>
                 <ModalField label="Corrected Method" htmlFor="editMethod">
@@ -2858,7 +2850,7 @@ export default function UnitDetailPage() {
                       setEditTenantFullName(e.target.value);
                       if (editTenantError) setEditTenantError(null);
                     }}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     placeholder="e.g. John Doe"
                   />
                 </ModalField>
@@ -2873,7 +2865,7 @@ export default function UnitDetailPage() {
                       setEditTenantEmail(e.target.value);
                       if (editTenantError) setEditTenantError(null);
                     }}
-                    className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                    className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     placeholder="e.g. john@example.com"
                   />
                 </ModalField>

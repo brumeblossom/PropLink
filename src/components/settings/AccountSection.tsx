@@ -246,7 +246,7 @@ export function AccountSection({ user }: AccountSectionProps) {
                   if (nameError) setNameError(null);
                 }}
                 placeholder="Enter full name"
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
               <div className="mt-1.5 flex justify-end">
                 <span
@@ -318,7 +318,7 @@ export function AccountSection({ user }: AccountSectionProps) {
                     setCurrentPassword(e.target.value);
                     if (currentPasswordError) setCurrentPasswordError(null);
                   }}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 pr-12 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="Enter current password"
                 />
                 <button
@@ -349,7 +349,7 @@ export function AccountSection({ user }: AccountSectionProps) {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 pr-12 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="Enter new password"
                 />
                 <button
@@ -376,7 +376,7 @@ export function AccountSection({ user }: AccountSectionProps) {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 pr-12 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="Repeat new password"
                 />
                 <button

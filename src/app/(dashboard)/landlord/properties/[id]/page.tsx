@@ -709,7 +709,7 @@ export default function PropertyDetailPage() {
                       value={searchQuery}
                       onChange={(e) => updateFilters(e.target.value, statusFilter, typeFilter)}
                       placeholder="Search unit or tenant"
-                      className="w-full rounded-lg border border-input bg-card pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring h-9"
+                      className="w-full rounded-lg field-focus pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-subtle-foreground h-9"
                     />
                   </div>
 
@@ -1131,7 +1131,7 @@ export default function PropertyDetailPage() {
                 required
                 value={propertyName}
                 onChange={(e) => setPropertyName(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
 
@@ -1142,7 +1142,7 @@ export default function PropertyDetailPage() {
                 required
                 value={propertyAddress}
                 onChange={(e) => setPropertyAddress(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
 
@@ -1208,7 +1208,7 @@ export default function PropertyDetailPage() {
                   min="1"
                   value={expectedUnits}
                   onChange={(e) => setExpectedUnits(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 />
               </ModalField>
             )}
@@ -1294,7 +1294,7 @@ export default function PropertyDetailPage() {
                 required
                 value={unitNumber}
                 onChange={(e) => setUnitNumber(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="e.g. Flat 1, Shop 4B"
               />
             </ModalField>
@@ -1322,7 +1322,7 @@ export default function PropertyDetailPage() {
                   min="1"
                   value={roomsCount}
                   onChange={(e) => setRoomsCount(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="e.g. 2"
                 />
               </ModalField>
@@ -1336,7 +1336,7 @@ export default function PropertyDetailPage() {
                 step="0.1"
                 value={sizeSqm}
                 onChange={(e) => setSizeSqm(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="e.g. 75.5"
               />
             </ModalField>
@@ -1386,7 +1386,7 @@ export default function PropertyDetailPage() {
                 required
                 value={editUnitNumber}
                 onChange={(e) => setEditUnitNumber(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
 
@@ -1413,7 +1413,7 @@ export default function PropertyDetailPage() {
                   min="1"
                   value={editRoomsCount}
                   onChange={(e) => setEditRoomsCount(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 />
               </ModalField>
             )}
@@ -1474,7 +1474,7 @@ export default function PropertyDetailPage() {
                       value={rangePrefix}
                       onChange={(e) => setRangePrefix(e.target.value)}
                       placeholder="e.g. Flat"
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     />
                   </ModalField>
                   <ModalField label="Unit Type">
@@ -1500,7 +1500,7 @@ export default function PropertyDetailPage() {
                       required
                       value={rangeStart}
                       onChange={(e) => setRangeStart(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     />
                   </ModalField>
                   <ModalField label="End Number" required>
@@ -1510,7 +1510,7 @@ export default function PropertyDetailPage() {
                       required
                       value={rangeEnd}
                       onChange={(e) => setRangeEnd(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     />
                   </ModalField>
                 </div>
@@ -1523,7 +1523,7 @@ export default function PropertyDetailPage() {
                       value={rangeRoomsCount}
                       onChange={(e) => setRangeRoomsCount(e.target.value)}
                       placeholder="e.g. 2"
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                     />
                   </ModalField>
                 )}
@@ -1550,7 +1550,7 @@ export default function PropertyDetailPage() {
                           setManualRows(newRows);
                         }}
                         placeholder={`Unit #${index + 1}`}
-                        className="flex-1 rounded-lg border border-input bg-card px-3 h-10 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                        className="flex-1 rounded-lg field-focus px-3 h-10 text-foreground placeholder:text-subtle-foreground text-sm"
                       />
                       <Select
                         value={row.unitType}
@@ -1578,7 +1578,7 @@ export default function PropertyDetailPage() {
                             setManualRows(newRows);
                           }}
                           placeholder="Rooms"
-                          className="w-20 rounded-lg border border-input bg-card px-2 h-10 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                          className="w-20 rounded-lg field-focus px-2 h-10 text-foreground placeholder:text-subtle-foreground text-sm"
                         />
                       )}
                       {manualRows.length > 1 && (

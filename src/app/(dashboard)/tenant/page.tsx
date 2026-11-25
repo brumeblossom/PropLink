@@ -541,7 +541,7 @@ export default function TenantHomePage() {
                 placeholder="Search property, unit or landlord"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 rounded-lg bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors"
+                className="w-full pl-9 pr-8 py-2 rounded-lg field-focus text-sm text-foreground placeholder:text-muted-foreground"
               />
               {search && (
                 <button

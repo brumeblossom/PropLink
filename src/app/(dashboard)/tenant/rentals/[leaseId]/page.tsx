@@ -785,7 +785,7 @@ export default function TenantRentalDetailsPage({
                   setAmountInput(formatInputNumber(e.target.value));
                   setPaymentError(null);
                 }}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
               {billingSummary && billingSummary.isRentSet && (
                 <p className="text-[11px] text-muted-foreground mt-1">
@@ -802,7 +802,7 @@ export default function TenantRentalDetailsPage({
                 max={todayStr}
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground text-sm"
               />
             </ModalField>
 
@@ -856,7 +856,7 @@ export default function TenantRentalDetailsPage({
                 placeholder="Optional reference or description"
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
-                className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full min-h-[120px] rounded-lg field-focus p-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
           </ModalBody>
@@ -995,7 +995,7 @@ export default function TenantRentalDetailsPage({
                 placeholder="Explain why this payment record is incorrect..."
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
-                className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                className="block w-full min-h-[120px] rounded-lg field-focus p-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
           </ModalBody>

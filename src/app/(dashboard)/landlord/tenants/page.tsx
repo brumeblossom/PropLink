@@ -306,7 +306,7 @@ function LandlordTenantsContent() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search name or email"
-              className="w-full pl-9 pr-8 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+              className="w-full pl-9 pr-8 py-2 rounded-lg field-focus text-sm text-foreground placeholder:text-subtle-foreground"
             />
             {searchInput && (
               <button
@@ -871,7 +871,7 @@ function LandlordTenantsContent() {
                     setEditTenantFullName(e.target.value);
                     if (editTenantError) setEditTenantError(null);
                   }}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="e.g. John Doe"
                 />
               </ModalField>
@@ -886,7 +886,7 @@ function LandlordTenantsContent() {
                     setEditTenantEmail(e.target.value);
                     if (editTenantError) setEditTenantError(null);
                   }}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   placeholder="e.g. john@example.com"
                 />
               </ModalField>

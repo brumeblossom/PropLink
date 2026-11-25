@@ -209,7 +209,7 @@ export function UnitChatPanel({ unitId, className }: UnitChatPanelProps) {
           onChange={(e) => setMessageText(e.target.value)}
           placeholder={`Type a message to ${counterparty.fullName}...`}
           disabled={sending}
-          className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none text-sm"
+          className="flex-1 rounded-xl field-focus bg-background px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground text-sm"
         />
         <Button
           type="submit"

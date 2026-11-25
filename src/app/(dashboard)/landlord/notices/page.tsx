@@ -279,7 +279,7 @@ function NoticesContent() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search messages"
-              className="w-full pl-9 pr-8 py-2 rounded-lg bg-card border border-input text-sm text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+              className="w-full pl-9 pr-8 py-2 rounded-lg field-focus text-sm text-foreground placeholder:text-subtle-foreground"
             />
             {searchInput && (
               <button
@@ -684,7 +684,7 @@ function NoticesContent() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Water Tank Maintenance This Saturday"
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                   required
                 />
               </ModalField>
@@ -695,7 +695,7 @@ function NoticesContent() {
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="Provide details about the announcement..."
-                  className="block w-full min-h-[120px] rounded-lg border border-input bg-card p-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm leading-relaxed"
+                  className="block w-full min-h-[120px] rounded-lg field-focus p-4 text-foreground placeholder:text-subtle-foreground text-sm leading-relaxed"
                   required
                 />
               </ModalField>

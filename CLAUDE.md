@@ -273,4 +273,5 @@ A prompt isn't complete until:
 - Never use alert, confirm or prompt. Use the toast and ConfirmDialog.
 - Buttons show the lucide Plus icon (16px) followed by the words, never a typed "+".
 - Colours come only from the theme tokens in globals.css (bg-background, bg-card, text-foreground, text-muted-foreground, border-border, bg-primary, text-primary, bg-primary-tint, success/warning/destructive and their tints). Never use raw Tailwind palette classes (neutral-*, gray-*, red-*, emerald-*, bg-white, text-white) in app code. Every screen must look right in light AND dark.
+- All inputs, selects and textareas use the shared field-focus style; no ad-hoc focus ring classes.
 - If an instruction would produce a cluttered or awkward result, say so before building it.

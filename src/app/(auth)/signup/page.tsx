@@ -277,7 +277,7 @@ function SignupForm() {
                 required
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 font-mono uppercase text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm tracking-wider"
+                className="block w-full h-12 rounded-lg field-focus px-4 font-mono uppercase text-foreground placeholder:text-subtle-foreground text-sm tracking-wider"
                 placeholder="E.G. PRO-1234"
               />
             </div>
@@ -296,7 +296,7 @@ function SignupForm() {
               autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+              className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               placeholder="Adekunle Ciroma"
             />
           </div>
@@ -314,7 +314,7 @@ function SignupForm() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+              className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               placeholder="you@example.com"
             />
           </div>
@@ -333,7 +333,7 @@ function SignupForm() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 pr-12 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="••••••••"
               />
               <button
@@ -362,7 +362,7 @@ function SignupForm() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 pr-12 text-foreground placeholder:text-subtle-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30 text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 pr-12 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="••••••••"
               />
               <button

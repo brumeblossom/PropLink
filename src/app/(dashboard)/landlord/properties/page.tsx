@@ -356,7 +356,7 @@ export default function PropertiesPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="e.g. Alaba Plaza"
               />
             </ModalField>
@@ -368,7 +368,7 @@ export default function PropertiesPage() {
                 required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 placeholder="e.g. 15 Kingsway Road"
               />
             </ModalField>
@@ -435,7 +435,7 @@ export default function PropertiesPage() {
                   value={expectedUnits}
                   onChange={(e) => setExpectedUnits(e.target.value)}
                   placeholder="e.g. 20"
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 />
               </ModalField>
             )}
@@ -501,7 +501,7 @@ export default function PropertiesPage() {
                 required
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
 
@@ -512,7 +512,7 @@ export default function PropertiesPage() {
                 required
                 value={editAddress}
                 onChange={(e) => setEditAddress(e.target.value)}
-                className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
               />
             </ModalField>
 
@@ -577,7 +577,7 @@ export default function PropertiesPage() {
                   min="1"
                   value={editExpectedUnits}
                   onChange={(e) => setEditExpectedUnits(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground placeholder:text-subtle-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm"
+                  className="block w-full h-12 rounded-lg field-focus px-4 text-foreground placeholder:text-subtle-foreground text-sm"
                 />
               </ModalField>
             )}

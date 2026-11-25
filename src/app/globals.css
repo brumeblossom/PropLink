@@ -151,3 +151,81 @@ html {
     animation: none !important;
   }
 }
+
+@layer components {
+  .field-focus {
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+    outline: none;
+  }
+
+  .field-focus:focus,
+  .field-focus:focus-visible {
+    outline: none;
+    border-color: hsl(var(--primary) / 0.55);
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.10);
+  }
+
+  .dark .field-focus:focus,
+  .dark .field-focus:focus-visible {
+    border-color: hsl(var(--ring));
+    box-shadow: 0 0 0 1px hsl(var(--ring));
+  }
+
+  .field-focus[aria-invalid="true"] {
+    border-color: hsl(var(--destructive));
+  }
+
+  .field-focus[aria-invalid="true"]:focus,
+  .field-focus[aria-invalid="true"]:focus-visible {
+    border-color: hsl(var(--destructive));
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.12);
+  }
+
+  .dark .field-focus[aria-invalid="true"]:focus,
+  .dark .field-focus[aria-invalid="true"]:focus-visible {
+    border-color: hsl(var(--destructive));
+    box-shadow: 0 0 0 1px hsl(var(--destructive));
+  }
+}
+
+/* Chrome & Safari Autofill Styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: hsl(var(--foreground));
+  -webkit-box-shadow: 0 0 0 1000px hsl(var(--card)) inset;
+  box-shadow: 0 0 0 1000px hsl(var(--card)) inset;
+  caret-color: hsl(var(--foreground));
+  transition: background-color 99999s ease-in-out 0s;
+}
+
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  border-color: hsl(var(--primary) / 0.55);
+  -webkit-box-shadow: 0 0 0 1000px hsl(var(--card)) inset, 0 0 0 3px hsl(var(--primary) / 0.10);
+  box-shadow: 0 0 0 1000px hsl(var(--card)) inset, 0 0 0 3px hsl(var(--primary) / 0.10);
+}
+
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill:focus,
+.dark select:-webkit-autofill:focus {
+  border-color: hsl(var(--ring));
+  -webkit-box-shadow: 0 0 0 1000px hsl(var(--card)) inset, 0 0 0 1px hsl(var(--ring));
+  box-shadow: 0 0 0 1000px hsl(var(--card)) inset, 0 0 0 1px hsl(var(--ring));
+}
+
+/* Number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
