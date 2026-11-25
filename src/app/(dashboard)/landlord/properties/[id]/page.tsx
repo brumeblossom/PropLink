@@ -886,7 +886,7 @@ export default function PropertyDetailPage() {
                             </td>
                             <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
                               {unit.activeLease
-                                ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
+                                ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${unit.activeLease.endDate ? new Date(unit.activeLease.endDate).toLocaleDateString() : "Ongoing"}`
                                 : "—"}
                             </td>
                             <td className="whitespace-nowrap px-6 py-4 text-sm">
@@ -1013,7 +1013,7 @@ export default function PropertyDetailPage() {
                               <span className="text-subtle-foreground">Lease: </span>
                               <span>
                                 {unit.activeLease
-                                  ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${new Date(unit.activeLease.endDate).toLocaleDateString()}`
+                                  ? `${new Date(unit.activeLease.startDate).toLocaleDateString()} - ${unit.activeLease.endDate ? new Date(unit.activeLease.endDate).toLocaleDateString() : "Ongoing"}`
                                   : "—"}
                               </span>
                             </div>

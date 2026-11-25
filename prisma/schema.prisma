@@ -77,6 +77,8 @@ enum NotificationChannel {
 enum RelatedType {
   notice
   reminder
+  lease
+  lease_expiry
 }
 
 model User {
@@ -103,6 +105,7 @@ model User {
   notificationsReceived    NotificationLog[]  @relation("RecipientNotifications")
   notificationsReceivedList Notification[]    @relation("RecipientNotificationsList")
   uploadedLeaseDocuments   LeaseDocument[]    @relation("UploadedLeaseDocuments")
+  tenantReminderSettings   TenantReminderSetting?
 
   @@map("users")
 }
@@ -154,7 +157,7 @@ model Lease {
   unitId            String        @map("unit_id") @db.Uuid
   tenantId          String        @map("tenant_id") @db.Uuid
   startDate         DateTime      @map("start_date") @db.Date
-  endDate           DateTime      @map("end_date") @db.Date
+  endDate           DateTime?     @map("end_date") @db.Date
   rentAmount        Decimal       @map("rent_amount") @db.Decimal(12, 2)
   rentFrequency     RentFrequency @map("rent_frequency")
   depositAmount     Decimal?      @map("deposit_amount") @db.Decimal(12, 2)
@@ -380,4 +383,18 @@ model Notification {
   // Compound: listReceived orders by created_at DESC — covers the ORDER BY without a separate sort step
   @@index([recipientId, createdAt])
   @@map("notifications")
+}
+
+model TenantReminderSetting {
+  userId             String    @id @map("user_id") @db.Uuid
+  expiryEnabled      Boolean   @default(true) @map("expiry_enabled")
+  expiryStartMode    String    @default("months") @map("expiry_start_mode")
+  expiryMonthsBefore Int       @default(2) @map("expiry_months_before")
+  expiryStartDate    DateTime? @map("expiry_start_date") @db.Date
+  expiryFrequency    String    @default("monthly") @map("expiry_frequency")
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_reminder_settings")
 }

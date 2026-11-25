@@ -8,7 +8,7 @@ import { formatRentFrequency } from "@/lib/rent";
 interface LeaseDetailsCardProps {
   viewer?: "tenant";
   startDate: Date | string;
-  endDate: Date | string;
+  endDate?: Date | string | null;
   rentAmount: number | string;
   rentFrequency: string;
   depositAmount?: number | string | null;
@@ -56,7 +56,7 @@ export function LeaseDetailsCard({
               Period
             </span>
             <span className="text-foreground font-medium block mt-1">
-              {formatDateGB(startDate)} – {formatDateGB(endDate)}
+              {formatDateGB(startDate)} – {endDate ? formatDateGB(endDate) : "Ongoing"}
             </span>
           </div>
           <div>

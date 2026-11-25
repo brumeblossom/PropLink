@@ -78,6 +78,8 @@ async function runReminderCheck() {
       },
     });
 
+    if (!lease.endDate) continue;
+
     const periods = getLeasePeriods(lease.startDate, lease.endDate, lease.rentFrequency);
     const rentAmount = Number(lease.rentAmount);
     let nextDueDate = null;

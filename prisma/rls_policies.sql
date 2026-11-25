@@ -26,7 +26,8 @@ BEGIN
         OR (status = 'pending' AND (invitation_expires_at IS NULL OR invitation_expires_at >= NOW()))
       )
       AND (
-        (NEW.start_date <= end_date AND NEW.end_date >= start_date)
+        (end_date IS NULL OR NEW.start_date <= end_date)
+        AND (NEW.end_date IS NULL OR NEW.end_date >= start_date)
       )
   ) THEN
     RAISE EXCEPTION 'Lease overlaps with another active lease for this unit.';
@@ -632,4 +633,29 @@ CREATE POLICY "leases_delete_policy" ON storage.objects
       OR can_delete_own_proof(name)
     )
   );
+
+-- ==========================================
+-- Tenant Reminder Settings Policies
+-- ==========================================
+ALTER TABLE tenant_reminder_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Tenants can select own reminder settings"
+  ON tenant_reminder_settings
+  FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Tenants can insert own reminder settings"
+  ON tenant_reminder_settings
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Tenants can update own reminder settings"
+  ON tenant_reminder_settings
+  FOR UPDATE
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
 

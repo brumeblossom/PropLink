@@ -25,7 +25,7 @@ import { Search, Inbox, X, Home, Users, CreditCard, Calendar } from "lucide-reac
 function computeLeaseStatus(
   lease: {
     startDate: Date | string;
-    endDate: Date | string;
+    endDate?: Date | string | null;
     renewalWindowDays?: number | null;
     terminatedAt?: Date | string | null;
   },
@@ -34,10 +34,10 @@ function computeLeaseStatus(
   if (lease.terminatedAt) return "moved_out";
   const todayStr = formatLagosYMD(today);
   const startStr = formatLagosYMD(lease.startDate);
-  const endStr = formatLagosYMD(lease.endDate);
+  const endStr = lease.endDate ? formatLagosYMD(lease.endDate) : null;
 
   if (todayStr < startStr) return "upcoming";
-  if (todayStr >= endStr) return "ended";
+  if (endStr && todayStr >= endStr) return "ended";
   return "active";
 }
 
@@ -188,7 +188,7 @@ export default function TenantHomePage() {
     const unitCurrentLeases: typeof leases = [];
     for (const unitLeases of Array.from(leasesByUnit.values())) {
       // Find current lease or newest
-      const current = unitLeases.find((l) => !l.terminatedAt && new Date(l.endDate) > today && new Date(l.startDate) <= today)
+      const current = unitLeases.find((l) => !l.terminatedAt && (!l.endDate || new Date(l.endDate) > today) && new Date(l.startDate) <= today)
         || unitLeases.find((l) => !l.terminatedAt && new Date(l.startDate) > today)
         || unitLeases[0];
       if (current) {
@@ -383,7 +383,7 @@ export default function TenantHomePage() {
                 Number(inv.rentAmount) > 0
                   ? `${formatCurrency(inv.rentAmount)} / ${formatRentFrequency(inv.rentFrequency)}`
                   : "Rent TBD";
-              const periodText = `${formatDateGB(inv.startDate)} – ${formatDateGB(inv.endDate)}`;
+              const periodText = `${formatDateGB(inv.startDate)} – ${inv.endDate ? formatDateGB(inv.endDate) : "Ongoing"}`;
 
               let expiryText = "";
               if (inv.invitationExpiresAt) {
@@ -695,7 +695,7 @@ export default function TenantHomePage() {
                         <span
                           className="whitespace-nowrap block"
                         >
-                          {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                          {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
                         </span>
                       </td>
 
@@ -755,7 +755,7 @@ export default function TenantHomePage() {
                     </span>
                     <span className="text-subtle-foreground mx-1.5">·</span>
                     <span>
-                      {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                      {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
                     </span>
                   </div>
 
@@ -809,7 +809,7 @@ export default function TenantHomePage() {
               <div className="pt-3">
                 <span className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rental Period</span>
                 <span className="font-semibold text-foreground mt-1 block">
-                  {formatDateGB(viewingInvitation.startDate)} – {formatDateGB(viewingInvitation.endDate)}
+                  {formatDateGB(viewingInvitation.startDate)} – {viewingInvitation.endDate ? formatDateGB(viewingInvitation.endDate) : "Ongoing"}
                 </span>
               </div>
 

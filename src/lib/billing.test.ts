@@ -471,4 +471,46 @@ describe("Billing & Running Balance", () => {
       expect(formatLagosYMD(balance.nextDueDate!)).toBe("2026-12-08");
     });
   });
+
+  describe("Open-ended Leases (Rolling tenancies with no fixed end date)", () => {
+    it("open-ended monthly lease: 4 finished periods means 4 × rent due; next due date is end of current period", () => {
+      // Lease starts 2026-01-01, rent ₦50,000 monthly, no endDate
+      const lease = {
+        startDate: "2026-01-01",
+        endDate: null,
+        rentAmount: 50000,
+        rentFrequency: "monthly",
+      };
+
+      // Periods:
+      // P1: starts 2026-01-01, ends 2026-02-01 (due date 2026-02-01)
+      // P2: starts 2026-02-01, ends 2026-03-01 (due date 2026-03-01)
+      // P3: starts 2026-03-01, ends 2026-04-01 (due date 2026-04-01)
+      // P4: starts 2026-04-01, ends 2026-05-01 (due date 2026-05-01)
+      // P5: starts 2026-05-01, ends 2026-06-01 (current period on 2026-05-15, due date 2026-06-01)
+      const today = "2026-05-15";
+
+      // 4 payments of ₦50,000 cover the 4 finished periods
+      const payments: PaymentLike[] = [
+        { amount: 50000, status: "confirmed" },
+        { amount: 50000, status: "confirmed" },
+        { amount: 50000, status: "confirmed" },
+        { amount: 50000, status: "confirmed" },
+      ];
+
+      const balance = getLeaseBalance(lease, payments, today);
+
+      expect(balance.periodsDue).toBe(4);
+      expect(balance.rentDueToDate).toBe(4 * 50000);
+      expect(balance.paidToDate).toBe(200000);
+      expect(balance.outstanding).toBe(0);
+      expect(balance.credit).toBe(0);
+      expect(balance.unpaidPeriods).toBe(0);
+      expect(balance.remainingLeaseRent).toBe(0);
+
+      // Next due date is the end of the current period (2026-06-01)
+      expect(balance.nextDueDate).not.toBeNull();
+      expect(formatLagosYMD(balance.nextDueDate!)).toBe("2026-06-01");
+    });
+  });
 });

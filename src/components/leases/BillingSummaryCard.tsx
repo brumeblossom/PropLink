@@ -19,7 +19,7 @@ interface BillingSummaryData {
 interface BillingSummaryCardProps {
   viewer: "landlord" | "tenant";
   billingSummary: BillingSummaryData;
-  leaseEndDate: Date | string;
+  leaseEndDate?: Date | string | null;
   today?: Date;
   className?: string;
 }

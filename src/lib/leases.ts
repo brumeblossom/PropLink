@@ -4,7 +4,7 @@ import { formatCurrency } from "./utils";
 export interface LeaseLike {
   id?: string;
   startDate: Date | string;
-  endDate: Date | string;
+  endDate?: Date | string | null;
   terminatedAt?: Date | string | null;
   status?: string | null;
   rentAmount?: number | string | bigint | { toString(): string } | null;
@@ -16,6 +16,30 @@ export interface LeaseLike {
     expiresAt?: Date | string | null;
   }> | null;
   [key: string]: unknown;
+}
+
+/**
+ * Returns the default end date for a lease given its start date:
+ * exactly 1 year after start date (same day and month next year).
+ */
+export function defaultEndDate(start: string): string {
+  if (!start) return "";
+  const parts = start.split("-");
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      const targetYear = year + 1;
+      const daysInMonth = new Date(Date.UTC(targetYear, month, 0)).getUTCDate();
+      const targetDay = Math.min(day, daysInMonth);
+      return `${targetYear}-${month.toString().padStart(2, "0")}-${targetDay.toString().padStart(2, "0")}`;
+    }
+  }
+  const d = new Date(start);
+  if (isNaN(d.getTime())) return "";
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().split("T")[0];
 }
 
 export type LeaseDisplayStatus =
@@ -60,13 +84,15 @@ export function getLeaseDisplayStatus(
 
   const todayStr = formatLagosYMD(today);
   const startStr = formatLagosYMD(lease.startDate);
-  const endStr = formatLagosYMD(lease.endDate);
 
   if (todayStr < startStr) {
     return "upcoming";
   }
-  if (todayStr > endStr) {
-    return "ended";
+  if (lease.endDate) {
+    const endStr = formatLagosYMD(lease.endDate);
+    if (todayStr > endStr) {
+      return "ended";
+    }
   }
   return "active";
 }
@@ -93,6 +119,10 @@ export function getRenewEligibility(
 ): RenewEligibility {
   if (lease.terminatedAt) {
     return { eligible: false, reason: "moved_out", message: "Tenant has moved out." };
+  }
+
+  if (!lease.endDate) {
+    return { eligible: false, reason: "not_ended", message: "Open-ended leases do not require renewal." };
   }
 
   const todayStr = formatLagosYMD(today);
@@ -173,8 +203,8 @@ export function getCurrentLease<T extends LeaseLike>(
   // 1. Running today: startDate <= todayStr <= endDate
   const running = activeLeases.filter((l) => {
     const startStr = formatLagosYMD(l.startDate);
-    const endStr = formatLagosYMD(l.endDate);
-    return startStr <= todayStr && todayStr <= endStr;
+    const endStr = l.endDate ? formatLagosYMD(l.endDate) : null;
+    return startStr <= todayStr && (!endStr || todayStr <= endStr);
   });
 
   if (running.length > 0) {
@@ -190,9 +220,9 @@ export function getCurrentLease<T extends LeaseLike>(
   }
 
   // 3. Most recent past: endDate < todayStr
-  const past = activeLeases.filter((l) => formatLagosYMD(l.endDate) < todayStr);
+  const past = activeLeases.filter((l) => l.endDate && formatLagosYMD(l.endDate) < todayStr);
   if (past.length > 0) {
-    past.sort((a, b) => formatLagosYMD(b.endDate).localeCompare(formatLagosYMD(a.endDate)));
+    past.sort((a, b) => formatLagosYMD(b.endDate!).localeCompare(formatLagosYMD(a.endDate!)));
     return past[0];
   }
 
@@ -243,7 +273,7 @@ export function getNextLease<T extends LeaseLike>(
     }
   }
 
-  if (!baseLease) return null;
+  if (!baseLease || !baseLease.endDate) return null;
 
   const baseEndStr = formatLagosYMD(baseLease.endDate);
   const activeLeases = leases.filter(isLeaseActive);
@@ -291,9 +321,9 @@ export function getUnitStatus(
     }
 
     const startStr = formatLagosYMD(current.startDate);
-    const endStr = formatLagosYMD(current.endDate);
+    const endStr = current.endDate ? formatLagosYMD(current.endDate) : null;
 
-    if (startStr <= todayStr && todayStr <= endStr) {
+    if (startStr <= todayStr && (!endStr || todayStr <= endStr)) {
       return "occupied";
     }
 

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export interface LeaseOption {
   id: string;
   startDate: string | Date;
-  endDate: string | Date;
+  endDate?: string | Date | null;
   tenantName?: string | null;
   status: "current" | "ended" | "moved_out" | "upcoming";
 }
@@ -65,7 +65,7 @@ export function LeasePeriodDropdown({
   };
 
   const formatOptionLabel = (lease: LeaseOption) => {
-    const range = `${formatDateGB(lease.startDate)} – ${formatDateGB(lease.endDate)}`;
+    const range = `${formatDateGB(lease.startDate)} – ${lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}`;
     if (isLandlord && lease.tenantName) {
       return `${range} · ${lease.tenantName}`;
     }

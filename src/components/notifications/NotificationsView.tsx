@@ -73,6 +73,7 @@ function getNotificationIconConfig(type: string) {
         icon: <MessageSquare className="w-4 h-4" />,
         color: "bg-primary-tint text-primary border-primary/20",
       };
+    case "lease_expiry":
     case "lease_created":
     default:
       return {

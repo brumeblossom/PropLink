@@ -232,6 +232,7 @@ export interface ModalSegmentedControlProps<T extends string> {
   value: T;
   onChange: (val: T) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function ModalSegmentedControl<T extends string>({
@@ -239,11 +240,13 @@ export function ModalSegmentedControl<T extends string>({
   value,
   onChange,
   className,
+  disabled,
 }: ModalSegmentedControlProps<T>) {
   return (
     <div
       className={cn(
         "h-11 bg-muted rounded-lg p-1 flex items-center gap-1 w-full",
+        disabled && "opacity-40 pointer-events-none",
         className
       )}
     >
@@ -253,12 +256,14 @@ export function ModalSegmentedControl<T extends string>({
           <button
             key={opt.value}
             type="button"
+            disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={cn(
               "flex-1 h-full rounded-md text-xs font-medium transition-all flex items-center justify-center px-2",
               isSelected
                 ? "bg-card text-foreground font-semibold shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+              disabled && "cursor-not-allowed"
             )}
           >
             {opt.label}

@@ -11,6 +11,7 @@ import { notificationsRouter } from "./notifications";
 import { internalRouter } from "./internal";
 import { dashboardRouter } from "./dashboard";
 import { documentsRouter } from "./documents";
+import { remindersRouter } from "./reminders";
 
 export const appRouter = router({
   auth: authRouter,
@@ -24,6 +25,7 @@ export const appRouter = router({
   notifications: notificationsRouter,
   internal: internalRouter,
   documents: documentsRouter,
+  reminders: remindersRouter,
   hello: publicProcedure
     .input(
       z.object({

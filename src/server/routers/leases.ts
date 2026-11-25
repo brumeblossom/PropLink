@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, authedProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
-import { RentFrequency, Role } from "@prisma/client";
+import { Prisma, RentFrequency, Role } from "@prisma/client";
 import { createNotification } from "../utils/notifications";
 import { getLeaseBalance, getDueDateStatus, formatLagosYMD } from "@/lib/billing";
 import { getCurrentLease, getNextLease, getRenewEligibility } from "@/lib/leases";
@@ -60,11 +60,9 @@ export const leasesRouter = router({
       }
 
       const start = input.startDate ? new Date(input.startDate) : new Date();
-      const end = input.endDate
-        ? new Date(input.endDate)
-        : new Date(new Date(start).setFullYear(start.getFullYear() + 1));
+      const end = input.endDate ? new Date(input.endDate) : null;
 
-      if (start >= end) {
+      if (end && start >= end) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Start date must be before end date.",
@@ -72,6 +70,18 @@ export const leasesRouter = router({
       }
 
       // Check for overlapping active or pending leases for this unit
+      // Treat null end date as "no end" (it overlaps every later period)
+      const overlapConditions: Prisma.LeaseWhereInput[] = [
+        {
+          OR: [{ endDate: null }, { endDate: { gte: start } }],
+        },
+      ];
+      if (end) {
+        overlapConditions.push({
+          startDate: { lte: end },
+        });
+      }
+
       const overlap = await prisma.lease.findFirst({
         where: {
           unitId: input.unitId,
@@ -86,9 +96,7 @@ export const leasesRouter = router({
               ],
             },
           ],
-          NOT: {
-            OR: [{ endDate: { lt: start } }, { startDate: { gt: end } }],
-          },
+          AND: overlapConditions,
         },
         include: {
           tenant: {
@@ -98,13 +106,12 @@ export const leasesRouter = router({
       });
 
       if (overlap) {
+        const overlapEndStr = overlap.endDate ? new Date(overlap.endDate).toLocaleDateString() : "Ongoing";
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `This unit already has an active lease for ${
             overlap.tenant.fullName
-          } from ${new Date(overlap.startDate).toLocaleDateString()} to ${new Date(
-            overlap.endDate
-          ).toLocaleDateString()}.`,
+          } from ${new Date(overlap.startDate).toLocaleDateString()} to ${overlapEndStr}.`,
         });
       }
 
@@ -194,7 +201,7 @@ export const leasesRouter = router({
       z.object({
         id: z.string().uuid(),
         startDate: z.string().optional(),
-        endDate: z.string().optional(),
+        endDate: z.string().optional().nullable(),
         rentAmount: z.number().nonnegative().optional(),
         rentFrequency: z.nativeEnum(RentFrequency).optional(),
         depositAmount: z.number().positive().optional().nullable(),
@@ -213,11 +220,21 @@ export const leasesRouter = router({
         });
       }
 
+      const start = input.startDate ? new Date(input.startDate) : lease.startDate;
+      const end = input.endDate !== undefined ? (input.endDate ? new Date(input.endDate) : null) : lease.endDate;
+
+      if (end && start >= end) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Start date must be before end date.",
+        });
+      }
+
       return await prisma.lease.update({
         where: { id: input.id },
         data: {
           startDate: input.startDate ? new Date(input.startDate) : undefined,
-          endDate: input.endDate ? new Date(input.endDate) : undefined,
+          endDate: input.endDate !== undefined ? (input.endDate ? new Date(input.endDate) : null) : undefined,
           rentAmount: input.rentAmount !== undefined ? input.rentAmount : undefined,
           rentFrequency: input.rentFrequency,
           depositAmount: input.depositAmount,
@@ -648,7 +665,7 @@ export const leasesRouter = router({
       today.setHours(0, 0, 0, 0);
 
       const start = new Date(lease.startDate);
-      const end = new Date(lease.endDate);
+      const end = lease.endDate ? new Date(lease.endDate) : null;
 
       let status: "terminated" | "upcoming" | "active" | "ended" | "moved_out" = "active";
 
@@ -656,7 +673,7 @@ export const leasesRouter = router({
         status = "moved_out";
       } else if (today < start) {
         status = "upcoming";
-      } else if (today >= end) {
+      } else if (end && today >= end) {
         status = "ended";
       } else {
         status = "active";
@@ -672,7 +689,7 @@ export const leasesRouter = router({
         rentAmount: lease.rentAmount,
         rentFrequency: lease.rentFrequency,
         renewalWindowDays: lease.renewalWindowDays,
-        renewalStartDate: end,
+        renewalStartDate: end || start,
         terminatedAt: lease.terminatedAt,
         status,
         today,
@@ -1131,7 +1148,7 @@ export const leasesRouter = router({
       z.object({
         sourceLeaseId: z.string().uuid(),
         startDate: z.string().optional(),
-        endDate: z.string(),
+        endDate: z.string().optional().nullable(),
         rentAmount: z.number().nonnegative(),
         rentFrequency: z.nativeEnum(RentFrequency).default(RentFrequency.annually),
         depositAmount: z.number().positive().optional().nullable(),
@@ -1173,6 +1190,13 @@ export const leasesRouter = router({
         });
       }
 
+      if (!sourceLease.endDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Open-ended leases do not require renewal.",
+        });
+      }
+
       const today = new Date();
       const eligibility = getRenewEligibility(
         sourceLease,
@@ -1199,12 +1223,50 @@ export const leasesRouter = router({
       }
 
       const start = new Date(sourceLease.endDate);
-      const end = new Date(input.endDate);
+      const end = input.endDate ? new Date(input.endDate) : null;
 
-      if (start >= end) {
+      if (end && start >= end) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Renewal end date must be after the start date.",
+        });
+      }
+
+      // Check for overlap with other leases on this unit (excluding sourceLease)
+      const renewOverlapConditions: Prisma.LeaseWhereInput[] = [
+        {
+          OR: [{ endDate: null }, { endDate: { gte: start } }],
+        },
+      ];
+      if (end) {
+        renewOverlapConditions.push({
+          startDate: { lte: end },
+        });
+      }
+
+      const overlap = await prisma.lease.findFirst({
+        where: {
+          unitId: sourceLease.unitId,
+          id: { not: sourceLease.id },
+          terminatedAt: null,
+          OR: [
+            { status: "active" },
+            {
+              status: "pending",
+              OR: [
+                { invitationExpiresAt: null },
+                { invitationExpiresAt: { gte: new Date() } },
+              ],
+            },
+          ],
+          AND: renewOverlapConditions,
+        },
+      });
+
+      if (overlap) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The renewal period overlaps with an active lease on this unit.",
         });
       }
 
@@ -1256,13 +1318,15 @@ export const leasesRouter = router({
 
       const today = new Date();
       const todayStr = formatLagosYMD(today);
-      const endStr = formatLagosYMD(lease.endDate);
 
-      if (todayStr < endStr) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot mark as moved out before the lease end date.",
-        });
+      if (lease.endDate) {
+        const endStr = formatLagosYMD(lease.endDate);
+        if (todayStr < endStr) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot mark as moved out before the lease end date.",
+          });
+        }
       }
 
       if (lease.terminatedAt) {
@@ -1423,7 +1487,7 @@ export const leasesRouter = router({
           propertyId: string;
           propertyName: string;
           startDate: string;
-          endDate: string;
+          endDate: string | null;
           rentAmount: number;
           rentFrequency: string;
           leaseStatus: "active" | "ended" | "moved_out" | "upcoming" | "pending" | "invite_sent" | "invite_expired";
@@ -1466,10 +1530,10 @@ export const leasesRouter = router({
               leaseStatus = "moved_out";
             } else {
               const startStr = formatLagosYMD(l.startDate);
-              const endStr = formatLagosYMD(l.endDate);
+              const endStr = l.endDate ? formatLagosYMD(l.endDate) : null;
               if (todayStr < startStr) {
                 leaseStatus = "upcoming";
-              } else if (todayStr >= endStr) {
+              } else if (endStr && todayStr >= endStr) {
                 leaseStatus = "ended";
               } else {
                 leaseStatus = "active";
@@ -1501,7 +1565,7 @@ export const leasesRouter = router({
               propertyId: l.unit.property.id,
               propertyName: l.unit.property.name,
               startDate: l.startDate.toISOString(),
-              endDate: l.endDate.toISOString(),
+              endDate: l.endDate ? l.endDate.toISOString() : null,
               rentAmount: Number(l.rentAmount),
               rentFrequency: l.rentFrequency,
               leaseStatus,

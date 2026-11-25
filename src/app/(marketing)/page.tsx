@@ -52,25 +52,19 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              {/* H1, 3 lines */}
+              {/* H1, 2 lines */}
               <h1 className="text-[clamp(44px,7vw,84px)] leading-[0.98] tracking-[-0.035em] mt-6">
-                <span className="block font-sans font-extrabold text-foreground">Your</span>
-                <span className="block font-sans font-extrabold text-foreground">properties.</span>
-                <span className="block font-serif italic font-normal text-emphasis">One calm place.</span>
+                <span className="block font-sans font-extrabold text-foreground">All your properties</span>
+                <span className="block font-serif italic font-normal text-emphasis">in one place.</span>
               </h1>
 
-              {/* Lead */}
-              <p className="text-[20px] font-semibold text-foreground mt-7">
-                For landlords with one flat or fifty.
-              </p>
-
               {/* Description */}
-              <p className="text-[17px] text-muted-foreground max-w-[48ch] mt-3 leading-relaxed">
+              <p className="text-[18px] text-muted-foreground max-w-[46ch] mt-6 leading-relaxed">
                 Track leases, rent and tenants without spreadsheets or WhatsApp threads. Know who has paid, what is due and when every lease ends.
               </p>
 
               {/* Actions - Phones (<640px): stacked full-width */}
-              <div className="flex flex-col gap-3 sm:hidden mt-8 w-full">
+              <div className="flex flex-col gap-3 sm:hidden mt-10 w-full">
                 <Link
                   href="/signup"
                   className="h-12 w-full rounded-full bg-gold hover:bg-[#B89230] text-gold-foreground font-semibold text-[15px] flex items-center justify-center gap-2 transition-colors shadow-sm"
@@ -87,7 +81,7 @@ export default function LandingPage() {
               </div>
 
               {/* Actions - Desktop / Tablet (>=640px) */}
-              <div className="hidden sm:flex flex-wrap items-center gap-5 mt-8">
+              <div className="hidden sm:flex flex-wrap items-center gap-5 mt-10">
                 <Link
                   href="/signup"
                   className="h-[46px] px-7 rounded-full bg-gold hover:bg-[#B89230] text-gold-foreground font-semibold text-[15px] inline-flex items-center gap-2 transition-colors shadow-sm"
@@ -104,16 +98,6 @@ export default function LandingPage() {
                   <ArrowRight className="w-4 h-4 text-gold" />
                 </Link>
               </div>
-
-              {/* 1px Divider & 2 plain lines */}
-              <div className="border-t border-border mt-[44px] pt-[28px] max-w-[520px] flex flex-col gap-[10px]">
-                <p className="text-[15px] text-muted-foreground leading-snug">
-                  <strong className="text-foreground font-semibold">Rent that adds up.</strong> Every payment counted, every balance right.
-                </p>
-                <p className="text-[15px] text-muted-foreground leading-snug">
-                  <strong className="text-foreground font-semibold">Proof on every payment.</strong> Tenants upload receipts, you confirm in a tap.
-                </p>
-              </div>
             </div>
 
             {/* Right Column: Hero Image */}
@@ -121,7 +105,7 @@ export default function LandingPage() {
               <LandingImage
                 src="/landing/hero.jpg"
                 alt="PropLink property management overview"
-                containerClassName="rounded-[28px] aspect-[4/4.6] shadow-sm w-full"
+                containerClassName="rounded-[28px] aspect-[4/3] lg:aspect-[5/4] shadow-sm w-full"
                 priority
                 fill
                 sizes="(max-width: 1024px) 100vw, 560px"
@@ -142,7 +126,7 @@ export default function LandingPage() {
               </span>
               <h2 className="text-[clamp(32px,4.4vw,52px)] leading-[1.08] tracking-[-0.025em] mt-4">
                 <span className="block font-sans font-bold text-foreground">Know who has paid,</span>
-                <span className="block font-serif italic font-normal text-emphasis">without chasing anyone.</span>
+                <span className="block font-serif italic font-normal text-emphasis whitespace-nowrap">no chasing tenants.</span>
               </h2>
 
               <div className="space-y-6 mt-8 lg:mt-10">

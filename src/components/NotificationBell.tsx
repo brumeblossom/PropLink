@@ -217,6 +217,7 @@ export function NotificationBell() {
       case "payment_flagged":
       case "payment_resolved":
         return <CreditCard className="w-4 h-4 text-success" />;
+      case "lease_expiry":
       case "lease_created":
         return <FileText className="w-4 h-4 text-kpi-navy" />;
       case "invite_redeemed":

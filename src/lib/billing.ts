@@ -2,7 +2,7 @@
 
 export interface LeaseLike {
   startDate: Date | string;
-  endDate: Date | string;
+  endDate?: Date | string | null;
   rentAmount: number | string | bigint | { toString(): string } | null;
   rentFrequency: string;
 }
@@ -138,20 +138,37 @@ export function computePeriodStartDate(
 }
 
 /**
- * Generates all period start dates for a lease strictly before lease.endDate.
- * A period that starts on or after endDate is not a rent period.
+ * Generates all period start dates for a lease.
+ * For fixed-term leases: strictly before lease.endDate.
+ * For open-ended leases: runs from startDate up to today plus one period.
  */
-export function getPeriodStarts(lease: Pick<LeaseLike, "startDate" | "endDate" | "rentFrequency">): Date[] {
+export function getPeriodStarts(
+  lease: Pick<LeaseLike, "startDate" | "rentFrequency"> & { endDate?: Date | string | null },
+  todayInput: Date | string = new Date()
+): Date[] {
   const start = getLagosYMD(lease.startDate);
-  const endStr = formatLagosYMD(lease.endDate);
   const freq = lease.rentFrequency?.toLowerCase();
+  const hasEndDate = Boolean(lease.endDate);
+  const endStr = hasEndDate && lease.endDate ? formatLagosYMD(lease.endDate) : null;
+  const todayStr = formatLagosYMD(todayInput);
 
   if (freq === "weekly" || freq === "week") {
     const starts: Date[] = [];
     let current = createLagosDate(start.year, start.month, start.day);
-    while (formatLagosYMD(current) < endStr) {
-      starts.push(new Date(current));
-      current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate() + 7, 0, 0, 0));
+    if (hasEndDate && endStr) {
+      while (formatLagosYMD(current) < endStr) {
+        starts.push(new Date(current));
+        current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate() + 7, 0, 0, 0));
+      }
+    } else {
+      while (true) {
+        const curStr = formatLagosYMD(current);
+        starts.push(new Date(current));
+        current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate() + 7, 0, 0, 0));
+        if (curStr > todayStr) {
+          break;
+        }
+      }
     }
     return starts;
   }
@@ -162,10 +179,17 @@ export function getPeriodStarts(lease: Pick<LeaseLike, "startDate" | "endDate" |
   for (let n = 0; n < 1200; n++) {
     const p = computePeriodStartDate(start.year, start.month, start.day, n, stepMonths);
     const pStr = formatLagosYMD(p.date);
-    if (pStr >= endStr) {
-      break;
+    if (hasEndDate && endStr) {
+      if (pStr >= endStr) {
+        break;
+      }
+      starts.push(p.date);
+    } else {
+      starts.push(p.date);
+      if (pStr > todayStr) {
+        break;
+      }
     }
-    starts.push(p.date);
   }
 
   return starts;
@@ -175,17 +199,19 @@ export function getPeriodStarts(lease: Pick<LeaseLike, "startDate" | "endDate" |
  * Finds the rent period { periodStart, periodEnd } that contains paymentDate.
  */
 export function getRentPeriodForDate(
-  lease: Pick<LeaseLike, "startDate" | "endDate" | "rentFrequency">,
+  lease: Pick<LeaseLike, "startDate" | "rentFrequency"> & { endDate?: Date | string | null },
   dateInput: Date | string
 ): { periodStart: Date; periodEnd: Date } {
-  const pStarts = getPeriodStarts(lease);
+  const pStarts = getPeriodStarts(lease, dateInput);
   const leaseStart = typeof lease.startDate === "string" ? new Date(lease.startDate) : lease.startDate;
-  const leaseEnd = typeof lease.endDate === "string" ? new Date(lease.endDate) : lease.endDate;
+  const leaseEnd = lease.endDate
+    ? (typeof lease.endDate === "string" ? new Date(lease.endDate) : lease.endDate)
+    : null;
 
   if (pStarts.length === 0) {
     return {
       periodStart: leaseStart,
-      periodEnd: leaseEnd,
+      periodEnd: leaseEnd || leaseStart,
     };
   }
 
@@ -211,9 +237,20 @@ export function getRentPeriodForDate(
     // Ends day before next period start
     const nextStart = pStarts[k + 1];
     const dayBefore = new Date(nextStart.getTime() - 24 * 60 * 60 * 1000);
-    periodEnd = dayBefore > leaseEnd ? leaseEnd : dayBefore;
-  } else {
+    periodEnd = leaseEnd && dayBefore > leaseEnd ? leaseEnd : dayBefore;
+  } else if (leaseEnd) {
     periodEnd = leaseEnd;
+  } else {
+    // Open-ended last generated start: compute next start - 1 day
+    const freq = lease.rentFrequency?.toLowerCase();
+    if (freq === "weekly" || freq === "week") {
+      periodEnd = new Date(periodStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    } else {
+      const stepMonths = getStepMonths(lease.rentFrequency || "monthly");
+      const start = getLagosYMD(lease.startDate);
+      const nextP = computePeriodStartDate(start.year, start.month, start.day, k + 1, stepMonths);
+      periodEnd = new Date(nextP.date.getTime() - 24 * 60 * 60 * 1000);
+    }
   }
 
   return { periodStart, periodEnd };
@@ -234,20 +271,42 @@ export function getDayAfter(dateInput: Date | string): Date {
  * A period's due date = its end date: the next period's start, or the lease end date for the last period.
  */
 export function getPeriodDueDates(
-  lease: Pick<LeaseLike, "startDate" | "endDate" | "rentFrequency">
+  lease: Pick<LeaseLike, "startDate" | "rentFrequency"> & { endDate?: Date | string | null },
+  todayInput: Date | string = new Date()
 ): Date[] {
-  const starts = getPeriodStarts(lease);
+  const starts = getPeriodStarts(lease, todayInput);
   if (starts.length === 0) return [];
 
   const dueDates: Date[] = [];
-  const endYMD = getLagosYMD(lease.endDate);
-  const leaseEndDate = createLagosDate(endYMD.year, endYMD.month, endYMD.day);
+  const hasEndDate = Boolean(lease.endDate);
 
-  for (let i = 0; i < starts.length; i++) {
-    if (i < starts.length - 1) {
-      dueDates.push(starts[i + 1]);
-    } else {
-      dueDates.push(leaseEndDate);
+  if (hasEndDate && lease.endDate) {
+    const endYMD = getLagosYMD(lease.endDate);
+    const leaseEndDate = createLagosDate(endYMD.year, endYMD.month, endYMD.day);
+
+    for (let i = 0; i < starts.length; i++) {
+      if (i < starts.length - 1) {
+        dueDates.push(starts[i + 1]);
+      } else {
+        dueDates.push(leaseEndDate);
+      }
+    }
+  } else {
+    const start = getLagosYMD(lease.startDate);
+    const freq = lease.rentFrequency?.toLowerCase();
+    const isWeekly = freq === "weekly" || freq === "week";
+    const stepMonths = getStepMonths(lease.rentFrequency || "monthly");
+
+    for (let i = 0; i < starts.length; i++) {
+      if (i < starts.length - 1) {
+        dueDates.push(starts[i + 1]);
+      } else {
+        if (isWeekly) {
+          dueDates.push(new Date(Date.UTC(starts[i].getUTCFullYear(), starts[i].getUTCMonth(), starts[i].getUTCDate() + 7, 0, 0, 0)));
+        } else {
+          dueDates.push(computePeriodStartDate(start.year, start.month, start.day, i + 1, stepMonths).date);
+        }
+      }
     }
   }
 
@@ -259,7 +318,7 @@ export function getPeriodDueDates(
  */
 export function getDueDateStatus(
   nextDueDate: Date | string | null,
-  endDate: Date | string,
+  endDate: Date | string | null | undefined,
   todayInput: Date | string = new Date(),
   unpaidPeriods: number = 0
 ): {
@@ -267,6 +326,12 @@ export function getDueDateStatus(
   text: string;
 } {
   if (!nextDueDate) {
+    if (!endDate) {
+      return {
+        status: "paid_in_full",
+        text: "All rent paid to date",
+      };
+    }
     const endStr = formatDateGB(endDate);
     return {
       status: "paid_in_full",
@@ -410,11 +475,12 @@ export function getLeaseBalance(
     : confirmedPayments.filter((p) => p.status === "pending");
   const pendingAmount = pending.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-  const periodStarts = getPeriodStarts(lease);
-  const periodDueDates = getPeriodDueDates(lease);
-  const totalPeriods = periodStarts.length;
-  const totalLeaseRent = isRentSet ? rentAmount * totalPeriods : 0;
-  const remainingLeaseRent = isRentSet ? Math.max(0, totalLeaseRent - paidToDate - pendingAmount) : 0;
+  const isOpenEnded = !lease.endDate;
+  const periodStarts = getPeriodStarts(lease, todayInput);
+  const periodDueDates = getPeriodDueDates(lease, todayInput);
+  const totalPeriods = isOpenEnded ? 0 : periodStarts.length;
+  const totalLeaseRent = !isOpenEnded && isRentSet ? rentAmount * totalPeriods : 0;
+  const remainingLeaseRent = !isOpenEnded && isRentSet ? Math.max(0, totalLeaseRent - paidToDate - pendingAmount) : 0;
 
   if (!isRentSet) {
     return {

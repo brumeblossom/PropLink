@@ -17,11 +17,12 @@ import { useChatWidget } from "@/components/ChatWidgetContext";
 import { isResidentialUnitType, getUnitTypesByPropertyType } from "@/lib/unit-types";
 import { formatCurrency, formatInputNumber, cn } from "@/lib/utils";
 import { formatDateGB } from "@/lib/billing";
-import { getCurrentLease, getRenewEligibility } from "@/lib/leases";
+import { getCurrentLease, getRenewEligibility, defaultEndDate } from "@/lib/leases";
 import { formatRentFrequency, RENT_FREQUENCY_OPTIONS } from "@/lib/rent";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalHeader, ModalBody, ModalFooter, ModalField } from "@/components/ui/modal";
+import { Checkbox } from "@/components/ui/checkbox";
 import { LeaseDocumentsCard } from "@/components/documents/LeaseDocumentsCard";
 import { InviteCard } from "@/components/leases/InviteCard";
 import { LeasePeriodDropdown, type LeaseOption } from "@/components/leases/LeasePeriodDropdown";
@@ -207,6 +208,8 @@ export default function UnitDetailPage() {
   const [editDepositAmount, setEditDepositAmount] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
+  const [editNoFixedEndDate, setEditNoFixedEndDate] = useState(false);
+  const [lastAutoEditEndDate, setLastAutoEditEndDate] = useState("");
   const [editLeaseError, setEditLeaseError] = useState<string | null>(null);
   const [editingLeaseId, setEditingLeaseId] = useState<string | null>(null);
   const [deleteLeaseConfirmId, setDeleteLeaseConfirmId] = useState<string | null>(null);
@@ -251,7 +254,15 @@ export default function UnitDetailPage() {
       setEditRentFrequency(target.rentFrequency);
       setEditDepositAmount(target.depositAmount ? formatInputNumber(target.depositAmount.toString()) : "");
       setEditStartDate(new Date(target.startDate).toISOString().split("T")[0]);
-      setEditEndDate(new Date(target.endDate).toISOString().split("T")[0]);
+      if (target.endDate) {
+        setEditEndDate(new Date(target.endDate).toISOString().split("T")[0]);
+        setEditNoFixedEndDate(false);
+        setLastAutoEditEndDate("");
+      } else {
+        setEditEndDate("");
+        setEditNoFixedEndDate(true);
+        setLastAutoEditEndDate("");
+      }
       setEditLeaseError(null);
       setIsEditLeaseOpen(true);
     }
@@ -259,12 +270,21 @@ export default function UnitDetailPage() {
 
   const handleEditStartDateChange = (val: string) => {
     setEditStartDate(val);
-    if (unit && isResidentialUnitType(unit.unitType) && val) {
-      const d = new Date(val);
-      if (!isNaN(d.getTime())) {
-        d.setFullYear(d.getFullYear() + 1);
-        setEditEndDate(d.toISOString().split("T")[0]);
-      }
+    if (!editNoFixedEndDate && val && (editEndDate === "" || editEndDate === lastAutoEditEndDate)) {
+      const def = defaultEndDate(val);
+      setEditEndDate(def);
+      setLastAutoEditEndDate(def);
+    }
+  };
+
+  const handleToggleEditNoFixedEndDate = (checked: boolean) => {
+    setEditNoFixedEndDate(checked);
+    if (checked) {
+      setEditEndDate("");
+    } else {
+      const def = defaultEndDate(editStartDate);
+      setEditEndDate(def);
+      setLastAutoEditEndDate(def);
     }
   };
 
@@ -284,7 +304,7 @@ export default function UnitDetailPage() {
       await updateLease.mutateAsync({
         id: editingLeaseId || activeLease!.id,
         startDate: editStartDate,
-        endDate: editEndDate,
+        endDate: editNoFixedEndDate ? null : (editEndDate || null),
         rentAmount: rent,
         rentFrequency: editRentFrequency,
         depositAmount: deposit,
@@ -504,6 +524,8 @@ export default function UnitDetailPage() {
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [noFixedEndDate, setNoFixedEndDate] = useState(false);
+  const [lastAutoEndDate, setLastAutoEndDate] = useState("");
   const [rentAmount, setRentAmount] = useState("");
   const [rentFrequency, setRentFrequency] = useState<RentFrequency | "">("");
   const [rentAmountError, setRentAmountError] = useState<string | null>(null);
@@ -544,7 +566,7 @@ export default function UnitDetailPage() {
     if (!leases) return [];
     return leases.map((l) => {
       let status: LeaseOption["status"] = "ended";
-      if (currentLease && l.id === currentLease.id && !l.terminatedAt && new Date(l.endDate) > today) {
+      if (currentLease && l.id === currentLease.id && !l.terminatedAt && (!l.endDate || new Date(l.endDate) > today)) {
         status = "current";
       } else if (l.terminatedAt) {
         status = "moved_out";
@@ -577,12 +599,21 @@ export default function UnitDetailPage() {
 
   const handleStartDateChange = (val: string) => {
     setStartDate(val);
-    if (unit && isResidentialUnitType(unit.unitType) && val) {
-      const d = new Date(val);
-      if (!isNaN(d.getTime())) {
-        d.setFullYear(d.getFullYear() + 1);
-        setEndDate(d.toISOString().split("T")[0]);
-      }
+    if (!noFixedEndDate && val && (endDate === "" || endDate === lastAutoEndDate)) {
+      const def = defaultEndDate(val);
+      setEndDate(def);
+      setLastAutoEndDate(def);
+    }
+  };
+
+  const handleToggleNoFixedEndDate = (checked: boolean) => {
+    setNoFixedEndDate(checked);
+    if (checked) {
+      setEndDate("");
+    } else {
+      const def = defaultEndDate(startDate);
+      setEndDate(def);
+      setLastAutoEndDate(def);
     }
   };
 
@@ -593,6 +624,8 @@ export default function UnitDetailPage() {
     setTenantEmailError(null);
     setStartDate("");
     setEndDate("");
+    setNoFixedEndDate(false);
+    setLastAutoEndDate("");
     setRentAmount("");
     setRentFrequency("");
     setRentAmountError(null);
@@ -605,6 +638,8 @@ export default function UnitDetailPage() {
   const [isRenewLeaseOpen, setIsRenewLeaseOpen] = useState(false);
   const [renewStartDate, setRenewStartDate] = useState("");
   const [renewEndDate, setRenewEndDate] = useState("");
+  const [renewNoFixedEndDate, setRenewNoFixedEndDate] = useState(false);
+  const [lastAutoRenewEndDate, setLastAutoRenewEndDate] = useState("");
   const [renewRentAmount, setRenewRentAmount] = useState("");
   const [renewRentFrequency, setRenewRentFrequency] = useState<RentFrequency>(RentFrequency.annually);
   const [renewDepositAmount, setRenewDepositAmount] = useState("");
@@ -613,6 +648,8 @@ export default function UnitDetailPage() {
   const resetRenewForm = () => {
     setRenewStartDate("");
     setRenewEndDate("");
+    setRenewNoFixedEndDate(false);
+    setLastAutoRenewEndDate("");
     setRenewRentAmount("");
     setRenewRentFrequency(RentFrequency.annually);
     setRenewDepositAmount("");
@@ -621,15 +658,14 @@ export default function UnitDetailPage() {
 
   const handleOpenRenewLease = () => {
     if (!activeLease) return;
-    // Starts on source lease end date
-    const newStart = new Date(activeLease.endDate).toISOString().split("T")[0];
+    const newStart = activeLease.endDate
+      ? new Date(activeLease.endDate).toISOString().split("T")[0]
+      : new Date().toISOString().split("T")[0];
     setRenewStartDate(newStart);
-    // Auto-calc end date of the same duration
-    const startMs = new Date(activeLease.startDate).getTime();
-    const endMs = new Date(activeLease.endDate).getTime();
-    const durationMs = endMs - startMs;
-    const newEndDate = new Date(new Date(activeLease.endDate).getTime() + durationMs);
-    setRenewEndDate(newEndDate.toISOString().split("T")[0]);
+    const def = defaultEndDate(newStart);
+    setRenewEndDate(def);
+    setLastAutoRenewEndDate(def);
+    setRenewNoFixedEndDate(false);
 
     setRenewRentAmount(Number(activeLease.rentAmount) === 0 ? "" : formatInputNumber(activeLease.rentAmount.toString()));
     setRenewRentFrequency(activeLease.rentFrequency);
@@ -640,12 +676,21 @@ export default function UnitDetailPage() {
 
   const handleRenewStartDateChange = (val: string) => {
     setRenewStartDate(val);
-    if (unit && isResidentialUnitType(unit.unitType) && val) {
-      const d = new Date(val);
-      if (!isNaN(d.getTime())) {
-        d.setFullYear(d.getFullYear() + 1);
-        setRenewEndDate(d.toISOString().split("T")[0]);
-      }
+    if (!renewNoFixedEndDate && val && (renewEndDate === "" || renewEndDate === lastAutoRenewEndDate)) {
+      const def = defaultEndDate(val);
+      setRenewEndDate(def);
+      setLastAutoRenewEndDate(def);
+    }
+  };
+
+  const handleToggleRenewNoFixedEndDate = (checked: boolean) => {
+    setRenewNoFixedEndDate(checked);
+    if (checked) {
+      setRenewEndDate("");
+    } else {
+      const def = defaultEndDate(renewStartDate);
+      setRenewEndDate(def);
+      setLastAutoRenewEndDate(def);
     }
   };
 
@@ -967,6 +1012,7 @@ export default function UnitDetailPage() {
   }
 
   const isLeaseEndedState = timeline?.status === "ended" && !activeLease?.terminatedAt;
+  const isOpenEndedActive = Boolean(activeLease && !activeLease.endDate && !activeLease.terminatedAt);
 
   const handleSelectLease = (leaseId: string) => {
     const currentUrlParams = new URLSearchParams(window.location.search);
@@ -976,7 +1022,7 @@ export default function UnitDetailPage() {
 
   // Visual Timeline math
   let todayPercent = 0;
-  if (timeline) {
+  if (timeline && timeline.endDate) {
     const startMs = new Date(timeline.startDate).getTime();
     const endMs = new Date(timeline.endDate).getTime();
     const todayMs = new Date().getTime();
@@ -1003,9 +1049,9 @@ export default function UnitDetailPage() {
               ? {
                 label: "Add payment",
                 icon: <Plus className="w-4 h-4" />,
-                disabled: !billingSummary || (billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0),
+                disabled: !billingSummary || (!isOpenEndedActive && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0),
                 title:
-                  billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0
+                  !isOpenEndedActive && billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0
                     ? "This lease is fully paid."
                     : undefined,
                 onClick: () => {
@@ -1013,7 +1059,7 @@ export default function UnitDetailPage() {
                   setSelectedPaymentLeaseId(currentLease?.id || activeLease.id);
                   setPaymentAmount(
                     billingSummary && billingSummary.outstanding > 0
-                      ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                      ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent || billingSummary.outstanding)))
                       : ""
                   );
                   setPaymentError(null);
@@ -1041,7 +1087,16 @@ export default function UnitDetailPage() {
                     : undefined,
                 },
               ]
-              : []),
+              : isOpenEndedActive
+                ? [
+                  {
+                    label: "Mark as moved out",
+                    onClick: () => setIsMovedOutConfirmOpen(true),
+                    icon: <LogOut className="w-4 h-4" />,
+                    variant: "outline" as const,
+                  },
+                ]
+                : []),
             {
               label: "Edit unit",
               onClick: () => handleOpenEditUnit(),
@@ -1198,23 +1253,27 @@ export default function UnitDetailPage() {
 
                 {/* Progress Visual Tracker */}
                 <div className="space-y-3 pt-4">
-                  <div className="relative w-full h-3 rounded-full bg-muted overflow-visible">
-                    {/* Elapsed progress tracker */}
-                    <div
-                      className="absolute top-0 bottom-0 left-0 bg-primary/40 rounded-l-full"
-                      style={{ width: `${todayPercent}%` }}
-                    />
-                    {/* Current day marker dot */}
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-primary bg-primary shadow-md cursor-pointer transition-transform hover:scale-110"
-                      style={{ left: `calc(${todayPercent}% - 10px)` }}
-                      title="Today"
-                    />
-                  </div>
+                  {timeline.endDate ? (
+                    <div className="relative w-full h-3 rounded-full bg-muted overflow-visible">
+                      {/* Elapsed progress tracker */}
+                      <div
+                        className="absolute top-0 bottom-0 left-0 bg-primary/40 rounded-l-full"
+                        style={{ width: `${todayPercent}%` }}
+                      />
+                      {/* Current day marker dot */}
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-primary bg-primary shadow-md cursor-pointer transition-transform hover:scale-110"
+                        style={{ left: `calc(${todayPercent}% - 10px)` }}
+                        title="Today"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-1.5 w-full rounded-full bg-muted" />
+                  )}
 
                   <div className="flex justify-between text-xs text-subtle-foreground font-medium pt-1">
                     <span>Start: {formatDateGB(timeline.startDate)}</span>
-                    <span>End: {formatDateGB(timeline.endDate)}</span>
+                    <span>End: {timeline.endDate ? formatDateGB(timeline.endDate) : "Ongoing"}</span>
                   </div>
                 </div>
 
@@ -1305,7 +1364,7 @@ export default function UnitDetailPage() {
                       Payment history
                     </div>
                     {(() => {
-                      const isPaidInFull = Boolean(billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
+                      const isPaidInFull = Boolean(activeLease?.endDate && billingSummary && billingSummary.isRentSet && billingSummary.remainingLeaseRent <= 0);
                       return isPaidInFull ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1331,7 +1390,7 @@ export default function UnitDetailPage() {
                             setSelectedPaymentLeaseId(activeLease?.id || currentLease?.id || "");
                             setPaymentAmount(
                               billingSummary?.outstanding
-                                ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent)))
+                                ? formatInputNumber(String(Math.min(billingSummary.outstanding, billingSummary.remainingLeaseRent || billingSummary.outstanding)))
                                 : ""
                             );
                             setPaymentError(null);
@@ -1768,21 +1827,30 @@ export default function UnitDetailPage() {
                     />
                   </ModalField>
                   <ModalField
-                    label={`New End Date ${unit && !isResidentialUnitType(unit.unitType) ? "(required)" : ""}`}
+                    label="New End Date (optional)"
                     htmlFor="renewEndDate"
-                    required
                   >
                     <input
                       id="renewEndDate"
                       type="date"
-                      required
+                      disabled={renewNoFixedEndDate}
                       value={renewEndDate}
                       onChange={(e) => setRenewEndDate(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     />
-                    {unit && isResidentialUnitType(unit.unitType) && (
-                      <p className="text-xs text-muted-foreground mt-1">Auto-set to 1 year from start date</p>
-                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Checkbox
+                        id="renewNoFixedEndDate"
+                        checked={renewNoFixedEndDate}
+                        onCheckedChange={(checked) => handleToggleRenewNoFixedEndDate(Boolean(checked))}
+                      />
+                      <label
+                        htmlFor="renewNoFixedEndDate"
+                        className="text-xs font-medium text-foreground cursor-pointer select-none"
+                      >
+                        No fixed end date
+                      </label>
+                    </div>
                   </ModalField>
                 </div>
 
@@ -1938,10 +2006,24 @@ export default function UnitDetailPage() {
                 <input
                   id="endDate"
                   type="date"
+                  disabled={noFixedEndDate}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                  className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-50"
                 />
+                <div className="flex items-center gap-2 mt-2">
+                  <Checkbox
+                    id="noFixedEndDate"
+                    checked={noFixedEndDate}
+                    onCheckedChange={(checked) => handleToggleNoFixedEndDate(Boolean(checked))}
+                  />
+                  <label
+                    htmlFor="noFixedEndDate"
+                    className="text-xs font-medium text-foreground cursor-pointer select-none"
+                  >
+                    No fixed end date
+                  </label>
+                </div>
               </ModalField>
             </div>
 
@@ -2031,15 +2113,28 @@ export default function UnitDetailPage() {
                       className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
                     />
                   </ModalField>
-                  <ModalField label="End Date" htmlFor="editEndDate" required>
+                  <ModalField label="End Date (optional)" htmlFor="editEndDate">
                     <input
                       id="editEndDate"
                       type="date"
-                      required
+                      disabled={editNoFixedEndDate}
                       value={editEndDate}
                       onChange={(e) => setEditEndDate(e.target.value)}
-                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm"
+                      className="block w-full h-12 rounded-lg border border-input bg-card px-4 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     />
+                    <div className="flex items-center gap-2 mt-2">
+                      <Checkbox
+                        id="editNoFixedEndDate"
+                        checked={editNoFixedEndDate}
+                        onCheckedChange={(checked) => handleToggleEditNoFixedEndDate(Boolean(checked))}
+                      />
+                      <label
+                        htmlFor="editNoFixedEndDate"
+                        className="text-xs font-medium text-foreground cursor-pointer select-none"
+                      >
+                        No fixed end date
+                      </label>
+                    </div>
                   </ModalField>
                 </div>
 
@@ -2132,7 +2227,7 @@ export default function UnitDetailPage() {
                     >
                       {leases.map((l) => (
                         <option key={l.id} value={l.id}>
-                          {formatDateGB(l.startDate)} – {formatDateGB(l.endDate)}{l.tenant?.fullName ? ` · ${l.tenant.fullName}` : ""}{l.id === currentLease?.id ? " (Current)" : l.terminatedAt ? " (Moved out)" : " (Ended)"}
+                          {formatDateGB(l.startDate)} – {l.endDate ? formatDateGB(l.endDate) : "Ongoing"}{l.tenant?.fullName ? ` · ${l.tenant.fullName}` : ""}{l.id === currentLease?.id ? " (Current)" : l.terminatedAt ? " (Moved out)" : " (Ended)"}
                         </option>
                       ))}
                     </Select>

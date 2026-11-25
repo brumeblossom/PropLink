@@ -8,12 +8,12 @@ const landlordSteps = [
   {
     step: "01",
     title: "Add your property",
-    text: "Name it, pick the type and add your units. Takes two minutes.",
+    text: "Name it, classify and add your units in minutes.",
   },
   {
     step: "02",
     title: "Invite your tenant",
-    text: "Share a 6-character code or send an email. They join and see their rent.",
+    text: "Share a code or send an email. They join and see their rent.",
   },
   {
     step: "03",
@@ -31,7 +31,7 @@ const tenantSteps = [
   {
     step: "01",
     title: "Get your invite",
-    text: "Your landlord gives you a code or invites your email.",
+    text: "An email or invite code is shared with you by your landlord.",
   },
   {
     step: "02",
@@ -46,7 +46,7 @@ const tenantSteps = [
   {
     step: "04",
     title: "Always have proof",
-    text: "Every receipt is saved. No more lost payment records.",
+    text: "All your receipts uploaded and safe in one place.",
   },
 ];
 
@@ -69,7 +69,7 @@ export function HowItWorks() {
           <h2 className="text-[clamp(32px,4.4vw,52px)] leading-[1.08] tracking-[-0.025em] font-bold mt-3">
             <span className="block font-sans text-white">Up and running in</span>
             <span className="block font-serif italic font-normal text-[#D4AF37]">
-              four calm steps.
+              four steps.
             </span>
           </h2>
 
@@ -109,21 +109,14 @@ export function HowItWorks() {
           key={activeTab}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 mt-14 lg:mt-16 transition-opacity duration-300 ease-in-out motion-reduce:transition-none"
         >
-          {steps.map((item, index) => (
+          {steps.map((item) => (
             <div
               key={item.step}
-              className="relative group p-6 rounded-2xl transition-colors duration-200 hover:bg-white/5 border border-transparent hover:border-white/10 flex flex-col items-start"
+              tabIndex={0}
+              className="relative group p-6 rounded-2xl bg-white/5 dark:bg-white/[0.04] border border-white/10 transition-all duration-200 hover:-translate-y-1 hover:border-[#D4AF37]/50 focus-visible:outline-none focus-visible:-translate-y-1 focus-visible:border-[#D4AF37]/50 motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0 flex flex-col items-start"
             >
-              {/* Dashed connector line between steps on desktop */}
-              {index < 3 && (
-                <div
-                  aria-hidden="true"
-                  className="hidden lg:block absolute top-[46px] left-[calc(44px+24px+12px)] right-[-12px] border-t border-dashed border-white/15 pointer-events-none"
-                />
-              )}
-
               {/* Step number in 44px circle */}
-              <div className="w-[44px] h-[44px] rounded-full border border-[#D4AF37]/40 group-hover:border-[#D4AF37]/60 text-[#D4AF37] font-mono font-bold text-base flex items-center justify-center shrink-0 transition-colors z-10 bg-[#0E1E45] dark:bg-[#1A1810]">
+              <div className="w-[44px] h-[44px] rounded-full border border-[#D4AF37]/40 text-[#D4AF37] font-sans font-bold tabular-nums text-base flex items-center justify-center shrink-0 transition-colors duration-200 z-10 bg-[#0E1E45] dark:bg-[#1A1810] group-hover:bg-[#D4AF37] group-hover:text-[#1A1405] group-hover:border-[#D4AF37] group-focus-visible:bg-[#D4AF37] group-focus-visible:text-[#1A1405] group-focus-visible:border-[#D4AF37]">
                 {item.step}
               </div>
 

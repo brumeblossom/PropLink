@@ -30,7 +30,7 @@ interface ProcessedLease {
   propertyId: string;
   propertyName: string;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   rentAmount: number;
   rentFrequency: string;
   leaseStatus: "active" | "ended" | "moved_out" | "upcoming" | "pending" | "invite_sent" | "invite_expired";
@@ -44,7 +44,7 @@ interface ProcessedLease {
   renewal?: {
     id: string;
     startDate: string;
-    endDate: string;
+    endDate: string | null;
     rentAmount: number;
     rentFrequency: string;
   } | null;
@@ -734,7 +734,7 @@ function LandlordTenantsContent() {
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="font-medium text-foreground">
-                                        {formatDateGB(lease.startDate)} – {formatDateGB(lease.endDate)}
+                                        {formatDateGB(lease.startDate)} – {lease.endDate ? formatDateGB(lease.endDate) : "Ongoing"}
                                       </span>
                                       <LeaseStatusBadge status={lease.leaseStatus} />
                                     </div>

@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { AccountSection } from "@/components/settings/AccountSection";
+import { RemindersSection } from "@/components/settings/RemindersSection";
 
 export default function TenantSettingsPage() {
   const { data: user, isLoading } = trpc.auth.me.useQuery();
@@ -44,6 +45,7 @@ export default function TenantSettingsPage() {
 
         <div className="space-y-6">
           <AccountSection user={user} />
+          <RemindersSection />
         </div>
       </PageContainer>
     </div>

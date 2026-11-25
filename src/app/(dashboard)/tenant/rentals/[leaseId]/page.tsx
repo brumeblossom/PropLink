@@ -37,7 +37,7 @@ import { PaymentMethod } from "@prisma/client";
 function computeLeaseStatus(
   lease: {
     startDate: Date | string;
-    endDate: Date | string;
+    endDate?: Date | string | null;
     renewalWindowDays?: number | null;
     terminatedAt?: Date | string | null;
   },
@@ -46,9 +46,10 @@ function computeLeaseStatus(
   if (lease.terminatedAt) return "moved_out";
   const todayStr = formatLagosYMD(today);
   const startStr = formatLagosYMD(lease.startDate);
-  const endStr = formatLagosYMD(lease.endDate);
 
   if (todayStr < startStr) return "upcoming";
+  if (!lease.endDate) return "active";
+  const endStr = formatLagosYMD(lease.endDate);
   if (todayStr >= endStr) return "ended";
   return "active";
 }
@@ -184,7 +185,7 @@ export default function TenantRentalDetailsPage({
     if (!lease?.unit?.leases) return [];
     return lease.unit.leases.map((l) => {
       let status: LeaseOption["status"] = "ended";
-      if (!l.terminatedAt && new Date(l.endDate) > today && new Date(l.startDate) <= today) {
+      if (!l.terminatedAt && (!l.endDate || new Date(l.endDate) > today) && new Date(l.startDate) <= today) {
         status = "current";
       } else if (l.terminatedAt) {
         status = "moved_out";

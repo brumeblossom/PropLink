@@ -311,13 +311,14 @@ export const unitsRouter = router({
       // Block deletion if unit has active lease
       const activeLease = unit.leases[0];
       if (activeLease) {
+        const endStr = activeLease.endDate
+          ? new Date(activeLease.endDate).toLocaleDateString()
+          : "Ongoing";
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Cannot delete unit with an active lease. Blocking lease: ${
             activeLease.tenant.fullName
-          } from ${new Date(activeLease.startDate).toLocaleDateString()} to ${new Date(
-            activeLease.endDate
-          ).toLocaleDateString()}. Please terminate active leases first.`,
+          } from ${new Date(activeLease.startDate).toLocaleDateString()} to ${endStr}. Please terminate active leases first.`,
         });
       }
 
@@ -379,14 +380,14 @@ export const unitsRouter = router({
           });
         }
 
-        // Extra check like single delete: any lease where terminatedAt is null and startDate <= now and endDate >= now
+        // Extra check like single delete: any lease where terminatedAt is null and startDate <= now and (endDate is null or >= now)
         const hasBlockingLease = unit.leases.some(
           (l) =>
             l.terminatedAt === null &&
             l.status !== "declined" &&
             l.status !== "cancelled" &&
             new Date(l.startDate) <= now &&
-            new Date(l.endDate) >= now
+            (!l.endDate || new Date(l.endDate) >= now)
         );
         if (hasBlockingLease) {
           throw new TRPCError({

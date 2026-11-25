@@ -208,6 +208,7 @@ export const dashboardRouter = router({
     // 5. Leases ending soon (within 60 days or renewal due)
     const leasesEndingSoon = activeLeasesEndingSoon
       .map((lease) => {
+        if (!lease.endDate) return null;
         const end = new Date(lease.endDate);
         const diffTime = end.getTime() - now.getTime();
         const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
