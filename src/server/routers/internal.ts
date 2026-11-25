@@ -5,6 +5,7 @@ import { RelatedType, NotificationChannel, NotificationStatus } from "@prisma/cl
 import { dispatchNotification } from "../services/notificationDispatcher";
 import { formatCurrency } from "@/lib/utils";
 import { getLeaseBalance, formatDateGB, formatLagosYMD, getLagosYMD, createLagosDate } from "@/lib/billing";
+import { cleanupOldInviteAttempts } from "../utils/inviteRateLimit";
 
 function computeHumanExpiryDuration(todayDate: Date, endDate: Date): string {
   const todayYMD = getLagosYMD(todayDate);
@@ -291,6 +292,9 @@ export const internalRouter = router({
 
         leaseExpirySent++;
       }
+
+      // Cleanup invite attempts older than 1 day
+      await cleanupOldInviteAttempts();
 
       return {
         success: true,

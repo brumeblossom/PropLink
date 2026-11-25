@@ -398,3 +398,13 @@ model TenantReminderSetting {
 
   @@map("tenant_reminder_settings")
 }
+
+model InviteCodeAttempt {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ipHash    String   @map("ip_hash")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([ipHash, createdAt])
+  @@map("invite_code_attempts")
+}
+

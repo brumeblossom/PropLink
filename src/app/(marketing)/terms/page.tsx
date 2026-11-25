@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalDocument, type LegalSection } from "@/components/legal/LegalDocument";
 
 export const metadata: Metadata = {
-  title: "Terms of Use · PropLink",
+  title: "Terms of Use",
   description: "Read the terms and conditions for using PropLink.",
 };
 

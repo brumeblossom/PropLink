@@ -8,7 +8,7 @@ async function main() {
     where: { fullName: "Verified Landlord" },
   });
   console.log(`Found ${landlords.length} landlord(s) "Verified Landlord":`);
-  landlords.forEach((l) => console.log(` - ID: ${l.id}, Name: ${l.fullName}, Email: ${l.email}`));
+  landlords.forEach((l) => console.log(` - ID: ${l.id}, Name: ${l.fullName}`));
 
   // 2. Find Property "Test Verification Estate"
   const properties = await prisma.property.findMany({
@@ -40,7 +40,7 @@ async function main() {
   });
   console.log(`Found ${invitations.length} test invitation lease(s):`);
   invitations.forEach((inv) =>
-    console.log(` - ID: ${inv.id}, Tenant: ${inv.tenant?.fullName} (${inv.tenant?.email}), Unit: ${inv.unit?.unitNumber}`)
+    console.log(` - ID: ${inv.id}, Tenant: ${inv.tenant?.fullName}, Unit: ${inv.unit?.unitNumber}`)
   );
 
   // 5. Find Notifications mentioning "TEST-INV-1" or "Test Verification Estate"

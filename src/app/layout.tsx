@@ -4,6 +4,8 @@ import { Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -19,9 +21,13 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://proplink.ng"),
-  title: "PropLink",
-  description: "Multi-tenant property management platform",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://prop-link-delta.vercel.app"),
+  title: {
+    template: "%s · PropLink",
+    default: "PropLink · Property management for landlords and tenants",
+  },
+  description:
+    "Track leases, rent and tenants without spreadsheets or WhatsApp threads. Know who has paid, what is due and when every lease ends.",
 };
 
 export default function RootLayout({
@@ -40,6 +46,8 @@ export default function RootLayout({
           {children}
           <ThemeSwitcher />
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

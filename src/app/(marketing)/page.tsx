@@ -15,7 +15,9 @@ import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FaqAccordion } from "@/components/landing/FaqAccordion";
 
 export const metadata: Metadata = {
-  title: "PropLink · Property management for landlords and tenants",
+  title: {
+    absolute: "PropLink · Property management for landlords and tenants",
+  },
   description:
     "Track leases, rent and tenants without spreadsheets or WhatsApp threads. Know who has paid, what is due and when every lease ends.",
   openGraph: {

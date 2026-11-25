@@ -1,5 +1,4 @@
-import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { router } from "../trpc";
 import { authRouter } from "./auth";
 import { propertiesRouter } from "./properties";
 import { unitsRouter } from "./units";
@@ -26,17 +25,6 @@ export const appRouter = router({
   internal: internalRouter,
   documents: documentsRouter,
   reminders: remindersRouter,
-  hello: publicProcedure
-    .input(
-      z.object({
-        text: z.string(),
-      })
-    )
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
-    }),
 });
 
 export type AppRouter = typeof appRouter;

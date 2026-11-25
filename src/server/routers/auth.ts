@@ -6,6 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { getSanitizedAuthError } from "@/lib/auth-errors";
 import { isPasswordValid } from "@/lib/password";
 import { redeemInvite } from "../services/redeemInvite";
+import {
+  getIpHashFromRequest,
+  assertInviteRateLimit,
+  recordFailedInviteAttempt,
+} from "../utils/inviteRateLimit";
 
 export const authRouter = router({
   signupLandlord: publicProcedure
@@ -83,7 +88,10 @@ export const authRouter = router({
         fullName: z.string().min(2),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const ipHash = getIpHashFromRequest(ctx.req);
+      await assertInviteRateLimit(ipHash);
+
       // 1. Fetch and validate the invite code
       const trimmedCode = input.inviteCode.trim();
       const invite = await prisma.inviteCode.findFirst({
@@ -98,6 +106,7 @@ export const authRouter = router({
       });
 
       if (!invite) {
+        await recordFailedInviteAttempt(ipHash);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "This invite code has expired. Ask your landlord for a new one.",
@@ -105,6 +114,7 @@ export const authRouter = router({
       }
 
       if (invite.redeemedAt) {
+        await recordFailedInviteAttempt(ipHash);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "This invite code has already been redeemed.",
@@ -112,6 +122,7 @@ export const authRouter = router({
       }
 
       if (new Date() > invite.expiresAt) {
+        await recordFailedInviteAttempt(ipHash);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "This invite code has expired. Ask your landlord for a new one.",
@@ -120,6 +131,7 @@ export const authRouter = router({
 
       // Check if email matches the placeholder tenant's email
       if (invite.lease.tenant.email.toLowerCase() !== input.email.toLowerCase()) {
+        await recordFailedInviteAttempt(ipHash);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "The email address does not match the one registered with this invite code.",
@@ -171,6 +183,49 @@ export const authRouter = router({
       }
 
       return { success: true };
+    }),
+
+  checkInviteCode: publicProcedure
+    .input(
+      z.object({
+        inviteCode: z.string().min(1),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const ipHash = getIpHashFromRequest(ctx.req);
+      await assertInviteRateLimit(ipHash);
+
+      const trimmedCode = input.inviteCode.trim();
+      const invite = await prisma.inviteCode.findFirst({
+        where: { code: trimmedCode },
+        include: {
+          lease: {
+            include: {
+              tenant: true,
+              unit: {
+                include: {
+                  property: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!invite || invite.redeemedAt || new Date() > invite.expiresAt) {
+        await recordFailedInviteAttempt(ipHash);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This invite code has expired. Ask your landlord for a new one.",
+        });
+      }
+
+      return {
+        valid: true,
+        email: invite.lease.tenant.email,
+        unitNumber: invite.lease.unit.unitNumber,
+        propertyName: invite.lease.unit.property.name,
+      };
     }),
 
   login: publicProcedure
