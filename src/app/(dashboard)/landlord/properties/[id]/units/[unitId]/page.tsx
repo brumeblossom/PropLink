@@ -2640,6 +2640,7 @@ export default function UnitDetailPage() {
         title="Remove payment proof?"
         description="Are you sure you want to remove this proof document?"
         confirmText="Remove"
+        loadingText="Removing..."
         variant="danger"
         isLoading={deletePaymentProofMutation.isPending}
       />
@@ -2685,6 +2686,7 @@ export default function UnitDetailPage() {
         description="Are you sure you want to void this payment record? This will exclude it from outstanding balance calculations."
         confirmText="Void"
         cancelText="Cancel"
+        loadingText="Voiding..."
         variant="danger"
         isLoading={resolvePayment.isPending}
       />
@@ -2721,10 +2723,11 @@ export default function UnitDetailPage() {
             // handled
           }
         }}
-        title="Cancel invitation"
+        title="Cancel invitation?"
         description="Are you sure you want to cancel this invitation? The unit will return to vacant."
         confirmText="Cancel invitation"
         cancelText="Keep invitation"
+        loadingText="Cancelling..."
         variant="danger"
         isLoading={cancelInvitation.isPending}
       />
@@ -2741,10 +2744,11 @@ export default function UnitDetailPage() {
             // handled
           }
         }}
-        title={`Cancel invite for ${activeLease?.tenant?.fullName || "tenant"}?`}
-        description={`The code stops working and ${unit?.unitNumber ? `Unit ${unit.unitNumber}` : "this unit"} becomes vacant.`}
+        title="Cancel invite?"
+        description={`${activeLease?.tenant?.fullName ? `${activeLease.tenant.fullName}'s` : "The"} invite code stops working and ${unit?.unitNumber ? `Unit ${unit.unitNumber}` : "this unit"} becomes vacant.`}
         confirmText="Cancel invite"
         cancelText="Keep invite"
+        loadingText="Cancelling..."
         variant="danger"
         isLoading={cancelCodeInviteMutation.isPending}
       />
@@ -2851,13 +2855,14 @@ export default function UnitDetailPage() {
             markMovedOutMutation.mutate({ leaseId: activeLease.id });
           }
         }}
-        title={`Mark ${activeLease?.tenant?.fullName || "tenant"} as moved out of Unit ${unit.unitNumber}?`}
+        title="Mark as moved out?"
         description={
           billingSummary && billingSummary.outstanding > 0
-            ? `The unit becomes vacant. This lease and its payments stay in the history.\n\n${formatCurrency(billingSummary.outstanding)} is still unpaid. It stays on record.`
-            : "The unit becomes vacant. This lease and its payments stay in the history."
+            ? `${activeLease?.tenant?.fullName ? `${activeLease.tenant.fullName}` : "The tenant"} will be marked as moved out of Unit ${unit.unitNumber}. The unit becomes vacant. This lease and its payments stay in the history.\n\n${formatCurrency(billingSummary.outstanding)} is still unpaid. It stays on record.`
+            : `${activeLease?.tenant?.fullName ? `${activeLease.tenant.fullName}` : "The tenant"} will be marked as moved out of Unit ${unit.unitNumber}. The unit becomes vacant. This lease and its payments stay in the history.`
         }
         confirmText="Mark as moved out"
+        loadingText="Marking as moved out..."
         cancelText="Cancel"
         isLoading={markMovedOutMutation.isPending}
       />

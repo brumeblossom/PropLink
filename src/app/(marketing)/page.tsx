@@ -37,7 +37,7 @@ export default function LandingPage() {
   return (
     <div className="w-full animate-landing-fade">
       {/* 2. HERO SECTION */}
-      <section className="py-[72px] lg:py-[112px]">
+      <section className="pt-12 pb-[72px] lg:pt-14 lg:pb-[112px]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left Column: Text & Actions */}
@@ -53,13 +53,13 @@ export default function LandingPage() {
               </div>
 
               {/* H1, 2 lines */}
-              <h1 className="text-[clamp(44px,7vw,84px)] leading-[0.98] tracking-[-0.035em] mt-6">
+              <h1 className="text-[clamp(48px,8vw,104px)] leading-[0.96] tracking-[-0.035em] mt-8">
                 <span className="block font-sans font-extrabold text-foreground">All your properties</span>
                 <span className="block font-serif italic font-normal text-emphasis">in one place.</span>
               </h1>
 
               {/* Description */}
-              <p className="text-[18px] text-muted-foreground max-w-[46ch] mt-6 leading-relaxed">
+              <p className="text-[20px] text-muted-foreground max-w-[44ch] mt-8 leading-[1.65]">
                 Track leases, rent and tenants without spreadsheets or WhatsApp threads. Know who has paid, what is due and when every lease ends.
               </p>
 
@@ -81,10 +81,10 @@ export default function LandingPage() {
               </div>
 
               {/* Actions - Desktop / Tablet (>=640px) */}
-              <div className="hidden sm:flex flex-wrap items-center gap-5 mt-10">
+              <div className="hidden sm:flex flex-wrap items-center gap-5 mt-12">
                 <Link
                   href="/signup"
-                  className="h-[46px] px-7 rounded-full bg-gold hover:bg-[#B89230] text-gold-foreground font-semibold text-[15px] inline-flex items-center gap-2 transition-colors shadow-sm"
+                  className="h-[52px] px-[30px] rounded-full bg-gold hover:bg-[#B89230] text-gold-foreground font-semibold text-[16px] inline-flex items-center gap-2 transition-colors shadow-sm"
                 >
                   <span>Sign up your first property</span>
                   <ArrowRight className="w-4 h-4" />
@@ -92,7 +92,7 @@ export default function LandingPage() {
 
                 <Link
                   href="/signup?role=tenant"
-                  className="inline-flex items-center gap-1.5 text-[15px] font-medium text-foreground underline decoration-gold decoration-1 underline-offset-4 hover:opacity-80 transition-opacity"
+                  className="inline-flex items-center gap-1.5 text-[16px] font-medium text-foreground underline decoration-gold decoration-1 underline-offset-4 hover:opacity-80 transition-opacity"
                 >
                   <span>I&apos;m a tenant</span>
                   <ArrowRight className="w-4 h-4 text-gold" />
@@ -105,7 +105,7 @@ export default function LandingPage() {
               <LandingImage
                 src="/landing/hero.jpg"
                 alt="PropLink property management overview"
-                containerClassName="rounded-[28px] aspect-[4/3] lg:aspect-[5/4] shadow-sm w-full"
+                containerClassName="rounded-[28px] aspect-[4/3] lg:aspect-[4/4.6] shadow-sm w-full"
                 priority
                 fill
                 sizes="(max-width: 1024px) 100vw, 560px"

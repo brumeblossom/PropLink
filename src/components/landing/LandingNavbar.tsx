@@ -1,23 +1,12 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Home, Menu, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { cn } from "@/lib/utils";
 
 export function LandingNavbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 8);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     if (typeof window !== "undefined" && (window.location.pathname === "/" || window.location.pathname === "")) {
@@ -32,16 +21,10 @@ export function LandingNavbar() {
   };
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 w-full transition-[border-color,background-color] duration-200 backdrop-blur-md",
-        "bg-background/90",
-        scrolled ? "border-b border-border shadow-sm" : "border-b border-transparent"
-      )}
-    >
+    <header className="sticky top-0 z-50 w-full bg-background/90 backdrop-blur-md">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
         {/* Left: Logo & Nav items */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-10">
           <Link href="/" className="flex items-center gap-3 shrink-0 hover:opacity-90 transition-opacity">
             <div className="w-[32px] h-[32px] rounded-lg bg-[#0E1E45] flex items-center justify-center shrink-0 shadow-sm">
               <Home className="w-4 h-4 text-[#C9A23A]" />
@@ -52,7 +35,7 @@ export function LandingNavbar() {
           </Link>
 
           {/* Desktop links - hidden under 860px */}
-          <nav className="hidden min-[860px]:flex items-center gap-[28px] ml-7">
+          <nav className="hidden min-[860px]:flex items-center gap-[28px]">
             <Link
               href="/#landlords"
               onClick={(e) => handleScrollTo(e, "landlords")}
@@ -85,7 +68,7 @@ export function LandingNavbar() {
         </div>
 
         {/* Right: Auth buttons - hidden under 860px */}
-        <div className="hidden min-[860px]:flex items-center gap-6">
+        <div className="hidden min-[860px]:flex items-center gap-6 ml-auto">
           <Link
             href="/login"
             className="text-[15px] font-medium text-foreground hover:text-primary transition-colors"

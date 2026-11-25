@@ -14,6 +14,7 @@ export interface ConfirmDialogProps {
   cancelText?: string;
   variant?: "danger" | "default";
   isLoading?: boolean;
+  loadingText?: string;
 }
 
 export function ConfirmDialog({
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   cancelText = "Cancel",
   variant = "danger",
   isLoading = false,
+  loadingText,
 }: ConfirmDialogProps) {
   return (
     <Modal
@@ -38,9 +40,9 @@ export function ConfirmDialog({
     >
       <ModalHeader
         title={
-          <span className="flex items-center gap-2">
+          <span className="flex items-start gap-2">
             {variant === "danger" && (
-              <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-[5px]" />
             )}
             <span>{title}</span>
           </span>
@@ -57,7 +59,7 @@ export function ConfirmDialog({
         onCancel={onClose}
         cancelText={cancelText}
         onConfirm={onConfirm}
-        confirmText={isLoading ? (variant === "danger" ? "Deleting..." : "Saving...") : confirmText}
+        confirmText={isLoading ? (loadingText ?? (variant === "danger" ? "Deleting..." : "Saving...")) : confirmText}
         confirmVariant={variant === "danger" ? "destructive" : "default"}
         isSaving={isLoading}
       />

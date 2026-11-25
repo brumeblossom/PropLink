@@ -857,6 +857,7 @@ export default function TenantHomePage() {
         }
         confirmText="Decline invitation"
         cancelText="Cancel"
+        loadingText="Declining..."
         variant="danger"
         isLoading={declineInvitation.isPending}
       />

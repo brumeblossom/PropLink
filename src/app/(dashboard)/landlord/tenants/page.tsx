@@ -782,10 +782,11 @@ function LandlordTenantsContent() {
               // handled
             }
           }}
-          title={`Cancel invite for ${leaseToCancelCode?.tenantName || "tenant"}?`}
-          description={`The code stops working and Unit ${leaseToCancelCode?.unitName || ""} becomes vacant.`}
+          title="Cancel invite?"
+          description={`${leaseToCancelCode?.tenantName ? `${leaseToCancelCode.tenantName}'s` : "The"} invite code stops working and Unit ${leaseToCancelCode?.unitName || ""} becomes vacant.`}
           confirmText="Cancel invite"
           cancelText="Keep invite"
+          loadingText="Cancelling..."
           variant="danger"
           isLoading={cancelCodeInviteMutation.isPending}
         />
@@ -806,6 +807,7 @@ function LandlordTenantsContent() {
           description={`Are you sure you want to cancel this invitation? Unit ${leaseToCancelInApp?.unitName || ""} will return to vacant.`}
           confirmText="Cancel invitation"
           cancelText="Keep invitation"
+          loadingText="Cancelling..."
           variant="danger"
           isLoading={cancelInvitationMutation.isPending}
         />
